@@ -1,0 +1,21 @@
+# Dependencies and generated output
+node_modules/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+
+# Local secrets (share only the placeholder template)
+.env*
+!.env.example
+
+# Local application data
+/campass/data/
+*.log
+
+# Personal Obsidian settings, cache, and plugins
+.obsidian/
+
+# OS files
+.DS_Store
+Thumbs.db

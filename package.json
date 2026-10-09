@@ -1,0 +1,13 @@
+{
+  "name": "swce2026-team13",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix campass run dev --",
+    "build": "npm --prefix campass run build --",
+    "start": "npm --prefix campass run start --",
+    "lint": "npm --prefix campass run lint --",
+    "test": "npm --prefix campass test --",
+    "test:api": "npm --prefix campass run test:api --",
+    "typecheck": "npm --prefix campass run typecheck --"
+  }
+}
