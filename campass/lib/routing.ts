@@ -100,7 +100,7 @@ export const waypoints: Waypoint[] = [
     y: 65,
   },
 ];
-// Every edge is a demonstration fixture. Official maps verify names, not indoor connectivity.
+// 시연 동선 · 실내 연결 미검증
 type Edge = { from: string; to: string; meters: number; stairs?: boolean };
 const edges: Edge[] = [
   { from: "bus", to: "main", meters: 40 },
@@ -160,7 +160,7 @@ export function calculateRoute(
   while (ids[0] !== start) ids.unshift(previous.get(ids[0])!);
   const steps = ids.map((id, index) => {
     const point = { ...waypoints.find((w) => w.id === id)! };
-    // Descriptions authored for the canonical route must not be reused for reverse routes.
+    // 역방향 경로 안내 갱신
     if (destination !== "interview" && index < ids.length - 1) {
       point.instruction = `${waypoints.find((w) => w.id === ids[index + 1])!.name} 방향으로 이동하세요`;
       point.detail = "시연 경로 · 현장의 안내 표지를 함께 확인하세요.";

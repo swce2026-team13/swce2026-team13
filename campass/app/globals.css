@@ -1108,3 +1108,25 @@ progress::-moz-progress-bar {
     scroll-behavior: auto !important;
   }
 }
+
+.route-modal {
+  width: min(100% - 24px, 480px);
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  border: 0;
+  border-radius: 20px;
+  background: var(--background);
+  color: var(--foreground);
+  overscroll-behavior: contain;
+}
+.route-modal::backdrop {
+  background: rgb(20 30 50 / 55%);
+}
+.route-modal .app-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.route-modal .actions {
+  position: static;
+}
