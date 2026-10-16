@@ -45,7 +45,7 @@ jobs:
           import urllib.request
           from collections import Counter
           
-          DATA_SOURCE = 'eb675e09-d84e-4904-8913-02698ddc82e9'
+          DATA_SOURCE = '97c887ac-1bc9-83a5-90a0-87775a21fd73'
           SCHEMA = {'제목': 'title', '번호': 'number', '유형': 'select', '상태': 'select',
                     '링크': 'url', '작성자': 'rich_text', '담당자': 'rich_text', '라벨': 'multi_select',
                     '브랜치': 'rich_text', '기능 ID': 'rich_text', '생성일': 'date', '종료일': 'date'}
