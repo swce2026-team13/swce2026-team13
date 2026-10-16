@@ -4,6 +4,7 @@ import { AppError, calculateRoute, waypoints } from "@/lib/routing";
 import {
   assertRequestOrigin,
   database,
+  loginAdmin,
   ownerToken,
   readBytes,
   readJson,
@@ -12,6 +13,7 @@ import {
   versionField,
 } from "@/lib/server";
 import { interpretIntent, recognizePhoto } from "@/lib/providers";
+import { ADMIN_SESSION_SECONDS } from "@/lib/store";
 async function handle(request: NextRequest) {
   const { token, owner } = ownerToken(
     request.cookies.get("campass_owner")?.value,
@@ -41,6 +43,40 @@ async function handle(request: NextRequest) {
     }
     const db = database();
     db.limit(`request:${owner}`, 180, 60000);
+    const adminSession = request.cookies.get("campass_admin")?.value;
+    const adminCookieOptions = {
+      httpOnly: true,
+      sameSite: "strict" as const,
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+    };
+    if (method === "POST" && parts.join("/") === "admin/login") {
+      const body = await readJson(request);
+      // The deployment proxy must overwrite X-Forwarded-For with the real client IP.
+      const address =
+        request.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim() ||
+        "unknown";
+      const session = loginAdmin(db, body, address);
+      if (adminSession) db.deleteAdminSession(adminSession);
+      const result = response({ ok: true });
+      result.cookies.set("campass_admin", session.id, {
+        ...adminCookieOptions,
+        maxAge: ADMIN_SESSION_SECONDS,
+        expires: new Date(session.expires),
+      });
+      return result;
+    }
+    if (method === "POST" && parts.join("/") === "admin/logout") {
+      if (adminSession) db.deleteAdminSession(adminSession);
+      const result = response({ ok: true });
+      result.cookies.set("campass_admin", "", {
+        ...adminCookieOptions,
+        maxAge: 0,
+        expires: new Date(0),
+      });
+      return result;
+    }
+    if (parts[0] === "admin") requireAdmin(adminSession, db);
     if (method === "GET" && parts.join("/") === "health")
       return response({ ok: true, service: "campass", schema: 1 });
     if (method === "GET" && parts.join("/") === "catalog")
@@ -64,8 +100,6 @@ async function handle(request: NextRequest) {
       });
     }
     if (method === "GET" && parts.join("/") === "admin/insights") {
-      db.limit("admin-attempts", 60, 60000);
-      requireAdmin(request.headers.get("authorization"));
       return response(db.insights());
     }
     if (method === "GET" && parts[0] === "sessions" && parts.length === 2)
