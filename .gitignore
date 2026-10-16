@@ -18,6 +18,10 @@ coverage/
 
 # OS files
 .DS_Store
-Thumbs.db''
+Thumbs.db
 
 docs/
+[Dd]oc/
+[Dd]ocs/
+백엔드 구현.md
+.npm-cache/

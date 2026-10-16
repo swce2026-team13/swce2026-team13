@@ -58,6 +58,31 @@ before(async () => {
   throw new Error(`Server did not start: ${output}`);
 });
 after(() => server?.kill());
+
+test("HTTP pages support direct navigation and unknown paths return 404", async () => {
+  for (const path of [
+    "/",
+    "/search?q=면접",
+    "/directions?destination=interview",
+    "/directions/photo",
+    "/directions/recognition",
+    "/directions/failed",
+    "/directions/recovery",
+    "/guide",
+    "/guide/arrival",
+    "/guide/map",
+    "/map",
+    "/map/places?building=본관",
+    "/help",
+    "/admin",
+  ]) {
+    const response = await fetch(`${origin}${path}`);
+    assert.equal(response.status, 200, path);
+    assert.match(response.headers.get("content-type"), /text\/html/);
+  }
+  assert.equal((await fetch(`${origin}/missing-page`)).status, 404);
+});
+
 async function request(path, body, options = {}) {
   return fetch(`${origin}/api/${path}`, {
     method: body === undefined ? "GET" : "POST",
