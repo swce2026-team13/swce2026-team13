@@ -23,11 +23,7 @@ export type Insight = {
     rate: number;
   }[];
 };
-export async function api<T>(
-  path: string,
-  body?: unknown,
-  token?: string,
-): Promise<T> {
+export async function api<T>(path: string, body?: unknown): Promise<T> {
   const response = await fetch(`/api/${path}`, {
     method: body === undefined ? "GET" : "POST",
     headers: {
@@ -36,7 +32,6 @@ export async function api<T>(
         : body === undefined
           ? {}
           : { "Content-Type": "application/json" }),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body:
       body === undefined
@@ -47,7 +42,10 @@ export async function api<T>(
   });
   const value = await response.json();
   if (!response.ok)
-    throw new Error(value.error?.message || "요청을 완료하지 못했어요.");
+    throw Object.assign(
+      new Error(value.error?.message || "요청을 완료하지 못했어요."),
+      { status: response.status },
+    );
   return value;
 }
 function useCampusState() {
@@ -90,8 +88,7 @@ function useCampusState() {
     [reason, setReason] = useState("방향 혼란"),
     [comment, setComment] = useState(""),
     [sent, setSent] = useState(false);
-  const [adminToken, setAdminToken] = useState(""),
-    [insight, setInsight] = useState<Insight | null>(null);
+  const [insight, setInsight] = useState<Insight | null>(null);
   const imageRef = useRef("");
   function go(next: View, values: Record<string, string> = {}) {
     setError("");
@@ -202,6 +199,8 @@ function useCampusState() {
     try {
       await fn();
     } catch (e) {
+      if (e instanceof Error && "status" in e && e.status === 401)
+        setInsight(null);
       setError(e instanceof Error ? e.message : "잠시 후 다시 시도해 주세요.");
     } finally {
       setBusy(false);
@@ -475,8 +474,6 @@ function useCampusState() {
     setComment,
     sent,
     setSent,
-    adminToken,
-    setAdminToken,
     insight,
     setInsight,
     go,

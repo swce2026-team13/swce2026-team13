@@ -1,8 +1,9 @@
 import { DatabaseSync } from "node:sqlite";
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { AppError, calculateRoute, waypoints, type Route } from "./routing.ts";
+export const ADMIN_SESSION_SECONDS = 8 * 60 * 60;
 export type Session = {
   id: string;
   destination: string;
@@ -33,6 +34,7 @@ export class Store {
       CREATE TABLE IF NOT EXISTS confusions (session_id TEXT, waypoint_id TEXT, reason TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(session_id,waypoint_id), FOREIGN KEY(session_id,waypoint_id) REFERENCES passages(session_id,waypoint_id));
       CREATE TABLE IF NOT EXISTS feedback (session_id TEXT PRIMARY KEY REFERENCES sessions(id), data TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
       CREATE TABLE IF NOT EXISTS rate_limits (key TEXT PRIMARY KEY, hits INTEGER NOT NULL, expires INTEGER NOT NULL);
+      CREATE TABLE IF NOT EXISTS admin_sessions (id TEXT PRIMARY KEY, expires INTEGER NOT NULL);
       PRAGMA user_version=1;`);
   }
   close() {
@@ -51,7 +53,7 @@ export class Store {
   }
   limit(key: string, max: number, windowMs: number) {
     const now = Date.now();
-    this.db.prepare("DELETE FROM rate_limits WHERE expires < ?").run(now);
+    this.db.prepare("DELETE FROM rate_limits WHERE expires <= ?").run(now);
     const row = this.db
       .prepare(
         `INSERT INTO rate_limits(key,hits,expires) VALUES (?,1,?) ON CONFLICT(key) DO UPDATE SET hits=hits+1 RETURNING hits`,
@@ -63,6 +65,52 @@ export class Store {
         429,
         "RATE_LIMITED",
       );
+    return row.hits;
+  }
+  checkLoginLimit(key: string) {
+    const row = this.db
+      .prepare("SELECT hits FROM rate_limits WHERE key=? AND expires>?")
+      .get(key, Date.now()) as { hits: number } | undefined;
+    if (row && row.hits >= 5)
+      throw new AppError(
+        "로그인 시도가 많아요. 10분 후 다시 시도해 주세요.",
+        429,
+        "RATE_LIMITED",
+      );
+  }
+  recordLoginFailure(key: string) {
+    const hits = this.limit(key, 5, 10 * 60 * 1000);
+    if (hits === 5) {
+      this.db
+        .prepare("UPDATE rate_limits SET expires=? WHERE key=?")
+        .run(Date.now() + 10 * 60 * 1000, key);
+      this.checkLoginLimit(key);
+    }
+  }
+  clearLoginFailures(key: string) {
+    this.db.prepare("DELETE FROM rate_limits WHERE key=?").run(key);
+  }
+  createAdminSession() {
+    const now = Date.now();
+    this.db.prepare("DELETE FROM admin_sessions WHERE expires<=?").run(now);
+    const session = {
+      id: randomBytes(32).toString("hex"),
+      expires: now + ADMIN_SESSION_SECONDS * 1000,
+    };
+    this.db
+      .prepare("INSERT INTO admin_sessions(id,expires) VALUES (?,?)")
+      .run(session.id, session.expires);
+    return session;
+  }
+  hasAdminSession(id: string) {
+    return Boolean(
+      this.db
+        .prepare("SELECT 1 FROM admin_sessions WHERE id=? AND expires>?")
+        .get(id, Date.now()),
+    );
+  }
+  deleteAdminSession(id: string) {
+    this.db.prepare("DELETE FROM admin_sessions WHERE id=?").run(id);
   }
   save(session: Session) {
     this.db
