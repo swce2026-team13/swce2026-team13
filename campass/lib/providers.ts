@@ -1,5 +1,6 @@
 import { AppError, waypoints } from "./routing.ts";
 import { places, searchPlaces, type Place } from "./catalog.ts";
+import { askGemini, type AskGemini, type GeminiConfig } from "./gemini.ts";
 export type Candidate = {
   waypointId: string;
   confidence: number;
@@ -15,7 +16,7 @@ export type IntentResult = {
   intent: Intent;
   conditions: { elevator?: boolean };
   places: Place[];
-  mode: "keyword" | "api";
+  mode: "keyword" | "api" | "llm";
   message: string;
 };
 
@@ -67,13 +68,15 @@ type Config = {
   VISION_API_KEY?: string;
   INTENT_API_URL?: string;
   INTENT_API_KEY?: string;
-};
+} & GeminiConfig;
 function environment(): Config {
   return {
     VISION_API_URL: process.env.VISION_API_URL,
     VISION_API_KEY: process.env.VISION_API_KEY,
     INTENT_API_URL: process.env.INTENT_API_URL,
     INTENT_API_KEY: process.env.INTENT_API_KEY,
+    GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+    GEMINI_MODEL: process.env.GEMINI_MODEL,
   };
 }
 function object(value: unknown): Record<string, unknown> {
@@ -202,17 +205,97 @@ export async function recognizePhoto(
       : "등록 사진과 비교할 단서가 부족해요. 다시 촬영하거나 직접 선택해 주세요.",
   };
 }
+// Gemini only fills the gap the rules leave; rule conditions and the catalog always win.
+async function complementWithGemini(
+  query: string,
+  keyword: IntentResult,
+  config: Config,
+  ask: AskGemini,
+  timeoutMs: number,
+): Promise<IntentResult> {
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let raw: Record<string, unknown>;
+  try {
+    const text = await Promise.race([
+      ask(query, config, controller.signal),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          controller.abort();
+          reject(new Error("Gemini timeout"));
+        }, timeoutMs);
+      }),
+    ]);
+    raw = object(JSON.parse(text));
+  } catch {
+    // Errors, 429 quota limits, timeouts and malformed JSON keep the keyword answer.
+    return keyword;
+  } finally {
+    clearTimeout(timer);
+  }
+  const conditions = {
+    ...(typeof raw.elevator === "boolean" ? { elevator: raw.elevator } : {}),
+    ...keyword.conditions,
+  };
+  const ids = Array.isArray(raw.placeIds) ? raw.placeIds : [];
+  const matched = [...new Set(ids)]
+    .map((id) => places.find((p) => p.id === id))
+    .filter(
+      (p): p is Place =>
+        !!p && (conditions.elevator === undefined || p.id !== "elevator"),
+    )
+    .slice(0, 5);
+  const intent = (["destination", "condition", "next"] as const).find(
+    (value) => value === raw.intent,
+  );
+  const derived: Intent = matched.length
+    ? "destination"
+    : conditions.elevator !== undefined
+      ? "condition"
+      : keyword.intent;
+  const result: Intent =
+    intent === "condition" && conditions.elevator === undefined
+      ? derived
+      : (intent ?? derived);
+  if (
+    !matched.length &&
+    conditions.elevator === undefined &&
+    result === keyword.intent
+  )
+    return keyword;
+  return {
+    intent: result,
+    conditions,
+    places: matched,
+    mode: "llm",
+    message: "질문 뜻을 해석해 찾았어요. 맞는지 확인해 주세요.",
+  };
+}
+
 export async function interpretIntent(
   query: string,
   config: Config = environment(),
+  ask: AskGemini = askGemini,
+  timeoutMs = 3000,
 ): Promise<IntentResult> {
   const { searchQuery } = extractConditions(query);
-  if (!config.INTENT_API_URL || !searchQuery)
-    return {
+  if (!config.INTENT_API_URL || !searchQuery) {
+    const keyword: IntentResult = {
       ...classifyIntent(query),
       mode: "keyword",
       message: "등록된 장소명과 검색어로 찾았어요.",
     };
+    const unresolved =
+      keyword.intent === "destination" &&
+      !keyword.places.length &&
+      keyword.conditions.elevator === undefined;
+    return unresolved &&
+      searchQuery &&
+      config.GEMINI_API_KEY &&
+      config.GEMINI_MODEL
+      ? complementWithGemini(query, keyword, config, ask, timeoutMs)
+      : keyword;
+  }
   const raw = object(
     await provider(
       config.INTENT_API_URL,
