@@ -28,7 +28,7 @@ export default function Screen() {
         <section className="content stack">
           <h1>어디를 찾으시나요?</h1>
           <form
-            className="search-box"
+            className="search-box glass-card"
             onSubmit={(e) => {
               e.preventDefault();
               if (query.trim()) search();

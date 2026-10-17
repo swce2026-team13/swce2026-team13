@@ -567,17 +567,16 @@ progress::-moz-progress-bar {
   background: var(--blue);
 }
 .actions {
-  position: sticky;
-  bottom: 0;
-  padding: 14px 20px 11px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  background: #fffefef5;
-  backdrop-filter: blur(12px);
-  border-top: 1px solid #e8ebf1;
-  z-index: 5;
-  margin-top: auto;
+  background: rgba(255, 255, 255, 0.42);
+
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+
+  border-top: 1px solid rgba(255, 255, 255, 0.6);
+
+  box-shadow:
+    0 -8px 32px rgba(51, 84, 130, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 .actions .button {
   border-radius: 12px;
@@ -1129,4 +1128,658 @@ progress::-moz-progress-bar {
 }
 .route-modal .actions {
   position: static;
+}
+/* ==================================================
+   CAMPASS LIQUID GLASS
+   Hype4 settings:
+   Blur 6 / Refraction 0.3 / Depth 2
+   ================================================== */
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+
+  box-shadow:
+    0 4px 14px rgba(40, 70, 120, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 0 4px 2px rgba(255, 255, 255, 0.2);
+
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.8),
+    transparent
+  );
+
+  pointer-events: none;
+}
+
+.glass-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 100%;
+
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.8),
+    transparent,
+    rgba(255, 255, 255, 0.3)
+  );
+
+  pointer-events: none;
+}
+
+.glass-card > * {
+  position: relative;
+  z-index: 1;
+}
+/* CAMPASS Liquid Glass background */
+.phone {
+  background:
+    radial-gradient(
+      circle at 15% 10%,
+      rgba(115, 174, 255, 0.32),
+      transparent 35%
+    ),
+    radial-gradient(
+      circle at 90% 35%,
+      rgba(185, 205, 255, 0.35),
+      transparent 38%
+    ),
+    linear-gradient(
+      180deg,
+      #edf6ff 0%,
+      #f7faff 50%,
+      #eef4ff 100%
+    );
+}
+/* ==================================================
+   CAMPASS GLOBAL LIQUID GLASS THEME
+   Blur 6 / Refraction 0.3 / Depth 2
+   ================================================== */
+
+/* 유리 재질을 적용할 공통 UI */
+.card,
+.search-box,
+.choice,
+.notice,
+.current-next,
+.map-card,
+.zoom,
+.capture-placeholder,
+.candidate,
+.button.secondary,
+.chips button,
+.icon-box,
+.check-icon,
+.select-wrap select {
+  background: rgba(255, 255, 255, 0.3);
+
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+
+  border-color: rgba(255, 255, 255, 0.3);
+
+  box-shadow:
+    0 4px 14px rgba(40, 70, 120, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 0 4px 2px rgba(255, 255, 255, 0.2);
+
+  position: relative;
+}
+
+/* 검색창은 조금 더 맑게 */
+.search-box {
+  background: rgba(255, 255, 255, 0.38);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+}
+
+/* 일반 카드 */
+.card {
+  background: rgba(255, 255, 255, 0.32);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+/* 선택 가능한 카드 */
+.choice {
+  background: rgba(255, 255, 255, 0.32);
+  border: 1px solid rgba(255, 255, 255, 0.42);
+}
+
+/* 작은 칩 / 필터 버튼 */
+.chips button {
+  background: rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+}
+
+/* secondary 버튼 */
+.button.secondary {
+  background: rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+}
+
+/* 지도 줌 버튼 */
+.zoom {
+  background: rgba(255, 255, 255, 0.36);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+/* 입력/촬영 영역 */
+.capture-placeholder {
+  background: rgba(235, 245, 255, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+.button.primary {
+  background: linear-gradient(
+    135deg,
+    rgba(40, 96, 237, 0.88),
+    rgba(86, 137, 255, 0.78)
+  );
+
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+
+  border: 1px solid rgba(255, 255, 255, 0.35);
+
+  box-shadow:
+    0 8px 24px rgba(40, 96, 237, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -1px 0 rgba(20, 60, 180, 0.15),
+    inset 0 0 4px 2px rgba(255, 255, 255, 0.08);
+
+  color: white;
+}
+/* ================================
+   ADMIN LOGIN - LIQUID GLASS
+   ================================ */
+
+.admin-login-card {
+  background: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 24px;
+
+  box-shadow:
+    0 4px 14px rgba(40, 70, 120, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 0 4px 2px rgba(255, 255, 255, 0.2);
+
+  padding: 24px 20px;
+}
+
+.admin-login-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-login-heading svg {
+  width: 34px;
+  height: 34px;
+}
+
+.admin-login-heading p {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.admin-login-field {
+  gap: 8px;
+}
+
+.admin-login-field input {
+  background: rgba(255, 255, 255, 0.42);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 16px;
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 4px 14px rgba(60, 90, 140, 0.08);
+}
+
+.admin-login-field input:focus {
+  border-color: rgba(40, 96, 237, 0.5);
+  outline: none;
+
+  box-shadow:
+    0 0 0 3px rgba(40, 96, 237, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+/* ==========================================
+   A0 SPLASH SCREEN
+   ========================================== */
+
+.splash-screen {
+  min-height: 100dvh;
+  position: relative;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background:
+    radial-gradient(
+      circle at 50% 38%,
+      rgba(255, 255, 255, 0.7),
+      transparent 32%
+    ),
+    linear-gradient(
+      180deg,
+      #edf4ff 0%,
+      #f4f8ff 100%
+    );
+
+  overflow: hidden;
+}
+
+.splash-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translateY(-15px);
+}
+
+.splash-logo {
+  width: 76px;
+  height: 76px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 24px;
+
+  background: rgba(255, 255, 255, 0.28);
+
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+
+  border: 1px solid rgba(255, 255, 255, 0.55);
+
+  box-shadow:
+    0 4px 14px rgba(50, 90, 160, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65),
+    inset 0 0 3px rgba(255, 255, 255, 0.22);
+
+  color: var(--blue);
+}
+
+.splash-logo svg {
+  width: 43px;
+  height: 43px;
+  stroke-width: 2;
+}
+
+.splash-title {
+  margin-top: 20px;
+
+  font-size: 34px;
+  line-height: 1;
+  font-weight: 750;
+  letter-spacing: -1.5px;
+
+  color: #172238;
+}
+
+.splash-title span {
+  color: var(--blue);
+}
+
+.splash-loading {
+  margin-top: 34px;
+
+  width: 56px;
+  height: 4px;
+
+  border-radius: 999px;
+  overflow: hidden;
+
+  background: rgba(50, 90, 150, 0.1);
+}
+
+.splash-loading span {
+  display: block;
+
+  width: 42%;
+  height: 100%;
+
+  border-radius: inherit;
+  background: var(--blue);
+
+  animation: splash-loading 0.8s ease-in-out;
+}
+
+@keyframes splash-loading {
+  from {
+    width: 0;
+  }
+
+  to {
+    width: 42%;
+  }
+}
+
+.splash-footer {
+  position: absolute;
+  bottom: 38px;
+  left: 0;
+  right: 0;
+
+  text-align: center;
+
+  font-size: 11px;
+  color: #98a8bd;
+}
+/* ==================================================
+   A1 HOME LAYOUT
+   Liquid Glass material is inherited from global theme
+   ================================================== */
+
+.home-screen {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.home-topbar {
+  min-height: 76px;
+  padding: 20px 20px 8px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.home-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.home-brand > strong {
+  font-size: 22px;
+  line-height: 1;
+  letter-spacing: 0.3px;
+  color: #172238;
+}
+
+.home-brand > strong span {
+  color: var(--blue);
+}
+
+.home-brand-icon {
+  width: 34px;
+  height: 34px;
+
+  display: grid;
+  place-items: center;
+
+  color: var(--blue);
+
+  background: rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 12px;
+
+  box-shadow:
+    0 3px 10px rgba(40, 70, 120, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+.home-help {
+  width: 36px;
+  height: 36px;
+
+  display: grid;
+  place-items: center;
+
+  color: #53647b;
+}
+
+.home-main {
+  flex: 1;
+  padding: 25px 20px 20px;
+}
+
+.home-intro {
+  margin-bottom: 26px;
+}
+
+.home-intro > p {
+  margin-bottom: 6px;
+
+  font-size: 13px;
+  color: #7f8da3;
+}
+
+.home-intro h1 {
+  font-size: 28px;
+  line-height: 1.25;
+  color: #273a59;
+}
+
+.home-search {
+  min-height: 64px;
+}
+
+.home-search-caption {
+  margin-top: 14px;
+
+  display: flex;
+  align-items: center;
+  gap: 7px;
+
+  font-size: 11px;
+  color: #7f8da3;
+}
+
+.home-search-caption svg {
+  color: var(--blue);
+}
+
+.home-question-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  margin-top: 15px;
+}
+
+.home-question-chips button {
+  min-height: 34px;
+
+  padding: 7px 11px;
+
+  border: 1px solid rgba(255, 255, 255, 0.46);
+  border-radius: 10px;
+
+  background: rgba(255, 255, 255, 0.28);
+
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+
+  box-shadow:
+    0 3px 10px rgba(40, 70, 120, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+
+  font-size: 11px;
+  color: #5d6d83;
+}
+
+.home-section {
+  margin-top: 30px;
+}
+
+.home-section > h2 {
+  margin-bottom: 13px;
+
+  font-size: 18px;
+  color: #314662;
+}
+
+.home-event-card {
+  min-height: 95px;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+
+  padding: 18px;
+}
+
+.home-event-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.home-event-title strong {
+  font-size: 17px;
+  color: #354a69;
+}
+
+.home-event-status {
+  padding: 5px 9px;
+
+  border-radius: 999px;
+
+  background: rgba(64, 200, 140, 0.12);
+  color: #16845f;
+
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.home-event-card p {
+  margin-top: 8px;
+
+  font-size: 11px;
+  color: #718098;
+}
+
+.home-event-link {
+  align-self: flex-end;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.home-carousel-dots {
+  height: 20px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.home-carousel-dots span {
+  display: block;
+
+  width: 5px;
+  height: 5px;
+
+  border-radius: 999px;
+
+  background: rgba(40, 96, 237, 0.25);
+}
+
+.home-carousel-dots span.active {
+  width: 18px;
+
+  background: var(--blue);
+}
+
+.home-quick-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.home-quick-card {
+  min-height: 102px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  gap: 5px;
+
+  text-align: center;
+}
+
+.home-quick-icon {
+  width: 34px;
+  height: 34px;
+
+  display: grid;
+  place-items: center;
+
+  margin-bottom: 3px;
+
+  border-radius: 11px;
+
+  background: rgba(230, 240, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+
+  color: var(--blue);
+}
+
+.home-quick-card strong {
+  font-size: 13px;
+  color: #3b4c67;
+}
+
+.home-quick-card small {
+  font-size: 10px;
+  color: #8995a7;
+}
+
+.home-map-button {
+  margin-top: 12px;
+}
+
+.home-new-footer {
+  padding: 10px 20px 28px;
+
+  text-align: center;
+
+  font-size: 10px;
+  color: #9aa8ba;
 }
