@@ -214,7 +214,7 @@ function useCampusState() {
     return () => {
       cancelled = true;
     };
-    // Updating elevator in the URL must not repeat the intent request.
+    // URL의 elevator 값만 바꿀 때는 의도 분류 요청을 다시 보내지 않음
   }, [view, selectedQuery, selectedCategory]);
   function saveSession(s: Session) {
     if (s.id !== session?.id) {

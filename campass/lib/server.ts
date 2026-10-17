@@ -46,7 +46,7 @@ export function loginAdmin(
   const hash = (s: string) => createHash("sha256").update(s).digest();
   const key = `admin-login:${hash(address).toString("hex")}`;
   db.checkLoginLimit(key);
-  // Hash to fixed-size buffers and always compare both fields, including malformed input.
+  // 길이를 맞추려고 해시로 바꾼 뒤, 형식이 이상한 입력도 두 값을 항상 모두 비교
   const idMatches = timingSafeEqual(
     hash(typeof input.id === "string" ? input.id : ""),
     hash(id),
