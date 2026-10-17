@@ -1,5 +1,5 @@
 import { AppError, waypoints } from "./routing.ts";
-import { places, searchPlaces } from "./catalog.ts";
+import { places, searchPlaces, type Place } from "./catalog.ts";
 export type Candidate = {
   waypointId: string;
   confidence: number;
@@ -10,6 +10,48 @@ export type Recognition = {
   candidates: Candidate[];
   message: string;
 };
+export type Intent = "destination" | "condition" | "next";
+export type IntentResult = {
+  intent: Intent;
+  conditions: { elevator?: boolean };
+  places: Place[];
+  mode: "keyword" | "api";
+  message: string;
+};
+
+function extractConditions(query: string) {
+  const conditions: IntentResult["conditions"] = {};
+  // Only travel/need phrases consume elevator names; location questions stay searchable.
+  // If several conditions occur, the last matching phrase wins.
+  const searchQuery = query
+    .replace(
+      /(?:엘리베이터|승강기)\s*(?:[를가]\s*)?(?:타고|으로\s*가(?:고\s*싶어요|요)?|로\s*가(?:고\s*싶어요|요)?|이용(?:해서|해요)?|써서|필요(?:해요|해|합니다)?)|(?:휠체어|유모차|캐리어|(?<![가-힣])짐(?=이|을|은|도|\s|$|[.,!?]))(?:이라서|라서|이\s*있(?:어요|어서)|이\s*많(?:아요|아서))?|다리가\s*아파(?:요|서)?|계단\s*(?:을\s*)?(?:말고|없이|으로|타고|이용(?:해서|해요)?)/g,
+      (phrase) => {
+        conditions.elevator = !/^계단\s*(?:을\s*)?(?:으로|타고|이용)/.test(
+          phrase,
+        );
+        return " ";
+      },
+    )
+    .replace(/\s+/g, " ")
+    .trim();
+  return { conditions, searchQuery };
+}
+
+export function classifyIntent(query: string, matchedPlaces?: Place[]) {
+  const { conditions, searchQuery } = extractConditions(query);
+  // searchPlaces("") lists every place; a condition-only request must stay empty.
+  const candidates =
+    matchedPlaces ?? (searchQuery ? searchPlaces(searchQuery) : []);
+  const intent: Intent = candidates.length
+    ? "destination"
+    : conditions.elevator !== undefined
+      ? "condition"
+      : /여기서|다음에|이제\s*어디|어느\s*쪽|어디로\s*가야/.test(searchQuery)
+        ? "next"
+        : "destination";
+  return { intent, conditions, places: candidates };
+}
 type Config = {
   VISION_API_URL?: string;
   VISION_API_KEY?: string;
@@ -153,11 +195,12 @@ export async function recognizePhoto(
 export async function interpretIntent(
   query: string,
   config: Config = environment(),
-) {
-  if (!config.INTENT_API_URL)
+): Promise<IntentResult> {
+  const { searchQuery } = extractConditions(query);
+  if (!config.INTENT_API_URL || !searchQuery)
     return {
+      ...classifyIntent(query),
       mode: "keyword",
-      places: searchPlaces(query),
       message: "등록된 장소명과 검색어로 찾았어요.",
     };
   const raw = object(
@@ -165,7 +208,7 @@ export async function interpretIntent(
       config.INTENT_API_URL,
       config.INTENT_API_KEY,
       JSON.stringify({
-        query,
+        query: searchQuery,
         campusId: "seokyeong",
         places: places.map((p) => ({
           id: p.id,
@@ -190,10 +233,11 @@ export async function interpretIntent(
       "PROVIDER_INVALID",
     );
   return {
-    mode: "api",
-    places: [...new Set(raw.placeIds)].map((id) =>
-      places.find((p) => p.id === id)!,
+    ...classifyIntent(
+      query,
+      [...new Set(raw.placeIds)].map((id) => places.find((p) => p.id === id)!),
     ),
+    mode: "api",
     message: "목적지 후보를 확인해 주세요.",
   };
 }

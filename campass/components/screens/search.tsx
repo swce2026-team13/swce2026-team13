@@ -11,6 +11,8 @@ export default function Screen() {
     results,
     setResults,
     searchNote,
+    searchIntent,
+    elevator,
     classroomSelection,
     setClassroomSelection,
     classroomBuilding,
@@ -44,7 +46,15 @@ export default function Screen() {
             </button>
           </form>
           <p>{searchNote}</p>
-          {classroomBuilding && classroomSelection ? (
+          {searchIntent !== "destination" ? (
+            <Notice>
+              {searchIntent === "next"
+                ? "먼저 목적지를 알려 주세요."
+                : elevator
+                  ? "엘리베이터로 안내할게요. 어디로 가시나요?"
+                  : "계단으로 안내할게요. 어디로 가시나요?"}
+            </Notice>
+          ) : classroomBuilding && classroomSelection ? (
             <ClassroomPicker
               key={`${searchRevision}-${classroomBuilding.id}`}
               building={classroomBuilding}

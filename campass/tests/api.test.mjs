@@ -113,8 +113,47 @@ test("HTTP catalog and intent expose sources and honest keyword mode", async () 
     await request("intent", { query: "헤인관 면접" })
   ).json();
   assert.equal(intent.mode, "keyword");
+  assert.equal(intent.intent, "destination");
+  assert.deepEqual(intent.conditions, {});
   assert.equal(intent.places[0].id, "interview");
   assert.equal((await request("intent", { query: { bad: true } })).status, 400);
+});
+test("HTTP intent exposes destination, condition and next responses with travel conditions", async () => {
+  for (const [query, expectedIntent, conditions, firstPlace] of [
+    ["엘리베이터로 가고 싶어요", "condition", { elevator: true }, undefined],
+    ["엘리베이터 어디 있어요", "destination", {}, "elevator"],
+    [
+      "엘리베이터 타고 혜인관 5층",
+      "destination",
+      { elevator: true },
+      "interview",
+    ],
+    [
+      "계단으로 면접 보러 갈게요",
+      "destination",
+      { elevator: false },
+      "interview",
+    ],
+    [
+      "휠체어라서 엘리베이터 필요해요",
+      "condition",
+      { elevator: true },
+      undefined,
+    ],
+    ["계단 이용", "condition", { elevator: false }, undefined],
+    ["여기서 어디로 가요", "next", {}, undefined],
+    ["존재하지않는장소xyz", "destination", {}, undefined],
+  ]) {
+    const response = await request("intent", { query });
+    assert.equal(response.status, 200, query);
+    const result = await response.json();
+    assert.equal(result.intent, expectedIntent, query);
+    assert.deepEqual(result.conditions, conditions, query);
+    assert.equal(result.places[0]?.id, firstPlace, query);
+    if (!firstPlace) assert.deepEqual(result.places, [], query);
+    assert.equal(result.mode, "keyword");
+    assert.equal(typeof result.message, "string");
+  }
 });
 test("HTTP enforces origin, route availability, and typed inputs", async () => {
   assert.equal(
