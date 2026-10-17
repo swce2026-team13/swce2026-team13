@@ -23,6 +23,21 @@ npm run dev
 - 배포 프록시는 외부의 `X-Forwarded-For` 헤더를 신뢰하지 말고 실제 접속지로 덮어써야 합니다. 애플리케이션 서버 직접 접근은 차단해야 접속지별 제한을 우회할 수 없습니다.
 - 데이터는 기본적으로 `data/campass.sqlite`에 저장됩니다. 폴더와 `.env.local`은 Git에서 제외합니다.
 
+## 환경변수
+
+`.env.example`을 `.env.local`로 복사해 값을 채웁니다. 모든 값은 서버에서만 읽으며 `NEXT_PUBLIC_` 접두사를 쓰지 않습니다.
+
+| 이름 | 설명 |
+| --- | --- |
+| `DATABASE_PATH` | SQLite 파일 경로 (기본 `./data/campass.sqlite`) |
+| `ADMIN_ID`, `ADMIN_PASSWORD` | 관리자 아이디와 12자 이상 비밀번호 |
+| `APP_ORIGIN` | 프로덕션 공개 주소 |
+| `VISION_API_URL`, `VISION_API_KEY` | 사진 위치 인식 API (비우면 직접 선택) |
+| `INTENT_API_URL`, `INTENT_API_KEY` | 외부 목적지 해석 API (비우면 키워드 검색) |
+| `GEMINI_API_KEY`, `GEMINI_MODEL` | 자연어 질문 Gemini 보완. 두 값이 모두 있어야 사용합니다. `GEMINI_MODEL`에는 Flash-Lite 계열 모델 이름을 넣습니다. |
+
+Gemini는 규칙으로 장소·이동 조건·다음 이동을 찾지 못한 질문에만 호출됩니다. 사용자 문장과 장소 목록(id·이름·별칭·건물·층)만 보내고, 등록된 장소 id만 최대 5개 사용합니다. 규칙이 찾은 조건이 우선입니다. 3초 안에 응답하지 않거나 오류·한도 초과(429)·잘못된 JSON이면 키워드 검색 결과로 응답합니다. Gemini 결과를 쓰면 `/api/intent` 응답의 `mode`가 `"llm"`입니다.
+
 ## 검사와 배포용 실행
 
 ```powershell

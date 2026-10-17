@@ -1,4 +1,4 @@
-import test from "node:test";
+import test, { mock } from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { recognizePhoto, interpretIntent } from "../lib/providers.ts";
@@ -326,6 +326,177 @@ test("intent does not call the destination API when conditions leave an empty qu
   assert.deepEqual(result.conditions, { elevator: false });
   assert.deepEqual(result.places, []);
 });
+const gemini = { GEMINI_API_KEY: "test-key", GEMINI_MODEL: "test-model" };
+const unresolved = "학생들 시험 보는 곳 알려줘";
+function fakeGemini(reply: (signal: AbortSignal) => Promise<string>) {
+  const calls: string[] = [];
+  const ask = async (query: string, _config: unknown, signal: AbortSignal) => {
+    calls.push(query);
+    return reply(signal);
+  };
+  return { ask, calls };
+}
+const reply = (value: unknown) => async () => JSON.stringify(value);
+// Gemini status logs are silenced here and checked in their own test.
+const warn = mock.method(console, "warn", () => {});
+const info = mock.method(console, "info", () => {});
+function logs(run: () => Promise<unknown>) {
+  warn.mock.resetCalls();
+  info.mock.resetCalls();
+  return run().then(() =>
+    [...warn.mock.calls, ...info.mock.calls].map((call) => call.arguments.join(" ")),
+  );
+}
+
+test("Gemini status logs give only the reason, never the key or the sentence", async () => {
+  const cases: [Parameters<typeof interpretIntent>[1], (signal: AbortSignal) => Promise<string>, string][] = [
+    [{ GEMINI_MODEL: "test-model" }, reply({}), "[gemini] 건너뜀: GEMINI_API_KEY 없음"],
+    [{ GEMINI_API_KEY: "test-key" }, reply({}), "[gemini] 건너뜀: GEMINI_MODEL 없음"],
+    [gemini, () => new Promise<string>(() => {}), "[gemini] 키워드 검색으로 대체: timeout"],
+    ...[400, 401, 403, 404, 429].map((status) => [
+      gemini,
+      async () => {
+        throw Object.assign(new Error(`${unresolved} test-key`), { status });
+      },
+      `[gemini] 키워드 검색으로 대체: HTTP ${status}`,
+    ] as [typeof gemini, () => Promise<string>, string]),
+    [gemini, async () => "not json", "[gemini] 키워드 검색으로 대체: JSON 파싱 실패"],
+    [gemini, async () => "[]", "[gemini] 키워드 검색으로 대체: JSON 형식 오류"],
+    [gemini, async () => { throw new Error("fetch failed"); }, "[gemini] 키워드 검색으로 대체: fetch failed"],
+    [gemini, reply({ intent: "destination", placeIds: ["invented"], elevator: null }), "[gemini] 응답은 왔지만 장소 없음"],
+  ];
+  for (const [config, answer, expected] of cases) {
+    const { ask } = fakeGemini(answer);
+    const lines = await logs(() => interpretIntent(unresolved, config, ask, 20));
+    assert.deepEqual(lines, [expected]);
+    assert.ok(lines.every((line) => !line.includes("test-key") && !line.includes(unresolved)));
+  }
+  const { ask } = fakeGemini(reply({ intent: "destination", placeIds: ["hyein-301"], elevator: null }));
+  assert.deepEqual(await logs(() => interpretIntent(unresolved, gemini, ask)), []);
+  assert.deepEqual(await logs(() => interpretIntent("면접 보러 왔어요", {}, ask)), []);
+});
+
+test("Gemini is not called for sentences the rules already resolve", async () => {
+  const { ask, calls } = fakeGemini(
+    reply({ intent: "destination", placeIds: ["hyein-301"], elevator: null }),
+  );
+  for (const query of ["엘리베이터로 갈래요", "면접 보러 왔어요", "여기서 어디로 가요"]) {
+    const result = await interpretIntent(query, gemini, ask);
+    assert.equal(result.mode, "keyword", query);
+    assert.deepEqual(result, {
+      ...providers.classifyIntent(query),
+      mode: "keyword",
+      message: result.message,
+    });
+  }
+  assert.deepEqual(calls, []);
+});
+
+test("Gemini fills unresolved destinations with registered places only", async () => {
+  assert.deepEqual(providers.classifyIntent(unresolved), {
+    intent: "destination", conditions: {}, places: [],
+  });
+  const found = fakeGemini(
+    reply({ intent: "destination", placeIds: ["hyein-301"], elevator: null }),
+  );
+  const result = await interpretIntent(unresolved, gemini, found.ask);
+  assert.deepEqual(found.calls, [unresolved]);
+  assert.equal(result.mode, "llm");
+  assert.equal(result.intent, "destination");
+  assert.deepEqual(result.conditions, {});
+  assert.deepEqual(result.places.map((place) => place.id), ["hyein-301"]);
+
+  const mixed = fakeGemini(
+    reply({
+      intent: "destination",
+      placeIds: ["invented", "hyein-301", "hyein-301", "hallucinated"],
+      elevator: null,
+    }),
+  );
+  const filtered = await interpretIntent(unresolved, gemini, mixed.ask);
+  assert.equal(filtered.mode, "llm");
+  assert.deepEqual(filtered.places.map((place) => place.id), ["hyein-301"]);
+
+  const many = fakeGemini(
+    reply({ intent: "destination", placeIds: places.map((p) => p.id), elevator: null }),
+  );
+  assert.equal((await interpretIntent(unresolved, gemini, many.ask)).places.length, 5);
+
+  const invented = fakeGemini(
+    reply({ intent: "destination", placeIds: ["invented"], elevator: null }),
+  );
+  const fallback = await interpretIntent(unresolved, gemini, invented.ask);
+  assert.equal(fallback.mode, "keyword");
+  assert.deepEqual(fallback.places, []);
+});
+
+test("Gemini intent and elevator are validated before use", async () => {
+  const travel = fakeGemini(
+    reply({ intent: "weird", placeIds: ["elevator", "interview"], elevator: true }),
+  );
+  const result = await interpretIntent(unresolved, gemini, travel.ask);
+  assert.equal(result.mode, "llm");
+  assert.equal(result.intent, "destination");
+  assert.deepEqual(result.conditions, { elevator: true });
+  assert.deepEqual(result.places.map((place) => place.id), ["interview"]);
+
+  const next = fakeGemini(reply({ intent: "next", placeIds: [], elevator: null }));
+  const moving = await interpretIntent("이 다음은요", gemini, next.ask);
+  assert.equal(moving.mode, "llm");
+  assert.equal(moving.intent, "next");
+  assert.deepEqual(moving.places, []);
+});
+
+test("Gemini timeouts, errors, quota limits and malformed JSON fall back to keyword search", async () => {
+  const keyword = await interpretIntent(unresolved, {});
+  const failures = [
+    (signal: AbortSignal) =>
+      new Promise<string>((_, reject) =>
+        signal.addEventListener("abort", () => reject(new Error("aborted"))),
+      ),
+    () => new Promise<string>(() => {}),
+    async () => {
+      throw new Error("network");
+    },
+    async () => {
+      throw Object.assign(new Error("RESOURCE_EXHAUSTED"), { status: 429 });
+    },
+    async () => "not json",
+    async () => "[]",
+    async () => "",
+    async () => JSON.stringify({ intent: "weird", placeIds: "hyein-301", elevator: "yes" }),
+  ];
+  for (const failure of failures) {
+    const { ask, calls } = fakeGemini(failure);
+    const result = await interpretIntent(unresolved, gemini, ask, 20);
+    assert.equal(calls.length, 1);
+    assert.deepEqual(result, keyword);
+  }
+  let aborted = false;
+  const { ask } = fakeGemini(
+    (signal) =>
+      new Promise<string>(() => {
+        signal.addEventListener("abort", () => {
+          aborted = true;
+        });
+      }),
+  );
+  await interpretIntent(unresolved, gemini, ask, 20);
+  assert.ok(aborted);
+});
+
+test("Gemini is not called without an API key", async () => {
+  const { ask, calls } = fakeGemini(
+    reply({ intent: "destination", placeIds: ["hyein-301"], elevator: null }),
+  );
+  for (const config of [{}, { GEMINI_MODEL: "test-model" }, { GEMINI_API_KEY: "" }]) {
+    const result = await interpretIntent(unresolved, config, ask);
+    assert.equal(result.mode, "keyword");
+    assert.deepEqual(result.places, []);
+  }
+  assert.deepEqual(calls, []);
+});
+
 test("vision adapter rejects provider identifiers not present in the route graph", async () => {
   await fixture(
     {

@@ -52,7 +52,7 @@ async function handle(request: NextRequest) {
     };
     if (method === "POST" && parts.join("/") === "admin/login") {
       const body = await readJson(request);
-      // The deployment proxy must overwrite X-Forwarded-For with the real client IP.
+      // 배포 프록시가 X-Forwarded-For를 실제 접속 IP로 덮어써야 함
       const address =
         request.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim() ||
         "unknown";

@@ -1,5 +1,6 @@
 import { AppError, waypoints } from "./routing.ts";
 import { places, searchPlaces, type Place } from "./catalog.ts";
+import { askGemini, type AskGemini, type GeminiConfig } from "./gemini.ts";
 export type Candidate = {
   waypointId: string;
   confidence: number;
@@ -15,16 +16,16 @@ export type IntentResult = {
   intent: Intent;
   conditions: { elevator?: boolean };
   places: Place[];
-  mode: "keyword" | "api";
+  mode: "keyword" | "api" | "llm";
   message: string;
 };
 
 function extractConditions(query: string) {
   const conditions: IntentResult["conditions"] = {};
-  // Only travel/need phrases consume elevator names; location questions stay searchable.
-  // "엘리베이터로" is travel unless the sentence asks where it is or points near it.
-  // "엘리베이터 말고" is dropped without a condition; the stairs phrase after it decides.
-  // If several conditions occur, the last matching phrase wins.
+  // 이동 조건 표현만 조건으로 처리하고, 위치를 묻는 말은 검색어로 남김
+  // '엘리베이터로'는 이동 조건. 단, 위치를 묻거나 앞·쪽·근처가 붙으면 시설 찾기
+  // '엘리베이터 말고'는 검색어에서만 빼고, 켜고 끄는 건 뒤의 계단 표현으로 정함
+  // 조건 표현이 여러 개면 마지막 표현 기준
   const facility = /어디|찾|위치|(?:엘리베이터|승강기)\s*(?:앞|쪽|근처)/.test(
     query,
   );
@@ -48,8 +49,8 @@ function extractConditions(query: string) {
 
 export function classifyIntent(query: string, matchedPlaces?: Place[]) {
   const { conditions, searchQuery } = extractConditions(query);
-  // searchPlaces("") lists every place; a condition-only request must stay empty.
-  // A travel condition already covers the elevator, so it is not a destination too.
+  // searchPlaces('')는 전체 장소를 돌려주므로 조건만 말한 경우엔 빈 결과로 둠
+  // 엘리베이터 조건이 있으면 엘리베이터 시설은 목적지에서 뺌
   const candidates = (
     matchedPlaces ?? (searchQuery ? searchPlaces(searchQuery) : [])
   ).filter((p) => conditions.elevator === undefined || p.id !== "elevator");
@@ -67,13 +68,15 @@ type Config = {
   VISION_API_KEY?: string;
   INTENT_API_URL?: string;
   INTENT_API_KEY?: string;
-};
+} & GeminiConfig;
 function environment(): Config {
   return {
     VISION_API_URL: process.env.VISION_API_URL,
     VISION_API_KEY: process.env.VISION_API_KEY,
     INTENT_API_URL: process.env.INTENT_API_URL,
     INTENT_API_KEY: process.env.INTENT_API_KEY,
+    GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+    GEMINI_MODEL: process.env.GEMINI_MODEL,
   };
 }
 function object(value: unknown): Record<string, unknown> {
@@ -202,17 +205,118 @@ export async function recognizePhoto(
       : "등록 사진과 비교할 단서가 부족해요. 다시 촬영하거나 직접 선택해 주세요.",
   };
 }
+// 규칙이 못 찾은 경우만 Gemini로 보완. 규칙의 조건과 등록 장소가 우선
+async function complementWithGemini(
+  query: string,
+  keyword: IntentResult,
+  config: Config,
+  ask: AskGemini,
+  timeoutMs: number,
+): Promise<IntentResult> {
+  const controller = new AbortController();
+  const timeout = new Error("timeout");
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let raw: Record<string, unknown>;
+  try {
+    const text = await Promise.race([
+      ask(query, config, controller.signal),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          controller.abort();
+          reject(timeout);
+        }, timeoutMs);
+      }),
+    ]);
+    raw = object(JSON.parse(text));
+  } catch (e) {
+    // 오류·한도 초과(429)·타임아웃·잘못된 JSON이면 키워드 결과 유지
+    // 로그에는 이유만 남기고 API 키와 사용자 문장은 남기지 않음
+    const status = (e as { status?: unknown } | null)?.status;
+    console.warn(
+      "[gemini] 키워드 검색으로 대체:",
+      e === timeout
+        ? "timeout"
+        : e instanceof SyntaxError
+          ? "JSON 파싱 실패"
+          : e instanceof AppError
+            ? "JSON 형식 오류"
+            : typeof status === "number"
+              ? `HTTP ${status}`
+              : e instanceof Error
+                ? e.message.slice(0, 200)
+                : "알 수 없는 오류",
+    );
+    return keyword;
+  } finally {
+    clearTimeout(timer);
+  }
+  const conditions = {
+    ...(typeof raw.elevator === "boolean" ? { elevator: raw.elevator } : {}),
+    ...keyword.conditions,
+  };
+  const ids = Array.isArray(raw.placeIds) ? raw.placeIds : [];
+  const matched = [...new Set(ids)]
+    .map((id) => places.find((p) => p.id === id))
+    .filter(
+      (p): p is Place =>
+        !!p && (conditions.elevator === undefined || p.id !== "elevator"),
+    )
+    .slice(0, 5);
+  const intent = (["destination", "condition", "next"] as const).find(
+    (value) => value === raw.intent,
+  );
+  const derived: Intent = matched.length
+    ? "destination"
+    : conditions.elevator !== undefined
+      ? "condition"
+      : keyword.intent;
+  const result: Intent =
+    intent === "condition" && conditions.elevator === undefined
+      ? derived
+      : (intent ?? derived);
+  if (
+    !matched.length &&
+    conditions.elevator === undefined &&
+    result === keyword.intent
+  ) {
+    console.info("[gemini] 응답은 왔지만 장소 없음");
+    return keyword;
+  }
+  return {
+    intent: result,
+    conditions,
+    places: matched,
+    mode: "llm",
+    message: "질문 뜻을 해석해 찾았어요. 맞는지 확인해 주세요.",
+  };
+}
+
 export async function interpretIntent(
   query: string,
   config: Config = environment(),
+  ask: AskGemini = askGemini,
+  timeoutMs = 3000,
 ): Promise<IntentResult> {
   const { searchQuery } = extractConditions(query);
-  if (!config.INTENT_API_URL || !searchQuery)
-    return {
+  if (!config.INTENT_API_URL || !searchQuery) {
+    const keyword: IntentResult = {
       ...classifyIntent(query),
       mode: "keyword",
       message: "등록된 장소명과 검색어로 찾았어요.",
     };
+    const unresolved =
+      keyword.intent === "destination" &&
+      !keyword.places.length &&
+      keyword.conditions.elevator === undefined;
+    if (!unresolved || !searchQuery) return keyword;
+    if (!config.GEMINI_API_KEY || !config.GEMINI_MODEL) {
+      console.warn(
+        `[gemini] 건너뜀: ${config.GEMINI_API_KEY ? "GEMINI_MODEL" : "GEMINI_API_KEY"} 없음`,
+      );
+      return keyword;
+    }
+    return complementWithGemini(query, keyword, config, ask, timeoutMs);
+  }
   const raw = object(
     await provider(
       config.INTENT_API_URL,

@@ -1,22 +1,22 @@
-# Dependencies and generated output
+# 의존성·빌드 결과물
 node_modules/
 .next/
 out/
 coverage/
 *.tsbuildinfo
 
-# Local secrets (share only the placeholder template)
+# 로컬 비밀 값 (예시 파일만 공유)
 .env*
 !.env.example
 
-# Local application data
+# 로컬 앱 데이터
 /campass/data/
 *.log
 
-# Personal Obsidian settings, cache, and plugins
+# 개인 Obsidian 설정
 .obsidian/
 
-# OS files
+# OS 파일
 .DS_Store
 Thumbs.db
 
