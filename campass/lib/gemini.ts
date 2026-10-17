@@ -1,6 +1,6 @@
 import { places } from "./catalog.ts";
 
-// Server-only: reads GEMINI_API_KEY. Client code may import types from providers.ts only.
+// 서버 전용(GEMINI_API_KEY 사용). 화면 코드에서는 providers.ts의 타입만 가져다 씀
 export type GeminiConfig = { GEMINI_API_KEY?: string; GEMINI_MODEL?: string };
 export type AskGemini = (
   query: string,
@@ -33,7 +33,7 @@ const schema = {
   required: ["intent", "placeIds", "elevator"],
 };
 
-// Sends only the user's sentence; the catalog lives in the system instruction.
+// 사용자 문장만 보내고, 장소 목록은 시스템 지시에 넣어 둠
 export const askGemini: AskGemini = async (query, config, signal) => {
   const { GoogleGenAI } = await import("@google/genai");
   const ai = new GoogleGenAI({ apiKey: config.GEMINI_API_KEY });

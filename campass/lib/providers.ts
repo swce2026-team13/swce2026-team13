@@ -22,10 +22,10 @@ export type IntentResult = {
 
 function extractConditions(query: string) {
   const conditions: IntentResult["conditions"] = {};
-  // Only travel/need phrases consume elevator names; location questions stay searchable.
-  // "엘리베이터로" is travel unless the sentence asks where it is or points near it.
-  // "엘리베이터 말고" is dropped without a condition; the stairs phrase after it decides.
-  // If several conditions occur, the last matching phrase wins.
+  // 이동 조건 표현만 조건으로 처리하고, 위치를 묻는 말은 검색어로 남김
+  // '엘리베이터로'는 이동 조건. 단, 위치를 묻거나 앞·쪽·근처가 붙으면 시설 찾기
+  // '엘리베이터 말고'는 검색어에서만 빼고, 켜고 끄는 건 뒤의 계단 표현으로 정함
+  // 조건 표현이 여러 개면 마지막 표현 기준
   const facility = /어디|찾|위치|(?:엘리베이터|승강기)\s*(?:앞|쪽|근처)/.test(
     query,
   );
@@ -49,8 +49,8 @@ function extractConditions(query: string) {
 
 export function classifyIntent(query: string, matchedPlaces?: Place[]) {
   const { conditions, searchQuery } = extractConditions(query);
-  // searchPlaces("") lists every place; a condition-only request must stay empty.
-  // A travel condition already covers the elevator, so it is not a destination too.
+  // searchPlaces('')는 전체 장소를 돌려주므로 조건만 말한 경우엔 빈 결과로 둠
+  // 엘리베이터 조건이 있으면 엘리베이터 시설은 목적지에서 뺌
   const candidates = (
     matchedPlaces ?? (searchQuery ? searchPlaces(searchQuery) : [])
   ).filter((p) => conditions.elevator === undefined || p.id !== "elevator");
@@ -205,7 +205,7 @@ export async function recognizePhoto(
       : "등록 사진과 비교할 단서가 부족해요. 다시 촬영하거나 직접 선택해 주세요.",
   };
 }
-// Gemini only fills the gap the rules leave; rule conditions and the catalog always win.
+// 규칙이 못 찾은 경우만 Gemini로 보완. 규칙의 조건과 등록 장소가 우선
 async function complementWithGemini(
   query: string,
   keyword: IntentResult,
@@ -229,8 +229,8 @@ async function complementWithGemini(
     ]);
     raw = object(JSON.parse(text));
   } catch (e) {
-    // Errors, 429 quota limits, timeouts and malformed JSON keep the keyword answer.
-    // Log only the reason: never the API key or the user's sentence.
+    // 오류·한도 초과(429)·타임아웃·잘못된 JSON이면 키워드 결과 유지
+    // 로그에는 이유만 남기고 API 키와 사용자 문장은 남기지 않음
     const status = (e as { status?: unknown } | null)?.status;
     console.warn(
       "[gemini] 키워드 검색으로 대체:",
