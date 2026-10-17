@@ -214,6 +214,7 @@ async function complementWithGemini(
   timeoutMs: number,
 ): Promise<IntentResult> {
   const controller = new AbortController();
+  const timeout = new Error("timeout");
   let timer: ReturnType<typeof setTimeout> | undefined;
   let raw: Record<string, unknown>;
   try {
@@ -222,13 +223,29 @@ async function complementWithGemini(
       new Promise<never>((_, reject) => {
         timer = setTimeout(() => {
           controller.abort();
-          reject(new Error("Gemini timeout"));
+          reject(timeout);
         }, timeoutMs);
       }),
     ]);
     raw = object(JSON.parse(text));
-  } catch {
+  } catch (e) {
     // Errors, 429 quota limits, timeouts and malformed JSON keep the keyword answer.
+    // Log only the reason: never the API key or the user's sentence.
+    const status = (e as { status?: unknown } | null)?.status;
+    console.warn(
+      "[gemini] 키워드 검색으로 대체:",
+      e === timeout
+        ? "timeout"
+        : e instanceof SyntaxError
+          ? "JSON 파싱 실패"
+          : e instanceof AppError
+            ? "JSON 형식 오류"
+            : typeof status === "number"
+              ? `HTTP ${status}`
+              : e instanceof Error
+                ? e.message.slice(0, 200)
+                : "알 수 없는 오류",
+    );
     return keyword;
   } finally {
     clearTimeout(timer);
@@ -261,8 +278,10 @@ async function complementWithGemini(
     !matched.length &&
     conditions.elevator === undefined &&
     result === keyword.intent
-  )
+  ) {
+    console.info("[gemini] 응답은 왔지만 장소 없음");
     return keyword;
+  }
   return {
     intent: result,
     conditions,
@@ -289,12 +308,14 @@ export async function interpretIntent(
       keyword.intent === "destination" &&
       !keyword.places.length &&
       keyword.conditions.elevator === undefined;
-    return unresolved &&
-      searchQuery &&
-      config.GEMINI_API_KEY &&
-      config.GEMINI_MODEL
-      ? complementWithGemini(query, keyword, config, ask, timeoutMs)
-      : keyword;
+    if (!unresolved || !searchQuery) return keyword;
+    if (!config.GEMINI_API_KEY || !config.GEMINI_MODEL) {
+      console.warn(
+        `[gemini] 건너뜀: ${config.GEMINI_API_KEY ? "GEMINI_MODEL" : "GEMINI_API_KEY"} 없음`,
+      );
+      return keyword;
+    }
+    return complementWithGemini(query, keyword, config, ask, timeoutMs);
   }
   const raw = object(
     await provider(

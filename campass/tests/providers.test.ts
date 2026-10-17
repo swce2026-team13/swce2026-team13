@@ -1,4 +1,4 @@
-import test from "node:test";
+import test, { mock } from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { recognizePhoto, interpretIntent } from "../lib/providers.ts";
@@ -337,6 +337,44 @@ function fakeGemini(reply: (signal: AbortSignal) => Promise<string>) {
   return { ask, calls };
 }
 const reply = (value: unknown) => async () => JSON.stringify(value);
+// Gemini status logs are silenced here and checked in their own test.
+const warn = mock.method(console, "warn", () => {});
+const info = mock.method(console, "info", () => {});
+function logs(run: () => Promise<unknown>) {
+  warn.mock.resetCalls();
+  info.mock.resetCalls();
+  return run().then(() =>
+    [...warn.mock.calls, ...info.mock.calls].map((call) => call.arguments.join(" ")),
+  );
+}
+
+test("Gemini status logs give only the reason, never the key or the sentence", async () => {
+  const cases: [Parameters<typeof interpretIntent>[1], (signal: AbortSignal) => Promise<string>, string][] = [
+    [{ GEMINI_MODEL: "test-model" }, reply({}), "[gemini] 건너뜀: GEMINI_API_KEY 없음"],
+    [{ GEMINI_API_KEY: "test-key" }, reply({}), "[gemini] 건너뜀: GEMINI_MODEL 없음"],
+    [gemini, () => new Promise<string>(() => {}), "[gemini] 키워드 검색으로 대체: timeout"],
+    ...[400, 401, 403, 404, 429].map((status) => [
+      gemini,
+      async () => {
+        throw Object.assign(new Error(`${unresolved} test-key`), { status });
+      },
+      `[gemini] 키워드 검색으로 대체: HTTP ${status}`,
+    ] as [typeof gemini, () => Promise<string>, string]),
+    [gemini, async () => "not json", "[gemini] 키워드 검색으로 대체: JSON 파싱 실패"],
+    [gemini, async () => "[]", "[gemini] 키워드 검색으로 대체: JSON 형식 오류"],
+    [gemini, async () => { throw new Error("fetch failed"); }, "[gemini] 키워드 검색으로 대체: fetch failed"],
+    [gemini, reply({ intent: "destination", placeIds: ["invented"], elevator: null }), "[gemini] 응답은 왔지만 장소 없음"],
+  ];
+  for (const [config, answer, expected] of cases) {
+    const { ask } = fakeGemini(answer);
+    const lines = await logs(() => interpretIntent(unresolved, config, ask, 20));
+    assert.deepEqual(lines, [expected]);
+    assert.ok(lines.every((line) => !line.includes("test-key") && !line.includes(unresolved)));
+  }
+  const { ask } = fakeGemini(reply({ intent: "destination", placeIds: ["hyein-301"], elevator: null }));
+  assert.deepEqual(await logs(() => interpretIntent(unresolved, gemini, ask)), []);
+  assert.deepEqual(await logs(() => interpretIntent("면접 보러 왔어요", {}, ask)), []);
+});
 
 test("Gemini is not called for sentences the rules already resolve", async () => {
   const { ask, calls } = fakeGemini(
