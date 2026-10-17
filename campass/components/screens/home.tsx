@@ -1,138 +1,191 @@
 "use client";
+
 import {
   ArrowRight,
   Building2,
-  CalendarDays,
-  ChevronRight,
-  DoorOpen,
+  CircleHelp,
+  Coffee,
+  Compass,
   Map,
+  MessageSquareText,
   Navigation,
-  Presentation,
-  Search,
-  Sparkles,
 } from "lucide-react";
-import { Tag } from "@/components/ui";
+
 import { useCampus } from "@/components/campus-provider";
+
 export default function Screen() {
   const { query, setQuery, session, busy, ready, go, search } = useCampus();
+
   return (
-    <>
-      {
-        <>
-          <section className="hero">
-            <Tag>처음 방문해도, 사진을 따라 차근차근</Tag>
-            <h1>어디로 가시나요?</h1>
-            <p>목적지를 검색하거나 편하게 말해보세요</p>
-            <form
-              className="search-box"
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (query.trim()) search();
-              }}
+    <div className="home-screen">
+      {/* 상단 로고 */}
+      <header className="home-topbar">
+        <div className="home-brand">
+          <span className="home-brand-icon">
+            <Compass size={20} />
+          </span>
+
+          <strong>
+            CAM<span>PASS</span>
+          </strong>
+        </div>
+
+        <button
+          className="home-help"
+          aria-label="도움말"
+          onClick={() => go("help")}
+        >
+          <CircleHelp size={21} />
+        </button>
+      </header>
+
+      <main className="home-main">
+        {/* 제목 */}
+        <section className="home-intro">
+          <p>처음 가는 길도 헤매지 않게</p>
+          <h1>어디로 가시나요?</h1>
+        </section>
+
+        {/* 검색창 */}
+        <form
+          className="search-box glass-card home-search"
+          onSubmit={(e) => {
+            e.preventDefault();
+
+            if (query.trim()) {
+              search();
+            }
+          }}
+        >
+          <MessageSquareText size={19} />
+
+          <input
+            aria-label="목적지 검색"
+            placeholder="예: 혜인관 면접 대기실로 가고 싶어요"
+            value={query}
+            maxLength={200}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+
+          <button
+            aria-label="목적지 찾기"
+            disabled={busy || !ready || !query.trim()}
+          >
+            <ArrowRight />
+          </button>
+        </form>
+
+        {/* 검색 설명 */}
+        <div className="home-search-caption">
+          <MessageSquareText size={14} />
+          <span>건물·강의실을 검색하거나 목적지를 말해보세요</span>
+        </div>
+
+        {/* 추천 질문 */}
+        <div className="home-question-chips">
+          <button
+            disabled={busy || !ready}
+            onClick={() => search("엘리베이터로 갈래요")}
+          >
+            엘리베이터로 갈래요
+          </button>
+
+          <button
+            disabled={busy || !ready}
+            onClick={() => search("혜인관 301호 어디예요?")}
+          >
+            혜인관 301호 어디예요?
+          </button>
+        </div>
+
+        {/* 오늘의 행사 */}
+        <section className="home-section">
+          <h2>오늘의 행사</h2>
+
+          <div className="home-event-card card">
+            <div>
+              <div className="home-event-title">
+                <strong>2026 수시 면접</strong>
+                <span className="home-event-status">진행 중</span>
+              </div>
+
+              <p>혜인관 5층 · 09:00–17:00</p>
+            </div>
+
+            <button
+              className="home-event-link"
+              disabled={busy || !ready}
+              onClick={() => search("면접 보러 왔어요")}
             >
-              <Search size={22} />
-              <input
-                aria-label="목적지 검색"
-                placeholder="예: 혜인관 면접 대기실로 가고 싶어요"
-                value={query}
-                maxLength={200}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-              <button
-                aria-label="목적지 찾기"
-                disabled={busy || !ready || !query.trim()}
-              >
-                <ArrowRight />
-              </button>
-            </form>
-            <div className="search-caption">
-              <Sparkles size={16} />
-              <span>목적지 찾기 · 말 속에서 등록된 장소를 찾아요</span>
-            </div>
-            <div className="chips">
-              {[
-                "면접 보러 왔어요",
-                "혜인관 5층으로 가고 싶어요",
-                "엘리베이터로 가고 싶어요",
-              ].map((t) => (
-                <button
-                  key={t}
-                  disabled={busy || !ready}
-                  onClick={() => search(t)}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-          </section>
-          <section className="content home-content">
-            <h3>어디를 찾고 계신가요?</h3>
-            <div className="category-grid">
-              {[
-                {
-                  name: "행사",
-                  sub: "면접·행사 장소",
-                  icon: CalendarDays,
-                  id: "event",
-                },
-                {
-                  name: "강의실",
-                  sub: "강의실·호실 찾기",
-                  icon: Presentation,
-                  id: "classroom",
-                },
-                {
-                  name: "시설",
-                  sub: "엘리베이터·편의시설",
-                  icon: DoorOpen,
-                  id: "facility",
-                },
-                {
-                  name: "건물",
-                  sub: "캠퍼스 건물 안내",
-                  icon: Building2,
-                  id: "building",
-                },
-              ].map((c) => (
-                <button
-                  className="category card"
-                  key={c.id}
-                  disabled={busy || !ready}
-                  onClick={() => search("", c.id)}
-                >
-                  <span>
-                    <c.icon size={23} />
-                    <b>{c.name}</b>
-                  </span>
-                  <small>{c.sub}</small>
-                </button>
-              ))}
-            </div>
-            <button className="button secondary" onClick={() => go("map")}>
-              <Map size={20} />
-              캠퍼스 지도 보기
-              <ChevronRight size={18} />
+              길찾기 <ArrowRight size={15} />
             </button>
-            {session && (
-              <button
-                className="button secondary"
-                onClick={() =>
-                  go(session.status === "completed" ? "arrival" : "guide")
-                }
-              >
-                <Navigation size={18} />
-                {session.status === "completed"
-                  ? "최근 안내·피드백 보기"
-                  : "이전 안내 이어가기"}
-              </button>
-            )}
-            <div className="home-footer">
-              <span>서경대학교 · CAMPASS</span>
-              <button onClick={() => go("admin")}>관리자</button>
-            </div>
-          </section>
-        </>
-      }
-    </>
+          </div>
+
+          <div className="home-carousel-dots" aria-hidden="true">
+            <span className="active" />
+            <span />
+          </div>
+        </section>
+
+        {/* 바로 찾기 */}
+        <section className="home-section">
+          <h2>바로 찾기</h2>
+
+          <div className="home-quick-grid">
+            <button
+              className="home-quick-card card"
+              disabled={busy || !ready}
+              onClick={() => search("", "classroom")}
+            >
+              <span className="home-quick-icon">
+                <Building2 size={22} />
+              </span>
+
+              <strong>건물·강의실</strong>
+              <small>건물 → 층 → 호실</small>
+            </button>
+
+            <button
+              className="home-quick-card card"
+              disabled={busy || !ready}
+              onClick={() => search("", "facility")}
+            >
+              <span className="home-quick-icon">
+                <Coffee size={22} />
+              </span>
+
+              <strong>편의시설</strong>
+              <small>카페 · 편의점 · 식당</small>
+            </button>
+          </div>
+
+          <button
+            className="button secondary home-map-button"
+            onClick={() => go("map")}
+          >
+            <Map size={20} />
+            지도에서 고르기
+          </button>
+
+          {session && (
+            <button
+              className="button secondary"
+              onClick={() =>
+                go(session.status === "completed" ? "arrival" : "guide")
+              }
+            >
+              <Navigation size={18} />
+              {session.status === "completed"
+                ? "최근 안내·피드백 보기"
+                : "이전 안내 이어가기"}
+            </button>
+          )}
+        </section>
+      </main>
+
+      <footer className="home-new-footer">
+        © 2026 서경대학교 · CAMPASS
+      </footer>
+    </div>
   );
 }

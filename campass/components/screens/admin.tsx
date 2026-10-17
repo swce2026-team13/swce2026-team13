@@ -38,8 +38,8 @@ export default function Screen() {
           </p>
           {!insight ? (
             <form
-              className="card stack"
-              onSubmit={(e) => {
+               className="card stack admin-login-card"
+               onSubmit={(e) => {
                 e.preventDefault();
                 run(async () => {
                   authRevision.current++;
@@ -52,9 +52,12 @@ export default function Screen() {
                 });
               }}
             >
-              <ShieldCheck className="blue-text" />
-              <h3>관리자 인증</h3>
-              <label className="field-label">
+              <div className="admin-login-heading">
+                <ShieldCheck className="blue-text" />
+                <h3>관리자 인증</h3>
+                <p>관리자 계정으로 로그인해 주세요.</p>
+              </div>
+              <label className="field-label admin-login-field">
                 아이디
                 <input
                   autoComplete="username"
@@ -64,7 +67,7 @@ export default function Screen() {
                   required
                 />
               </label>
-              <label className="field-label">
+              <label className="field-label admin-login-field">
                 비밀번호
                 <input
                   type="password"
