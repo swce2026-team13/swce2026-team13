@@ -52,6 +52,48 @@ test("vision adapter accepts the documented HTTP contract and filters low confid
 
 const intentCases = [
   {
+    query: "엘리베이터로 갈래요",
+    intent: "condition",
+    conditions: { elevator: true },
+    first: undefined,
+  },
+  {
+    query: "짐이 많아서 엘리베이터로 면접장 가요",
+    intent: "destination",
+    conditions: { elevator: true },
+    first: "interview",
+  },
+  {
+    query: "엘리베이터 말고 계단으로",
+    intent: "condition",
+    conditions: { elevator: false },
+    first: undefined,
+  },
+  {
+    query: "계단 싫어요",
+    intent: "condition",
+    conditions: { elevator: true },
+    first: undefined,
+  },
+  {
+    query: "엘리베이터 앞으로 가고 싶어요",
+    intent: "destination",
+    conditions: {},
+    first: "elevator",
+  },
+  {
+    query: "엘리베이터 어디 있어요?",
+    intent: "destination",
+    conditions: {},
+    first: "elevator",
+  },
+  {
+    query: "혜인관 301호 어디예요?",
+    intent: "destination",
+    conditions: {},
+    first: "hyein-301",
+  },
+  {
     query: "엘리베이터로 가고 싶어요",
     intent: "condition",
     conditions: { elevator: true },
@@ -109,6 +151,8 @@ for (const example of intentCases) {
     assert.equal(result.places[0]?.id, example.first);
     if (!example.first) assert.deepEqual(result.places, []);
     assert.ok(result.places.every((place) => places.includes(place)));
+    if ("elevator" in example.conditions)
+      assert.ok(result.places.every((place) => place.id !== "elevator"));
     const response = await interpretIntent(example.query, {});
     assert.equal(response.intent, example.intent);
     assert.deepEqual(response.conditions, example.conditions);
@@ -120,6 +164,10 @@ for (const example of intentCases) {
 
 test("intent classification handles condition variants without returning all places for an empty remainder", () => {
   for (const query of [
+    "엘리베이터로",
+    "승강기로 이동할래요",
+    "엘리베이터으로 부탁해요",
+    "계단은 좀",
     "승강기로 가요",
     "승강기를 타고",
     "엘리베이터 이용",
@@ -146,7 +194,11 @@ test("intent classification handles condition variants without returning all pla
 });
 
 test("intent classification preserves facility searches and destination priority", () => {
-  for (const query of ["승강기 어디", "엘리베이터를 찾아요", "승강기 위치"]) {
+  for (const query of [
+    "승강기 어디", "엘리베이터를 찾아요", "승강기 위치",
+    "엘리베이터 쪽으로 가요", "승강기 근처로 가요",
+    "엘리베이터로 어디 가요", "엘리베이터로 찾아갈래요", "승강기로 위치 알려주세요",
+  ]) {
     const result = providers.classifyIntent(query);
     assert.equal(result.intent, "destination", query);
     assert.deepEqual(result.conditions, {}, query);
@@ -178,6 +230,40 @@ test("intent classification preserves facility searches and destination priority
   assert.equal(missing.intent, "destination");
   assert.deepEqual(missing.places, []);
   assert.deepEqual(missing.conditions, {});
+});
+
+test("excluding an elevator does not set a condition by itself", () => {
+  for (const query of ["엘리베이터 말고", "승강기 말고"]) {
+    assert.deepEqual(providers.classifyIntent(query), {
+      intent: "destination", conditions: {}, places: [],
+    });
+    const stairs = providers.classifyIntent(`${query} 계단으로`);
+    assert.equal(stairs.intent, "condition");
+    assert.deepEqual(stairs.conditions, { elevator: false });
+    assert.deepEqual(stairs.places, []);
+  }
+});
+
+test("intent API strips travel phrases and removes elevator facilities for either travel condition", async () => {
+  const queries: string[] = [];
+  await fixture({ placeIds: ["elevator", "interview"] }, async (url) => {
+    const enabled = await interpretIntent("짐이 많아서 엘리베이터로 면접장 가요", { INTENT_API_URL: url });
+    assert.deepEqual(queries, ["면접장 가요"]);
+    assert.equal(enabled.intent, "destination");
+    assert.deepEqual(enabled.conditions, { elevator: true });
+    assert.deepEqual(enabled.places.map((place) => place.id), ["interview"]);
+    const disabled = await interpretIntent("승강기 말고 계단으로 면접", { INTENT_API_URL: url });
+    assert.deepEqual(queries, ["면접장 가요", "면접"]);
+    assert.equal(disabled.intent, "destination");
+    assert.deepEqual(disabled.conditions, { elevator: false });
+    assert.deepEqual(disabled.places.map((place) => place.id), ["interview"]);
+  }, queries);
+  await fixture({ placeIds: ["elevator"] }, async (url) => {
+    const result = await interpretIntent("계단 싫어요", { INTENT_API_URL: url });
+    assert.equal(result.intent, "condition");
+    assert.deepEqual(result.conditions, { elevator: true });
+    assert.deepEqual(result.places, []);
+  });
 });
 
 test("intent understands travel particles without treating unrelated words as luggage", () => {

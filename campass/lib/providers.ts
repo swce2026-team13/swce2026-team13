@@ -22,14 +22,22 @@ export type IntentResult = {
 function extractConditions(query: string) {
   const conditions: IntentResult["conditions"] = {};
   // Only travel/need phrases consume elevator names; location questions stay searchable.
+  // "엘리베이터로" is travel unless the sentence asks where it is or points near it.
+  // "엘리베이터 말고" is dropped without a condition; the stairs phrase after it decides.
   // If several conditions occur, the last matching phrase wins.
+  const facility = /어디|찾|위치|(?:엘리베이터|승강기)\s*(?:앞|쪽|근처)/.test(
+    query,
+  );
   const searchQuery = query
     .replace(
-      /(?:엘리베이터|승강기)\s*(?:[를가]\s*)?(?:타고|으로\s*가(?:고\s*싶어요|요)?|로\s*가(?:고\s*싶어요|요)?|이용(?:해서|해요)?|써서|필요(?:해요|해|합니다)?)|(?:휠체어|유모차|캐리어|(?<![가-힣])짐(?=이|을|은|도|\s|$|[.,!?]))(?:이라서|라서|이\s*있(?:어요|어서)|이\s*많(?:아요|아서))?|다리가\s*아파(?:요|서)?|계단\s*(?:을\s*)?(?:말고|없이|으로|타고|이용(?:해서|해요)?)/g,
+      /(?:엘리베이터|승강기)\s*(?:말고|으?로|(?:[를가]\s*)?(?:타고|이용(?:해서|해요)?|써서|필요(?:해요|해|합니다)?))|(?:휠체어|유모차|캐리어|(?<![가-힣])짐(?=이|을|은|도|\s|$|[.,!?]))(?:이라서|라서|이\s*있(?:어요|어서)|이\s*많(?:아요|아서))?|다리가\s*아파(?:요|서)?|계단\s*(?:을\s*)?(?:말고|없이|으로|타고|이용(?:해서|해요)?)|계단\s*(?:은\s*)?(?:싫(?:어요|어|습니다)?|좀)/g,
       (phrase) => {
-        conditions.elevator = !/^계단\s*(?:을\s*)?(?:으로|타고|이용)/.test(
-          phrase,
-        );
+        if (facility && /^(?:엘리베이터|승강기)\s*으?로$/.test(phrase))
+          return phrase;
+        if (!/말고$/.test(phrase) || phrase.startsWith("계단"))
+          conditions.elevator = !/^계단\s*(?:을\s*)?(?:으로|타고|이용)/.test(
+            phrase,
+          );
         return " ";
       },
     )
@@ -41,8 +49,10 @@ function extractConditions(query: string) {
 export function classifyIntent(query: string, matchedPlaces?: Place[]) {
   const { conditions, searchQuery } = extractConditions(query);
   // searchPlaces("") lists every place; a condition-only request must stay empty.
-  const candidates =
-    matchedPlaces ?? (searchQuery ? searchPlaces(searchQuery) : []);
+  // A travel condition already covers the elevator, so it is not a destination too.
+  const candidates = (
+    matchedPlaces ?? (searchQuery ? searchPlaces(searchQuery) : [])
+  ).filter((p) => conditions.elevator === undefined || p.id !== "elevator");
   const intent: Intent = candidates.length
     ? "destination"
     : conditions.elevator !== undefined

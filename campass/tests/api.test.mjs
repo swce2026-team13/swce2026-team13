@@ -121,6 +121,7 @@ test("HTTP catalog and intent expose sources and honest keyword mode", async () 
 test("HTTP intent exposes destination, condition and next responses with travel conditions", async () => {
   for (const [query, expectedIntent, conditions, firstPlace] of [
     ["엘리베이터로 가고 싶어요", "condition", { elevator: true }, undefined],
+    ["엘리베이터로 갈래요", "condition", { elevator: true }, undefined],
     ["엘리베이터 어디 있어요", "destination", {}, "elevator"],
     [
       "엘리베이터 타고 혜인관 5층",
