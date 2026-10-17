@@ -5,21 +5,15 @@ import Home from "@/components/screens/home";
 import Splash from "@/components/screens/splash";
 
 export default function Page() {
-  const [showSplash, setShowSplash] = useState<boolean | null>(null);
+  const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
-  setShowSplash(true);
+    const timer = window.setTimeout(() => {
+      setShowSplash(false);
+    }, 800);
 
-  const timer = window.setTimeout(() => {
-    setShowSplash(false);
-  }, 800);
-
-  return () => window.clearTimeout(timer);
-}, []);
-
-  if (showSplash === null) {
-    return null;
-  }
+    return () => window.clearTimeout(timer);
+  }, []);
 
   if (showSplash) {
     return <Splash />;

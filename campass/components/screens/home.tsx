@@ -18,7 +18,6 @@ export default function Screen() {
 
   return (
     <div className="home-screen">
-      {/* 상단 로고 */}
       <header className="home-topbar">
         <div className="home-brand">
           <span className="home-brand-icon">
@@ -40,13 +39,11 @@ export default function Screen() {
       </header>
 
       <main className="home-main">
-        {/* 제목 */}
         <section className="home-intro">
           <p>처음 가는 길도 헤매지 않게</p>
           <h1>어디로 가시나요?</h1>
         </section>
 
-        {/* 검색창 */}
         <form
           className="search-box glass-card home-search"
           onSubmit={(e) => {
@@ -75,13 +72,11 @@ export default function Screen() {
           </button>
         </form>
 
-        {/* 검색 설명 */}
         <div className="home-search-caption">
           <MessageSquareText size={14} />
           <span>건물·강의실을 검색하거나 목적지를 말해보세요</span>
         </div>
 
-        {/* 추천 질문 */}
         <div className="home-question-chips">
           <button
             disabled={busy || !ready}
@@ -98,7 +93,6 @@ export default function Screen() {
           </button>
         </div>
 
-        {/* 오늘의 행사 */}
         <section className="home-section">
           <h2>오늘의 행사</h2>
 
@@ -127,7 +121,6 @@ export default function Screen() {
           </div>
         </section>
 
-        {/* 바로 찾기 */}
         <section className="home-section">
           <h2>바로 찾기</h2>
 
@@ -183,9 +176,7 @@ export default function Screen() {
         </section>
       </main>
 
-      <footer className="home-new-footer">
-        © 2026 서경대학교 · CAMPASS
-      </footer>
+      <footer className="home-new-footer">© 2026 서경대학교 · CAMPASS</footer>
     </div>
   );
 }

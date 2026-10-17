@@ -16,29 +16,25 @@ export default function Screen() {
       )}
       {session && (
         <section className="content stack">
-          {
-            <Progress
-              current={session!.currentStep + 1}
-              total={session!.route.steps.length}
-            />
-          }
+          <Progress
+            current={session!.currentStep + 1}
+            total={session!.route.steps.length}
+          />
           <CampusMap
             route={session!.route}
             current={session?.currentStep}
             onBuilding={undefined}
           />
-          {
-            <>
-              <div className="card">
-                <Tag>현재 {session!.currentStep + 1}단계</Tag>
-                <h3>{step?.name}</h3>
-                <p>다음 · {nextStep?.name || "목적지"}</p>
-              </div>
-              <button className="button primary" onClick={() => go("guide")}>
-                사진 안내로 돌아가기
-              </button>
-            </>
-          }
+
+          <div className="card">
+            <Tag>현재 {session!.currentStep + 1}단계</Tag>
+            <h3>{step?.name}</h3>
+            <p>다음 · {nextStep?.name || "목적지"}</p>
+          </div>
+          <button className="button primary" onClick={() => go("guide")}>
+            사진 안내로 돌아가기
+          </button>
+
           <a
             className="text-button centered"
             href={sources.map}

@@ -133,7 +133,18 @@ progress::-moz-progress-bar {
   max-width: 390px;
   min-height: 100dvh;
   margin: 0 auto;
-  background: var(--background);
+  background:
+    radial-gradient(
+      circle at 15% 10%,
+      rgba(115, 174, 255, 0.32),
+      transparent 35%
+    ),
+    radial-gradient(
+      circle at 90% 35%,
+      rgba(185, 205, 255, 0.35),
+      transparent 38%
+    ),
+    linear-gradient(180deg, #edf6ff 0%, #f7faff 50%, #eef4ff 100%);
   position: relative;
   box-shadow: 0 0 60px #2434510c;
   display: flex;
@@ -567,6 +578,14 @@ progress::-moz-progress-bar {
   background: var(--blue);
 }
 .actions {
+  position: sticky;
+  bottom: 0;
+  padding: 14px 20px 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 5;
+  margin-top: auto;
   background: rgba(255, 255, 255, 0.42);
 
   backdrop-filter: blur(6px);
@@ -1129,25 +1148,11 @@ progress::-moz-progress-bar {
 .route-modal .actions {
   position: static;
 }
-/* ==================================================
-   CAMPASS LIQUID GLASS
-   Hype4 settings:
-   Blur 6 / Refraction 0.3 / Depth 2
-   ================================================== */
+/* 공통 유리 효과와 컴포넌트별 색상 */
 
 .glass-card {
-  background: rgba(255, 255, 255, 0.3);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-
   border-radius: 20px;
   border: 1px solid rgba(255, 255, 255, 0.3);
-
-  box-shadow:
-    0 4px 14px rgba(40, 70, 120, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.1),
-    inset 0 0 4px 2px rgba(255, 255, 255, 0.2);
 
   position: relative;
   overflow: hidden;
@@ -1193,32 +1198,9 @@ progress::-moz-progress-bar {
   position: relative;
   z-index: 1;
 }
-/* CAMPASS Liquid Glass background */
-.phone {
-  background:
-    radial-gradient(
-      circle at 15% 10%,
-      rgba(115, 174, 255, 0.32),
-      transparent 35%
-    ),
-    radial-gradient(
-      circle at 90% 35%,
-      rgba(185, 205, 255, 0.35),
-      transparent 38%
-    ),
-    linear-gradient(
-      180deg,
-      #edf6ff 0%,
-      #f7faff 50%,
-      #eef4ff 100%
-    );
-}
-/* ==================================================
-   CAMPASS GLOBAL LIQUID GLASS THEME
-   Blur 6 / Refraction 0.3 / Depth 2
-   ================================================== */
-
-/* 유리 재질을 적용할 공통 UI */
+/* 유리 재질만 공유하고, 위치 지정은 각 UI의 기존 규칙을 유지 */
+.glass-card,
+.admin-login-card,
 .card,
 .search-box,
 .choice,
@@ -1245,47 +1227,34 @@ progress::-moz-progress-bar {
     inset 0 1px 0 rgba(255, 255, 255, 0.5),
     inset 0 -1px 0 rgba(255, 255, 255, 0.1),
     inset 0 0 4px 2px rgba(255, 255, 255, 0.2);
-
-  position: relative;
 }
 
-/* 검색창은 조금 더 맑게 */
 .search-box {
   background: rgba(255, 255, 255, 0.38);
   border: 1px solid rgba(255, 255, 255, 0.55);
 }
 
-/* 일반 카드 */
 .card {
   background: rgba(255, 255, 255, 0.32);
   border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
-/* 선택 가능한 카드 */
 .choice {
   background: rgba(255, 255, 255, 0.32);
   border: 1px solid rgba(255, 255, 255, 0.42);
 }
 
-/* 작은 칩 / 필터 버튼 */
-.chips button {
-  background: rgba(255, 255, 255, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.45);
-}
-
-/* secondary 버튼 */
+.chips button,
 .button.secondary {
   background: rgba(255, 255, 255, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.45);
 }
 
-/* 지도 줌 버튼 */
 .zoom {
   background: rgba(255, 255, 255, 0.36);
   border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
-/* 입력/촬영 영역 */
 .capture-placeholder {
   background: rgba(235, 245, 255, 0.35);
   border: 1px solid rgba(255, 255, 255, 0.5);
@@ -1310,23 +1279,12 @@ progress::-moz-progress-bar {
 
   color: white;
 }
-/* ================================
-   ADMIN LOGIN - LIQUID GLASS
-   ================================ */
+/* 관리자 로그인 */
 
 .admin-login-card {
   background: rgba(255, 255, 255, 0.3);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-
   border: 1px solid rgba(255, 255, 255, 0.35);
   border-radius: 24px;
-
-  box-shadow:
-    0 4px 14px rgba(40, 70, 120, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.1),
-    inset 0 0 4px 2px rgba(255, 255, 255, 0.2);
 
   padding: 24px 20px;
 }
@@ -1373,9 +1331,7 @@ progress::-moz-progress-bar {
     0 0 0 3px rgba(40, 96, 237, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.65);
 }
-/* ==========================================
-   A0 SPLASH SCREEN
-   ========================================== */
+/* 스플래시 */
 
 .splash-screen {
   min-height: 100dvh;
@@ -1391,11 +1347,7 @@ progress::-moz-progress-bar {
       rgba(255, 255, 255, 0.7),
       transparent 32%
     ),
-    linear-gradient(
-      180deg,
-      #edf4ff 0%,
-      #f4f8ff 100%
-    );
+    linear-gradient(180deg, #edf4ff 0%, #f4f8ff 100%);
 
   overflow: hidden;
 }
@@ -1497,10 +1449,7 @@ progress::-moz-progress-bar {
   font-size: 11px;
   color: #98a8bd;
 }
-/* ==================================================
-   A1 HOME LAYOUT
-   Liquid Glass material is inherited from global theme
-   ================================================== */
+/* 홈 */
 
 .home-screen {
   min-height: 100dvh;

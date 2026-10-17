@@ -1,5 +1,5 @@
 "use client";
-import { ArrowLeft, Building2, CircleHelp, Map, X } from "lucide-react";
+import { ArrowLeft, Map, X } from "lucide-react";
 import { useCampus } from "./campus-provider";
 import { titles, viewForPath } from "@/lib/navigation";
 import { usePathname } from "next/navigation";
@@ -8,45 +8,35 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { busy, error, setError, go, back, displayDestination } = useCampus();
   return (
     <div className="phone">
-      <header className="app-header">
-        {view === "home" ? (
-          <Building2 className="brand-icon" />
-        ) : (
+      {view !== "home" && (
+        <header className="app-header">
           <button className="icon-button" aria-label="뒤로 가기" onClick={back}>
             <ArrowLeft size={21} />
           </button>
-        )}
-        <strong>
-          {view === "guide"
-            ? `${displayDestination.building} ${displayDestination.name}`
-            : titles[view]}
-        </strong>
-        {view === "home" ? (
-          <button
-            className="icon-button"
-            aria-label="이용 안내"
-            onClick={() => go("help")}
-          >
-            <CircleHelp size={20} />
-          </button>
-        ) : view === "guide" ? (
-          <button
-            className="icon-button"
-            aria-label="안내 중 지도 보기"
-            onClick={() => go("guide-map")}
-          >
-            <Map size={21} />
-          </button>
-        ) : (
-          <button
-            className="icon-button"
-            aria-label="홈으로"
-            onClick={() => go("home")}
-          >
-            <X size={21} />
-          </button>
-        )}
-      </header>
+          <strong>
+            {view === "guide"
+              ? `${displayDestination.building} ${displayDestination.name}`
+              : titles[view]}
+          </strong>
+          {view === "guide" ? (
+            <button
+              className="icon-button"
+              aria-label="안내 중 지도 보기"
+              onClick={() => go("guide-map")}
+            >
+              <Map size={21} />
+            </button>
+          ) : (
+            <button
+              className="icon-button"
+              aria-label="홈으로"
+              onClick={() => go("home")}
+            >
+              <X size={21} />
+            </button>
+          )}
+        </header>
+      )}
       {error && (
         <div className="error-banner" role="alert">
           {error}

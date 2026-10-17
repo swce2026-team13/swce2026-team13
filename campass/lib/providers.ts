@@ -20,28 +20,38 @@ export type IntentResult = {
   message: string;
 };
 
+const elevatorTravel =
+  /(?:엘리베이터|승강기)\s*(?:말고|으?로|(?:[를가]\s*)?(?:타고|이용(?:해서|해요)?|써서|필요(?:해요|해|합니다)?))/;
+const mobilityAid =
+  /(?:휠체어|유모차|캐리어|(?<![가-힣])짐(?=이|을|은|도|\s|$|[.,!?]))(?:이라서|라서|이\s*있(?:어요|어서)|이\s*많(?:아요|아서))?/;
+const legPain = /다리가\s*아파(?:요|서)?/;
+const stairsTravel =
+  /계단\s*(?:을\s*)?(?:말고|없이|으로|타고|이용(?:해서|해요)?)/;
+const stairsDiscomfort = /계단\s*(?:은\s*)?(?:싫(?:어요|어|습니다)?|좀)/;
+const travelConditions = new RegExp(
+  [elevatorTravel, mobilityAid, legPain, stairsTravel, stairsDiscomfort]
+    .map((pattern) => pattern.source)
+    .join("|"),
+  "g",
+);
+
 function extractConditions(query: string) {
   const conditions: IntentResult["conditions"] = {};
-  // 이동 조건 표현만 조건으로 처리하고, 위치를 묻는 말은 검색어로 남김
-  // '엘리베이터로'는 이동 조건. 단, 위치를 묻거나 앞·쪽·근처가 붙으면 시설 찾기
-  // '엘리베이터 말고'는 검색어에서만 빼고, 켜고 끄는 건 뒤의 계단 표현으로 정함
-  // 조건 표현이 여러 개면 마지막 표현 기준
+  // 시설 위치 질문은 검색어로 남기고, 이동 조건은 문장에 나온 순서대로 적용한다.
   const facility = /어디|찾|위치|(?:엘리베이터|승강기)\s*(?:앞|쪽|근처)/.test(
     query,
   );
   const searchQuery = query
-    .replace(
-      /(?:엘리베이터|승강기)\s*(?:말고|으?로|(?:[를가]\s*)?(?:타고|이용(?:해서|해요)?|써서|필요(?:해요|해|합니다)?))|(?:휠체어|유모차|캐리어|(?<![가-힣])짐(?=이|을|은|도|\s|$|[.,!?]))(?:이라서|라서|이\s*있(?:어요|어서)|이\s*많(?:아요|아서))?|다리가\s*아파(?:요|서)?|계단\s*(?:을\s*)?(?:말고|없이|으로|타고|이용(?:해서|해요)?)|계단\s*(?:은\s*)?(?:싫(?:어요|어|습니다)?|좀)/g,
-      (phrase) => {
-        if (facility && /^(?:엘리베이터|승강기)\s*으?로$/.test(phrase))
-          return phrase;
-        if (!/말고$/.test(phrase) || phrase.startsWith("계단"))
-          conditions.elevator = !/^계단\s*(?:을\s*)?(?:으로|타고|이용)/.test(
-            phrase,
-          );
-        return " ";
-      },
-    )
+    .replace(travelConditions, (phrase) => {
+      if (facility && /^(?:엘리베이터|승강기)\s*으?로$/.test(phrase))
+        return phrase;
+      // '엘리베이터 말고'는 제거만 하고 조건을 바꾸지 않는다.
+      if (!/말고$/.test(phrase) || phrase.startsWith("계단"))
+        conditions.elevator = !/^계단\s*(?:을\s*)?(?:으로|타고|이용)/.test(
+          phrase,
+        );
+      return " ";
+    })
     .replace(/\s+/g, " ")
     .trim();
   return { conditions, searchQuery };
