@@ -1596,6 +1596,7 @@ progress::-moz-progress-bar {
 }
 
 .home-event-card {
+  width: 100%;
   min-height: 95px;
 
   display: flex;
@@ -1603,6 +1604,7 @@ progress::-moz-progress-bar {
   justify-content: space-between;
 
   padding: 18px;
+  text-align: left;
 }
 
 .home-event-title {
@@ -1657,20 +1659,17 @@ progress::-moz-progress-bar {
   gap: 4px;
 }
 
-.home-carousel-dots span {
+.home-carousel-dots button {
   display: block;
-
   width: 5px;
   height: 5px;
-
   border-radius: 999px;
-
   background: rgba(40, 96, 237, 0.25);
+  transition: width 0.2s ease, background 0.2s ease;
 }
 
-.home-carousel-dots span.active {
+.home-carousel-dots button.active {
   width: 18px;
-
   background: var(--blue);
 }
 

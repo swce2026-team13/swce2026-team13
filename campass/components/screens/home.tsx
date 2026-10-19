@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import {
   ArrowRight,
   Building2,
@@ -16,7 +18,27 @@ import { useCampus } from "@/components/campus-provider";
 export default function Screen() {
   const { query, setQuery, session, busy, ready, go, search } = useCampus();
 
+  const [eventIndex, setEventIndex] = useState(0);
+
+  const events = [
+    {
+      title: "2026 수시 면접",
+      status: "진행 중",
+      place: "혜인관 3층",
+      time: "09:00–17:00",
+      query: "면접 보러 왔어요",
+    },
+    {
+      title: "공모전 발표",
+      status: "11/10",
+      place: "유담관 L층",
+      time: "발표 행사",
+      query: "공모전 발표 보러 왔어요",
+    },
+  ];
+
   return (
+
     <div className="home-screen">
       <header className="home-topbar">
         <div className="home-brand">
@@ -94,32 +116,52 @@ export default function Screen() {
         </div>
 
         <section className="home-section">
-          <h2>오늘의 행사</h2>
+  <h2>오늘의 행사</h2>
 
-          <div className="home-event-card card">
-            <div>
-              <div className="home-event-title">
-                <strong>2026 수시 면접</strong>
-                <span className="home-event-status">진행 중</span>
-              </div>
+  <div className="home-event-carousel">
+    <button
+      type="button"
+      className="home-event-card card"
+      onClick={() => setEventIndex((eventIndex + 1) % events.length)}
+      aria-label="다음 행사 보기"
+    >
+      <div>
+        <div className="home-event-title">
+          <strong>{events[eventIndex].title}</strong>
+          <span className="home-event-status">
+            {events[eventIndex].status}
+          </span>
+        </div>
 
-              <p>혜인관 5층 · 09:00–17:00</p>
-            </div>
+        <p>
+          {events[eventIndex].place} · {events[eventIndex].time}
+        </p>
+      </div>
 
-            <button
-              className="home-event-link"
-              disabled={busy || !ready}
-              onClick={() => search("면접 보러 왔어요")}
-            >
-              길찾기 <ArrowRight size={15} />
-            </button>
-          </div>
+      <span
+        className="home-event-link"
+        onClick={(e) => {
+          e.stopPropagation();
+          search(events[eventIndex].query);
+        }}
+      >
+        길찾기 <ArrowRight size={15} />
+      </span>
+    </button>
+  </div>
 
-          <div className="home-carousel-dots" aria-hidden="true">
-            <span className="active" />
-            <span />
-          </div>
-        </section>
+  <div className="home-carousel-dots">
+    {events.map((event, index) => (
+      <button
+        key={event.title}
+        type="button"
+        className={index === eventIndex ? "active" : ""}
+        aria-label={`${index + 1}번째 행사 보기`}
+        onClick={() => setEventIndex(index)}
+      />
+    ))}
+  </div>
+</section>
 
         <section className="home-section">
           <h2>바로 찾기</h2>
