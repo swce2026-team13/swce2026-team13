@@ -35,6 +35,17 @@ const names: [string, string][] = [
   ["creative", "크리에이티브센터"],
 ];
 export const places: Place[] = [
+     {
+     id: "eunju1_5f_front",
+     name: "은주1관 5층 앞",
+     building: "은주1관",
+     floor: "5층",
+     category: "facility",
+     aliases: ["은주1관", "은주관 5층", "은주1관 5층"],
+     verified: false,
+     source: "시연 동선(임시)",
+     description: "한림관 6층 연결통로를 지나 도착하는 은주1관 5층 앞",
+   }, 
   {
     id: "interview",
     name: "면접 대기실",
