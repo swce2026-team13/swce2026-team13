@@ -114,6 +114,109 @@ export const waypoints: Waypoint[] = [
     y: 65,
     stage: true,
   },
+    {
+    id: "bus_stop_2115",
+    name: "2115번 정류장",
+    instruction: "정류장에서 출발하세요",
+    detail: "본관과 이어진 연결통로 방향으로 이동해 주세요.",
+    photo: "bus",
+    direction: "forward",
+    x: 52,
+    y: 303,
+  },
+  {
+    id: "main_bus_stop_passage",
+    name: "본관↔2115 정류장 연결통로",
+    instruction: "연결통로를 따라 이동하세요",
+    detail: "본관 복도 방향으로 이동해 주세요.",
+    photo: "corridor",
+    direction: "forward",
+    x: 52,
+    y: 240,
+  },
+  {
+    id: "main_corridor",
+    name: "본관 복도",
+    instruction: "복도를 따라 이동하세요",
+    detail: "엘리베이터 앞으로 이동해 주세요.",
+    photo: "corridor",
+    direction: "forward",
+    x: 52,
+    y: 180,
+  },
+  {
+    id: "main_elevator_front",
+    name: "본관 엘리베이터 앞",
+    instruction: "엘리베이터 앞을 지나 이동하세요",
+    detail: "한림관으로 이어지는 연결통로를 찾아 주세요.",
+    photo: "corridor",
+    direction: "forward",
+    x: 52,
+    y: 120,
+  },
+  {
+    id: "to_hallim",
+    name: "본관 5층↔한림관 3층 연결통로",
+    instruction: "연결통로를 따라 한림관으로 이동하세요",
+    detail: "한림관 3층 엘리베이터 방향으로 이동해 주세요.",
+    photo: "corridor",
+    direction: "forward",
+    x: 130,
+    y: 120,
+    stage: true,
+  },
+  {
+    id: "hallim_to_elevator",
+    name: "한림관 3층 엘리베이터 가는 길",
+    instruction: "엘리베이터 쪽으로 이동하세요",
+    detail: "한림관 3층 엘리베이터 앞으로 이동해 주세요.",
+    photo: "corridor",
+    direction: "forward",
+    x: 200,
+    y: 120,
+  },
+  {
+    id: "hallim_elevator_front",
+    name: "한림관 3층 엘리베이터 앞",
+    instruction: "엘리베이터로 6층까지 이동하세요",
+    detail: "6층에서 내려 주세요.",
+    photo: "corridor",
+    direction: "up",
+    x: 263,
+    y: 120,
+    stage: true,
+  },
+  {
+    id: "hallim_6f_elevator",
+    name: "한림관 6층 엘리베이터 앞",
+    instruction: "6층에 도착했어요",
+    detail: "은주1관으로 이어지는 연결통로 방향으로 이동해 주세요.",
+    photo: "corridor",
+    direction: "forward",
+    x: 263,
+    y: 90,
+  },
+  {
+    id: "hallim_6f_corridor",
+    name: "한림관 6층↔은주1관 5층 연결통로",
+    instruction: "연결통로를 따라 은주1관으로 이동하세요",
+    detail: "은주1관 5층으로 이어져요.",
+    photo: "corridor",
+    direction: "forward",
+    x: 230,
+    y: 65,
+  },
+  {
+    id: "eunju1_5f_front",
+    name: "은주1관 5층 앞",
+    instruction: "은주1관 5층에 도착했어요",
+    detail: "시연용 임시 목적지입니다.",
+    photo: "corridor",
+    direction: "forward",
+    x: 170,
+    y: 65,
+    stage: true,
+  },
 ];
 // 시연 동선 · 실내 연결 미검증
 type Edge = {
@@ -134,6 +237,15 @@ const edges: Edge[] = [
   { from: "elevator", to: "interview", meters: 35, floorMove: true },
   { from: "hyein", to: "stairs", meters: 5 },
   { from: "stairs", to: "interview", meters: 30, stairs: true, floorMove: true },
+  { from: "bus_stop_2115", to: "main_bus_stop_passage", meters: 40, connection: true },
+  { from: "main_bus_stop_passage", to: "main_corridor", meters: 30 },
+  { from: "main_corridor", to: "main_elevator_front", meters: 20 },
+  { from: "main_elevator_front", to: "to_hallim", meters: 30, connection: true },
+  { from: "to_hallim", to: "hallim_to_elevator", meters: 25 },
+  { from: "hallim_to_elevator", to: "hallim_elevator_front", meters: 10 },
+  { from: "hallim_elevator_front", to: "hallim_6f_elevator", meters: 15, floorMove: true },
+  { from: "hallim_6f_elevator", to: "hallim_6f_corridor", meters: 20 },
+  { from: "hallim_6f_corridor", to: "eunju1_5f_front", meters: 40, connection: true },
 ];
 export type Route = {
   steps: Waypoint[];
@@ -186,7 +298,7 @@ export function calculateRoute(
   const steps = ids.map((id, index) => {
     const point = { ...waypoints.find((w) => w.id === id)! };
     // 역방향 경로 안내 갱신
-    if (destination !== "interview" && index < ids.length - 1) {
+    if (!["interview", "eunju1_5f_front"].includes(destination) && index < ids.length - 1) {
       point.instruction = `${waypoints.find((w) => w.id === ids[index + 1])!.name} 방향으로 이동하세요`;
       point.detail = "시연 경로 · 현장의 안내 표지를 함께 확인하세요.";
     }
