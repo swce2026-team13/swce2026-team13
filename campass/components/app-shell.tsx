@@ -4,7 +4,8 @@ import { useCampus } from "./campus-provider";
 import { titles, viewForPath } from "@/lib/navigation";
 import { usePathname } from "next/navigation";
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const view = viewForPath(usePathname());
+  const pathname = usePathname();
+  const view = viewForPath(pathname);
   const { busy, error, setError, go, back, displayDestination } = useCampus();
   return (
     <div className="phone">
@@ -48,7 +49,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {busy && (
         <div className="loading-line" role="status" aria-label="처리 중" />
       )}
-      <main id="main-content">{children}</main>
+      <main id="main-content" key={pathname}>
+        {children}
+      </main>
     </div>
   );
 }
