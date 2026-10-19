@@ -99,6 +99,37 @@ async function handle(request: NextRequest) {
         ),
       });
     }
+    if (method === "GET" && parts.join("/") === "route-insights") {
+  const start = textField(request.nextUrl.searchParams.get("start"));
+  const destination = textField(
+    request.nextUrl.searchParams.get("destination"),
+  );
+
+  const elevatorValue = request.nextUrl.searchParams.get("elevator");
+
+  if (elevatorValue !== "true" && elevatorValue !== "false") {
+    throw new AppError("엘리베이터 옵션을 확인해 주세요.");
+  }
+
+  const route = calculateRoute(
+    start,
+    destination,
+    elevatorValue === "true",
+  );
+
+  const routeIds = new Set(route.steps.map((step) => step.id));
+  const insight = db.insights();
+
+  const points = insight.points.filter((point) =>
+    routeIds.has(point.id),
+  );
+
+  return response({
+    points,
+    scope: "current-route",
+    dataMode: insight.dataMode,
+  });
+}
     if (method === "GET" && parts.join("/") === "admin/insights") {
       return response(db.insights());
     }

@@ -58,7 +58,7 @@ function useCampusState() {
   const view = viewForPath(usePathname());
   const params = useSearchParams();
   const selectedDestination = params.get("destination") || places[0].id;
-  const selectedStart = params.get("start") || "bus";
+  const selectedStart = params.get("start") || "gate";
   const selectedElevator = params.get("elevator") !== "false";
   const selectedBuilding = params.get("building") || "혜인관";
   const selectedQuery = params.get("q") || "";
