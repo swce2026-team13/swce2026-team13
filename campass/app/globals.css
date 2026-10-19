@@ -1731,3 +1731,78 @@ progress::-moz-progress-bar {
   font-size: 10px;
   color: #9aa8ba;
 }
+.ai-search-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ai-user-message {
+  align-self: flex-end;
+  max-width: 82%;
+  padding: 12px 14px;
+  border-radius: 18px 18px 6px 18px;
+  background: rgba(55, 105, 240, 0.12);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.ai-assistant-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--blue);
+}
+
+.ai-answer-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ai-answer-type {
+  width: fit-content;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: rgba(55, 105, 240, 0.1);
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ai-place-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ai-place-card .button {
+  width: 100%;
+}
+.ai-place-card {
+  border: 1px solid rgba(76, 118, 255, 0.14);
+}
+
+.ai-place-card:hover {
+  border-color: rgba(76, 118, 255, 0.35);
+}
+
+.ai-place-card .row {
+  align-items: center;
+}
+
+.ai-place-card strong {
+  display: block;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.ai-place-card .muted {
+  margin: 2px 0 0;
+}
+
+.ai-search-flow > .button.secondary {
+  margin-top: 2px;
+}
