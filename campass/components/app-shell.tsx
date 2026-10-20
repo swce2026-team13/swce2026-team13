@@ -8,16 +8,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const view = viewForPath(pathname);
   const { busy, error, setError, go, back, displayDestination } = useCampus();
   return (
-    <div className="phone">
+    <div className={`phone ${view === "photo" ? "photo-shell" : ""}`}>
       {view !== "home" && (
-        <header className="app-header">
+        <header
+          className={`app-header ${
+          view === "photo" ? "photo-app-header" : ""
+      }`}
+>
           <button className="icon-button" aria-label="뒤로 가기" onClick={back}>
             <ArrowLeft size={21} />
           </button>
           <strong>
-            {view === "guide"
-              ? `${displayDestination.building} ${displayDestination.name}`
-              : titles[view]}
+          {view === "guide"
+            ? `${displayDestination.building} ${displayDestination.name}`
+           : view === "photo"
+            ? "출발 위치 찍기"
+           : titles[view]}
           </strong>
           {view === "guide" ? (
             <button
