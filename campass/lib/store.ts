@@ -265,11 +265,25 @@ export class Store {
       )
       .all() as { id: string; passages: number; confusions: number }[];
     const points = rows
-      .map((r) => ({
-        ...r,
-        name: waypoints.find((w) => w.id === r.id)?.name ?? r.id,
-        rate: Math.round((r.confusions / r.passages) * 1000) / 10,
-      }))
+  .map((r) => {
+    const topReason = this.db
+      .prepare(
+        `SELECT reason, COUNT(*) AS count
+         FROM confusions
+         WHERE waypoint_id=?
+         GROUP BY reason
+         ORDER BY count DESC
+         LIMIT 1`,
+      )
+      .get(r.id) as { reason: string; count: number } | undefined;
+
+    return {
+      ...r,
+      name: waypoints.find((w) => w.id === r.id)?.name ?? r.id,
+      rate: Math.round((r.confusions / r.passages) * 1000) / 10,
+      topReason: topReason?.reason ?? null,
+    };
+  })
       .sort((a, b) => b.rate - a.rate || b.confusions - a.confusions);
     const passages = points.reduce((n, p) => n + p.passages, 0),
       confusions = points.reduce((n, p) => n + p.confusions, 0);

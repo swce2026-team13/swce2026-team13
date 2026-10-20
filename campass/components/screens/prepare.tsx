@@ -1,5 +1,11 @@
 "use client";
-import { ArrowRight, Camera, CheckCircle2, Columns2 } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  Camera,
+  CheckCircle2,
+  Columns2,
+} from "lucide-react";
 import { waypoints } from "@/lib/routing";
 import { Notice, Tag } from "@/components/ui";
 import { useCampus } from "@/components/campus-provider";
@@ -37,7 +43,7 @@ export default function Screen() {
         </div>
         {destinationCard}
         <h3>어디에서 출발하시나요?</h3>
-        {["bus", "main"].map((id) => (
+        {["gate", "main", "parking"].map((id) => (
           <button
             key={id}
             disabled={busy}
@@ -47,11 +53,10 @@ export default function Screen() {
             <span className="radio" />
             <span>
               <b>{waypoints.find((w) => w.id === id)!.name}</b>
-              {id === "bus" && <small>정류장 바로 앞</small>}
             </span>
           </button>
         ))}
-        {!["bus", "main"].includes(start) && (
+        {!["gate", "main", "parking"].includes(start) && (
           <div className="choice selected">
             <CheckCircle2 size={20} />
             {waypoints.find((w) => w.id === start)?.name}
@@ -94,13 +99,15 @@ export default function Screen() {
             <div className="between">
               <b>추천 경로</b>
               <strong className="blue-text">
-                약 {route.minutes}분 <small>{route.steps.length}개 지점</small>
+                연결 {route.connections}곳 · 층 이동 {route.floorMoves}번
               </strong>
             </div>
             <p className="small">시연용 동선 · 실제 거리와 다를 수 있어요</p>
             <ol className="route-list">
-              {route.steps.map((w) => (
-                <li key={w.id}>{w.name}</li>
+              {route.steps
+                .filter((w) => w.stage)
+                 .map((w) => (
+            <li key={w.id}>{w.name}</li>
               ))}
             </ol>
             <button className="text-button centered" onClick={() => go("map")}>
@@ -108,6 +115,25 @@ export default function Screen() {
             </button>
           </div>
         )}
+        {route && (
+  <button
+    type="button"
+    className="card confusion-preview-card"
+    onClick={() => go("confusion")}
+  >
+    <div className="between">
+      <strong className="row">
+        <AlertTriangle size={20} />
+        헤매는 사람이 많은 구간
+      </strong>
+      <span>자세히 보기 →</span>
+    </div>
+
+    <p className="muted small">
+      이 경로에서 주의할 구간을 확인해 보세요.
+    </p>
+  </button>
+)}
         <p className="fine-print">
           실내 동선은 현장 검증 전 시연 데이터입니다.
         </p>
