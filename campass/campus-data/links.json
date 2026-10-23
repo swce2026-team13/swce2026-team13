@@ -1,0 +1,631 @@
+{
+  "statusMeaning": {
+    "확인": "현장 메모·안내도·팀 확인으로 근거 있음",
+    "확인 필요": "자료는 있으나 실제로 걸어서 되는지 미확인",
+    "추정": "근거 약함 (3D 시안의 같은 높이 가정 등)",
+    "삭제": "틀린 것으로 확인됨. 쓰지 않음"
+  },
+  "ignored": [
+    "캠퍼스맵 이미지의 흰 점선 동선 = 실외 언덕길 (연결에서 제외, 팀 확인 10/17)"
+  ],
+  "extraNodes": [
+    {
+      "id": "스콘스퀘어",
+      "name": "스콘스퀘어",
+      "kind": "plaza",
+      "note": "은주1관·대일관·상승관·청운관·혜인관·은주2관으로 둘러싸인 광장. 아래가 지하주차장. 높이 약 149m (표고점 148.9m). 한림관 6층 · 은주1관 5층 · 혜인관 1층과 같은 높이",
+      "approxLocal": [
+        69.3,
+        -43.5
+      ],
+      "approxLocalNote": "광장(풋살·농구 코트 포함) 영역의 중심",
+      "polygon": [
+        [
+          37.57,
+          16.27
+        ],
+        [
+          46.73,
+          11.83
+        ],
+        [
+          50.61,
+          13.77
+        ],
+        [
+          49.78,
+          10.72
+        ],
+        [
+          51.72,
+          11.27
+        ],
+        [
+          55.05,
+          9.05
+        ],
+        [
+          55.32,
+          11.55
+        ],
+        [
+          56.71,
+          9.33
+        ],
+        [
+          60.04,
+          9.33
+        ],
+        [
+          96.64,
+          -8.44
+        ],
+        [
+          106.07,
+          -14.54
+        ],
+        [
+          105.52,
+          -17.04
+        ],
+        [
+          106.62,
+          -18.7
+        ],
+        [
+          109.12,
+          -18.43
+        ],
+        [
+          109.67,
+          -20.37
+        ],
+        [
+          111.34,
+          -19.81
+        ],
+        [
+          111.34,
+          -18.43
+        ],
+        [
+          128.25,
+          -30.36
+        ],
+        [
+          80.21,
+          -111.54
+        ],
+        [
+          21.71,
+          -61.33
+        ],
+        [
+          32.58,
+          7.68
+        ],
+        [
+          37.57,
+          16.27
+        ]
+      ],
+      "areaM2": 7899,
+      "polygonSource": "학교 캠퍼스맵 화면(카카오맵)의 광장 영역 (대략)"
+    },
+    {
+      "id": "지하주차장",
+      "name": "지하주차장 (혜인관 지하1층 주차장)",
+      "kind": "parking",
+      "note": "스콘스퀘어 아래"
+    }
+  ],
+  "links": [
+    {
+      "id": "bon-5__hallim-3",
+      "from": {
+        "building": "bon",
+        "name": "본관",
+        "floor": "5"
+      },
+      "to": {
+        "building": "hallim",
+        "name": "한림관",
+        "floor": "3"
+      },
+      "kind": "indoor",
+      "status": "확인",
+      "stepFree": null,
+      "evidence": [
+        "현장 메모 \"한림관 3층 = 은주1관 2층 = 본관 5층\"",
+        "학교 캠퍼스맵 \"본관-한림관 연결통로\" 위치",
+        "캠퍼스맵 이미지(연결통로 표시)"
+      ]
+    },
+    {
+      "id": "hallim-3__eunju1-2",
+      "from": {
+        "building": "hallim",
+        "name": "한림관",
+        "floor": "3"
+      },
+      "to": {
+        "building": "eunju1",
+        "name": "은주1관",
+        "floor": "2"
+      },
+      "kind": "indoor",
+      "status": "확인",
+      "stepFree": null,
+      "evidence": [
+        "현장 메모 \"한림관 3층 = 은주1관 2층 = 본관 5층\"",
+        "학교 캠퍼스맵 \"한림관-은주관 연결통로\" 위치 (한 곳만 표시)",
+        "캠퍼스맵 이미지(연결통로 표시)"
+      ],
+      "note": "학교 호실 데이터에는 은주1관 2층 호실이 없음 (통로·로비 층으로 보임)"
+    },
+    {
+      "id": "hallim-6__eunju1-5",
+      "from": {
+        "building": "hallim",
+        "name": "한림관",
+        "floor": "6"
+      },
+      "to": {
+        "building": "eunju1",
+        "name": "은주1관",
+        "floor": "5"
+      },
+      "kind": "indoor",
+      "status": "확인",
+      "stepFree": null,
+      "evidence": [
+        "한림관 6층 피난안내도 \"통로(은주1관 5층)\"",
+        "현장 메모 \"한림관 6층 = 은주1관 5층\""
+      ],
+      "note": "은주1관 5층 피난안내도에는 통로 표시 없음"
+    },
+    {
+      "id": "bukak-7__munye-6",
+      "from": {
+        "building": "bukak",
+        "name": "북악관",
+        "floor": "7"
+      },
+      "to": {
+        "building": "munye",
+        "name": "문예관",
+        "floor": "6"
+      },
+      "kind": "indoor",
+      "status": "확인",
+      "stepFree": null,
+      "evidence": [
+        "현장 메모 \"북악관 7층 = 문예관 6층\""
+      ]
+    },
+    {
+      "id": "eunju2-1__suin-1",
+      "from": {
+        "building": "eunju2",
+        "name": "은주2관",
+        "floor": "1"
+      },
+      "to": {
+        "building": "suin",
+        "name": "수인관",
+        "floor": "1"
+      },
+      "kind": "outdoor",
+      "status": "확인",
+      "stepFree": true,
+      "evidence": [
+        "팀 확인 10/17: 은주2관 5층에서 엘리베이터로 1층 → 수인관 앞, 풋살장도 이쪽"
+      ]
+    },
+    {
+      "id": "eunju1-5__스콘스퀘어-광장",
+      "from": {
+        "building": "eunju1",
+        "name": "은주1관",
+        "floor": "5"
+      },
+      "to": {
+        "building": "스콘스퀘어",
+        "name": "스콘스퀘어",
+        "floor": "광장"
+      },
+      "kind": "outdoor",
+      "status": "확인",
+      "stepFree": null,
+      "evidence": [
+        "팀 확인 10/18: 한림관 6층 → 은주1관 5층 → 동쪽 출입구로 나가면 스콘스퀘어",
+        "학교 캠퍼스맵 \"은주1관 입구(2)\"가 건물 동쪽(광장 쪽) 벽에 있음",
+        "수치지형도 표고점 148.9m (광장) · 3D 시안 단면도 149m (은주1관 5층 · 한림관 6층 · 스콘스퀘어)",
+        "은주1관 호실이 5층까지만 있어 광장 쪽 출입구가 맨 위층"
+      ],
+      "note": "계단 없이 이어지는지는 아직 모름 (stepFree = null)"
+    },
+    {
+      "id": "eunju1-1__eunju2-1",
+      "from": {
+        "building": "eunju1",
+        "name": "은주1관",
+        "floor": "1"
+      },
+      "to": {
+        "building": "eunju2",
+        "name": "은주2관",
+        "floor": "1"
+      },
+      "kind": "indoor",
+      "status": "추정",
+      "stepFree": null,
+      "evidence": [
+        "3D 시안 (같은 높이로 가정)",
+        "수치지형도에서 두 건물이 한 윤곽으로 붙어 있음"
+      ]
+    },
+    {
+      "id": "eunju1-3__eunju2-3",
+      "from": {
+        "building": "eunju1",
+        "name": "은주1관",
+        "floor": "3"
+      },
+      "to": {
+        "building": "eunju2",
+        "name": "은주2관",
+        "floor": "3"
+      },
+      "kind": "indoor",
+      "status": "추정",
+      "stepFree": null,
+      "evidence": [
+        "3D 시안 (같은 높이로 가정)",
+        "수치지형도에서 두 건물이 한 윤곽으로 붙어 있음"
+      ]
+    },
+    {
+      "id": "eunju1-5__eunju2-5",
+      "from": {
+        "building": "eunju1",
+        "name": "은주1관",
+        "floor": "5"
+      },
+      "to": {
+        "building": "eunju2",
+        "name": "은주2관",
+        "floor": "5"
+      },
+      "kind": "indoor",
+      "status": "추정",
+      "stepFree": null,
+      "evidence": [
+        "3D 시안 (같은 높이로 가정)",
+        "수치지형도에서 두 건물이 한 윤곽으로 붙어 있음"
+      ]
+    },
+    {
+      "id": "bon-8__bukak-6",
+      "from": {
+        "building": "bon",
+        "name": "본관",
+        "floor": "8"
+      },
+      "to": {
+        "building": "bukak",
+        "name": "북악관",
+        "floor": "6"
+      },
+      "kind": "indoor",
+      "status": "추정",
+      "stepFree": null,
+      "evidence": [
+        "3D 시안 (같은 높이로 가정)"
+      ],
+      "note": "근거 약함: 두 건물 사이에 길이 있고, 층 목록이 바뀌어 층 번호도 다시 확인해야 함"
+    },
+    {
+      "id": "bon-2__bukak-1",
+      "from": {
+        "building": "bon",
+        "name": "본관",
+        "floor": "2"
+      },
+      "to": {
+        "building": "bukak",
+        "name": "북악관",
+        "floor": "1"
+      },
+      "kind": "indoor",
+      "status": "추정",
+      "stepFree": null,
+      "evidence": [
+        "3D 시안 (같은 높이로 가정)"
+      ],
+      "note": "근거 약함: 두 건물 사이에 길이 있고, 층 목록이 바뀌어 층 번호도 다시 확인해야 함"
+    },
+    {
+      "id": "bon-1__bukak-B1",
+      "from": {
+        "building": "bon",
+        "name": "본관",
+        "floor": "1"
+      },
+      "to": {
+        "building": "bukak",
+        "name": "북악관",
+        "floor": "B1"
+      },
+      "kind": "indoor",
+      "status": "추정",
+      "stepFree": null,
+      "evidence": [
+        "3D 시안 (같은 높이로 가정)"
+      ],
+      "note": "근거 약함: 두 건물 사이에 길이 있고, 층 목록이 바뀌어 층 번호도 다시 확인해야 함"
+    },
+    {
+      "id": "yudam-11__bon-5",
+      "from": {
+        "building": "yudam",
+        "name": "유담관",
+        "floor": "11"
+      },
+      "to": {
+        "building": "bon",
+        "name": "본관",
+        "floor": "5"
+      },
+      "kind": "indoor",
+      "status": "추정",
+      "stepFree": null,
+      "evidence": [
+        "3D 시안 (같은 높이로 가정)"
+      ],
+      "note": "근거 약함: 두 건물 사이에 길이 있음"
+    },
+    {
+      "id": "eunju2-5__스콘스퀘어-광장",
+      "from": {
+        "building": "eunju2",
+        "name": "은주2관",
+        "floor": "5"
+      },
+      "to": {
+        "building": "스콘스퀘어",
+        "name": "스콘스퀘어",
+        "floor": "광장"
+      },
+      "kind": "outdoor",
+      "status": "추정",
+      "stepFree": null,
+      "evidence": [
+        "3D 시안",
+        "캠퍼스맵 이미지(광장 둘레에 입구 표시)"
+      ],
+      "note": "광장에서 들어가는 층 확인 필요"
+    },
+    {
+      "id": "hyein-1__스콘스퀘어-광장",
+      "from": {
+        "building": "hyein",
+        "name": "혜인관",
+        "floor": "1"
+      },
+      "to": {
+        "building": "스콘스퀘어",
+        "name": "스콘스퀘어",
+        "floor": "광장"
+      },
+      "kind": "outdoor",
+      "status": "확인",
+      "stepFree": null,
+      "evidence": [
+        "팀 확인 10/18: 은주1관 5층에서 나가면 스콘스퀘어, 혜인관 1층과 같은 높이",
+        "수치지형도 표고점 148.9m가 혜인관 입구(1) 바로 옆 (광장 높이)",
+        "3D 시안 단면도 높이 149m (혜인관 1층 · 스콘스퀘어)"
+      ]
+    },
+    {
+      "id": "chungwoon-1__스콘스퀘어-광장",
+      "from": {
+        "building": "chungwoon",
+        "name": "청운관",
+        "floor": "1"
+      },
+      "to": {
+        "building": "스콘스퀘어",
+        "name": "스콘스퀘어",
+        "floor": "광장"
+      },
+      "kind": "outdoor",
+      "status": "추정",
+      "stepFree": null,
+      "evidence": [
+        "3D 시안",
+        "캠퍼스맵 이미지(광장 둘레에 입구 표시)"
+      ],
+      "note": "광장에서 들어가는 층 확인 필요"
+    },
+    {
+      "id": "daeil-1__스콘스퀘어-광장",
+      "from": {
+        "building": "daeil",
+        "name": "대일관",
+        "floor": "1"
+      },
+      "to": {
+        "building": "스콘스퀘어",
+        "name": "스콘스퀘어",
+        "floor": "광장"
+      },
+      "kind": "outdoor",
+      "status": "추정",
+      "stepFree": null,
+      "evidence": [
+        "3D 시안",
+        "캠퍼스맵 이미지(광장 둘레에 입구 표시)"
+      ],
+      "note": "광장에서 들어가는 층 확인 필요"
+    },
+    {
+      "id": "eunju1-3__지하주차장-B1",
+      "from": {
+        "building": "eunju1",
+        "name": "은주1관",
+        "floor": "3"
+      },
+      "to": {
+        "building": "지하주차장",
+        "name": "지하주차장",
+        "floor": "B1"
+      },
+      "kind": "parking",
+      "status": "확인 필요",
+      "stepFree": null,
+      "evidence": [
+        "캠퍼스맵 이미지(지하통로입구 · 연결층수 표기)",
+        "혜인관 지하1층 주차장 안내도"
+      ],
+      "note": "주차장 안에서 걸어서 이어지는지 확인 필요"
+    },
+    {
+      "id": "chungwoon-B1__지하주차장-B1",
+      "from": {
+        "building": "chungwoon",
+        "name": "청운관",
+        "floor": "B1"
+      },
+      "to": {
+        "building": "지하주차장",
+        "name": "지하주차장",
+        "floor": "B1"
+      },
+      "kind": "parking",
+      "status": "확인 필요",
+      "stepFree": null,
+      "evidence": [
+        "캠퍼스맵 이미지(지하통로입구 · 연결층수 표기)",
+        "혜인관 지하1층 주차장 안내도"
+      ],
+      "note": "주차장 안에서 걸어서 이어지는지 확인 필요"
+    },
+    {
+      "id": "hyein-B1__지하주차장-B1",
+      "from": {
+        "building": "hyein",
+        "name": "혜인관",
+        "floor": "B1"
+      },
+      "to": {
+        "building": "지하주차장",
+        "name": "지하주차장",
+        "floor": "B1"
+      },
+      "kind": "parking",
+      "status": "확인 필요",
+      "stepFree": null,
+      "evidence": [
+        "캠퍼스맵 이미지(지하통로입구 · 연결층수 표기)",
+        "혜인관 지하1층 주차장 안내도"
+      ],
+      "note": "주차장 안에서 걸어서 이어지는지 확인 필요"
+    },
+    {
+      "id": "hallim-3__eunju1-3",
+      "from": {
+        "building": "hallim",
+        "name": "한림관",
+        "floor": "3"
+      },
+      "to": {
+        "building": "eunju1",
+        "name": "은주1관",
+        "floor": "3"
+      },
+      "kind": "indoor",
+      "status": "삭제",
+      "stepFree": null,
+      "evidence": [
+        "현장 메모로 은주1관 2층으로 정정"
+      ]
+    },
+    {
+      "id": "yudam-8__suin-4",
+      "from": {
+        "building": "yudam",
+        "name": "유담관",
+        "floor": "8"
+      },
+      "to": {
+        "building": "suin",
+        "name": "수인관",
+        "floor": "4"
+      },
+      "kind": "indoor",
+      "status": "삭제",
+      "stepFree": null,
+      "evidence": [
+        "수인관은 정문 쪽(은주2관 남쪽)에 있어 유담관과 붙어 있지 않음"
+      ]
+    },
+    {
+      "id": "suin-4__bon-1",
+      "from": {
+        "building": "suin",
+        "name": "수인관",
+        "floor": "4"
+      },
+      "to": {
+        "building": "bon",
+        "name": "본관",
+        "floor": "1"
+      },
+      "kind": "indoor",
+      "status": "삭제",
+      "stepFree": null,
+      "evidence": [
+        "수인관 위치가 본관과 멀음"
+      ]
+    },
+    {
+      "id": "yudam-13__bon-8",
+      "from": {
+        "building": "yudam",
+        "name": "유담관",
+        "floor": "13"
+      },
+      "to": {
+        "building": "bon",
+        "name": "본관",
+        "floor": "8"
+      },
+      "kind": "indoor",
+      "status": "삭제",
+      "stepFree": null,
+      "evidence": [
+        "유담관에 13층 없음 (호실 데이터)"
+      ]
+    },
+    {
+      "id": "munye-5__스콘스퀘어-광장",
+      "from": {
+        "building": "munye",
+        "name": "문예관",
+        "floor": "5"
+      },
+      "to": {
+        "building": "스콘스퀘어",
+        "name": "스콘스퀘어",
+        "floor": "광장"
+      },
+      "kind": "outdoor",
+      "status": "삭제",
+      "stepFree": null,
+      "evidence": [
+        "문예관은 스콘스퀘어와 붙어 있지 않음 (캠퍼스맵)"
+      ]
+    }
+  ]
+}

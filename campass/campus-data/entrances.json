@@ -1,0 +1,530 @@
+{
+  "note": "학교 캠퍼스맵 데이터의 \"교통 및 출입\" 항목. 입구가 몇 층인지는 데이터에 없음 (floor = null)",
+  "entrances": [
+    {
+      "id": "bus_stop_2115",
+      "name": "서경대본관 2115번 버스정류장",
+      "kind": "bus_stop",
+      "building": null,
+      "buildingName": null,
+      "floor": null,
+      "stepFree": null,
+      "lat": 37.61546111,
+      "lon": 127.0116775,
+      "local": [
+        -80.57,
+        25.64
+      ]
+    },
+    {
+      "id": "bus_stop_1164",
+      "name": "서경대본관 1164번 버스정류장",
+      "kind": "bus_stop",
+      "building": null,
+      "buildingName": null,
+      "floor": null,
+      "stepFree": null,
+      "lat": 37.6154431,
+      "lon": 127.0115898,
+      "local": [
+        -88.31,
+        23.64
+      ]
+    },
+    {
+      "id": "bus_stop_gate_1",
+      "name": "대일외고서경대정문 버스정류장",
+      "kind": "bus_stop",
+      "building": null,
+      "buildingName": null,
+      "floor": null,
+      "stepFree": null,
+      "lat": 37.61292467,
+      "lon": 127.0131835,
+      "local": [
+        52.44,
+        -255.86
+      ]
+    },
+    {
+      "id": "bus_stop_gate_2",
+      "name": "서경대정문.대일외고 버스정류장",
+      "kind": "bus_stop",
+      "building": null,
+      "buildingName": null,
+      "floor": null,
+      "stepFree": null,
+      "lat": 37.6131995,
+      "lon": 127.012957,
+      "local": [
+        32.43,
+        -225.36
+      ]
+    },
+    {
+      "id": "passage_bon_hallim",
+      "name": "본관-한림관 연결통로",
+      "kind": "connector",
+      "building": null,
+      "buildingName": null,
+      "floor": null,
+      "stepFree": null,
+      "lat": 37.61531462,
+      "lon": 127.0124364,
+      "local": [
+        -13.56,
+        9.39
+      ]
+    },
+    {
+      "id": "passage_hallim_eunju1",
+      "name": "한림관-은주관 연결통로",
+      "kind": "connector",
+      "building": null,
+      "buildingName": null,
+      "floor": null,
+      "stepFree": null,
+      "lat": 37.61526728,
+      "lon": 127.0128186,
+      "local": [
+        20.18,
+        4.14
+      ]
+    },
+    {
+      "id": "gate_main",
+      "name": "정문",
+      "kind": "gate",
+      "building": null,
+      "buildingName": null,
+      "floor": null,
+      "stepFree": null,
+      "lat": 37.61360271,
+      "lon": 127.01279,
+      "local": [
+        17.68,
+        -180.61
+      ]
+    },
+    {
+      "id": "gate_west",
+      "name": "서문(후문)",
+      "kind": "gate",
+      "building": null,
+      "buildingName": null,
+      "floor": null,
+      "stepFree": null,
+      "lat": 37.6162045,
+      "lon": 127.0109613,
+      "local": [
+        -143.81,
+        108.14
+      ]
+    },
+    {
+      "id": "parking_entrance_1",
+      "name": "제1주차장 출입구",
+      "kind": "parking_entrance",
+      "building": null,
+      "buildingName": null,
+      "floor": null,
+      "stepFree": null,
+      "lat": 37.61394512,
+      "lon": 127.012422,
+      "local": [
+        -14.81,
+        -142.61
+      ]
+    },
+    {
+      "id": "parking_entrance_2",
+      "name": "제2주차장 출입구",
+      "kind": "parking_entrance",
+      "building": null,
+      "buildingName": null,
+      "floor": null,
+      "stepFree": null,
+      "lat": 37.61499482,
+      "lon": 127.0119805,
+      "local": [
+        -53.81,
+        -26.11
+      ]
+    },
+    {
+      "id": "parking_entrance_west",
+      "name": "서문 주차장 출입구",
+      "kind": "parking_entrance",
+      "building": null,
+      "buildingName": null,
+      "floor": null,
+      "stepFree": null,
+      "lat": 37.61621576,
+      "lon": 127.0109754,
+      "local": [
+        -142.56,
+        109.39
+      ]
+    },
+    {
+      "id": "yudam_entrance_1",
+      "name": "유담관 입구(1)",
+      "kind": "building_entrance",
+      "building": "yudam",
+      "buildingName": "유담관",
+      "floor": null,
+      "stepFree": null,
+      "lat": 37.61469975,
+      "lon": 127.0119747,
+      "local": [
+        -54.32,
+        -58.86
+      ]
+    },
+    {
+      "id": "yudam_entrance_2",
+      "name": "유담관 입구(2)",
+      "kind": "building_entrance",
+      "building": "yudam",
+      "buildingName": "유담관",
+      "floor": null,
+      "stepFree": null,
+      "lat": 37.61513675,
+      "lon": 127.0117624,
+      "local": [
+        -73.07,
+        -10.36
+      ]
+    },
+    {
+      "id": "yudam_entrance_3",
+      "name": "유담관 입구(3)",
+      "kind": "building_entrance",
+      "building": "yudam",
+      "buildingName": "유담관",
+      "floor": null,
+      "stepFree": null,
+      "lat": 37.61519986,
+      "lon": 127.0113434,
+      "local": [
+        -110.06,
+        -3.36
+      ]
+    },
+    {
+      "id": "bon_entrance_1",
+      "name": "본관 입구(1)",
+      "kind": "building_entrance",
+      "building": "bon",
+      "buildingName": "본관",
+      "floor": null,
+      "stepFree": null,
+      "lat": 37.61532593,
+      "lon": 127.0120145,
+      "local": [
+        -50.81,
+        10.64
+      ]
+    },
+    {
+      "id": "bon_entrance_2",
+      "name": "본관 입구(2)",
+      "kind": "building_entrance",
+      "building": "bon",
+      "buildingName": "본관",
+      "floor": null,
+      "stepFree": null,
+      "lat": 37.61563679,
+      "lon": 127.0117965,
+      "local": [
+        -70.06,
+        45.14
+      ]
+    },
+    {
+      "id": "bon_entrance_3",
+      "name": "본관 입구(3)",
+      "kind": "building_entrance",
+      "building": "bon",
+      "buildingName": "본관",
+      "floor": null,
+      "stepFree": null,
+      "lat": 37.61544302,
+      "lon": 127.0124336,
+      "local": [
+        -13.81,
+        23.64
+      ]
+    },
+    {
+      "id": "hallim_entrance_1",
+      "name": "한림관 입구",
+      "kind": "building_entrance",
+      "building": "hallim",
+      "buildingName": "한림관",
+      "floor": null,
+      "stepFree": null,
+      "lat": 37.61511415,
+      "lon": 127.0125241,
+      "local": [
+        -5.82,
+        -12.86
+      ]
+    },
+    {
+      "id": "eunju1_entrance_1",
+      "name": "은주1관 입구(1)",
+      "kind": "building_entrance",
+      "building": "eunju1",
+      "buildingName": "은주1관",
+      "floor": null,
+      "stepFree": null,
+      "lat": 37.6148641,
+      "lon": 127.012694,
+      "local": [
+        9.19,
+        -40.61
+      ]
+    },
+    {
+      "id": "eunju1_entrance_2",
+      "name": "은주1관 입구(2)",
+      "kind": "building_entrance",
+      "building": "eunju1",
+      "buildingName": "은주1관",
+      "floor": "5",
+      "stepFree": null,
+      "lat": 37.61484156,
+      "lon": 127.0128639,
+      "local": [
+        24.19,
+        -43.11
+      ]
+    },
+    {
+      "id": "eunju2_entrance_1",
+      "name": "은주2관 입구(1)",
+      "kind": "building_entrance",
+      "building": "eunju2",
+      "buildingName": "은주2관",
+      "floor": null,
+      "stepFree": null,
+      "lat": 37.61440009,
+      "lon": 127.012742,
+      "local": [
+        13.43,
+        -92.11
+      ]
+    },
+    {
+      "id": "eunju2_entrance_2",
+      "name": "은주2관 입구(2)",
+      "kind": "building_entrance",
+      "building": "eunju2",
+      "buildingName": "은주2관",
+      "floor": null,
+      "stepFree": null,
+      "lat": 37.61410267,
+      "lon": 127.0136113,
+      "local": [
+        90.19,
+        -125.11
+      ]
+    },
+    {
+      "id": "hyein_entrance_1",
+      "name": "혜인관 입구(1)",
+      "kind": "building_entrance",
+      "building": "hyein",
+      "buildingName": "혜인관",
+      "floor": null,
+      "stepFree": null,
+      "lat": 37.61451259,
+      "lon": 127.0138039,
+      "local": [
+        107.19,
+        -79.61
+      ]
+    },
+    {
+      "id": "hyein_entrance_2",
+      "name": "혜인관 입구(2)",
+      "kind": "building_entrance",
+      "building": "hyein",
+      "buildingName": "혜인관",
+      "floor": null,
+      "stepFree": null,
+      "lat": 37.61489097,
+      "lon": 127.0141324,
+      "local": [
+        136.18,
+        -37.61
+      ]
+    },
+    {
+      "id": "chungwoon_entrance_1",
+      "name": "청운관 입구",
+      "kind": "building_entrance",
+      "building": "chungwoon",
+      "buildingName": "청운관",
+      "floor": null,
+      "stepFree": null,
+      "lat": 37.61510725,
+      "lon": 127.0137785,
+      "local": [
+        104.93,
+        -13.61
+      ]
+    },
+    {
+      "id": "sangseung_entrance_1",
+      "name": "상승관 입구",
+      "kind": "building_entrance",
+      "building": "sangseung",
+      "buildingName": "상승관",
+      "floor": null,
+      "stepFree": false,
+      "lat": 37.61523791,
+      "lon": 127.0135973,
+      "local": [
+        88.93,
+        0.89
+      ]
+    },
+    {
+      "id": "daeil_entrance_1",
+      "name": "대일관 입구(1)",
+      "kind": "building_entrance",
+      "building": "daeil",
+      "buildingName": "대일관",
+      "floor": null,
+      "stepFree": null,
+      "lat": 37.61537988,
+      "lon": 127.0130848,
+      "local": [
+        43.68,
+        16.64
+      ]
+    },
+    {
+      "id": "daeil_entrance_2",
+      "name": "대일관 입구(2)",
+      "kind": "building_entrance",
+      "building": "daeil",
+      "buildingName": "대일관",
+      "floor": null,
+      "stepFree": null,
+      "lat": 37.61531001,
+      "lon": 127.0134331,
+      "local": [
+        74.44,
+        8.89
+      ]
+    },
+    {
+      "id": "daeil_entrance_3",
+      "name": "대일관 입구(3)",
+      "kind": "building_entrance",
+      "building": "daeil",
+      "buildingName": "대일관",
+      "floor": null,
+      "stepFree": null,
+      "lat": 37.61546544,
+      "lon": 127.0133822,
+      "local": [
+        69.94,
+        26.14
+      ]
+    },
+    {
+      "id": "munye_entrance_1",
+      "name": "문예관 입구(1)",
+      "kind": "building_entrance",
+      "building": "munye",
+      "buildingName": "문예관",
+      "floor": null,
+      "stepFree": null,
+      "lat": 37.61563672,
+      "lon": 127.0124817,
+      "local": [
+        -9.57,
+        45.14
+      ]
+    },
+    {
+      "id": "munye_entrance_2",
+      "name": "문예관 입구(2)",
+      "kind": "building_entrance",
+      "building": "munye",
+      "buildingName": "문예관",
+      "floor": null,
+      "stepFree": null,
+      "lat": 37.61567277,
+      "lon": 127.0123798,
+      "local": [
+        -18.56,
+        49.14
+      ]
+    },
+    {
+      "id": "bukak_entrance_1",
+      "name": "북악관 입구(1)",
+      "kind": "building_entrance",
+      "building": "bukak",
+      "buildingName": "북악관",
+      "floor": null,
+      "stepFree": null,
+      "lat": 37.61590934,
+      "lon": 127.011822,
+      "local": [
+        -67.82,
+        75.39
+      ]
+    },
+    {
+      "id": "bukak_entrance_2",
+      "name": "북악관 입구(2)",
+      "kind": "building_entrance",
+      "building": "bukak",
+      "buildingName": "북악관",
+      "floor": null,
+      "stepFree": null,
+      "lat": 37.61579893,
+      "lon": 127.0121646,
+      "local": [
+        -37.57,
+        63.14
+      ]
+    },
+    {
+      "id": "bukak_entrance_3",
+      "name": "북악관 입구(3)",
+      "kind": "building_entrance",
+      "building": "bukak",
+      "buildingName": "북악관",
+      "floor": null,
+      "stepFree": null,
+      "lat": 37.61603551,
+      "lon": 127.0114823,
+      "local": [
+        -97.81,
+        89.39
+      ]
+    },
+    {
+      "id": "bukak_entrance_4",
+      "name": "북악관 입구(4)",
+      "kind": "building_entrance",
+      "building": "bukak",
+      "buildingName": "북악관",
+      "floor": null,
+      "stepFree": null,
+      "lat": 37.61614589,
+      "lon": 127.011437,
+      "local": [
+        -101.81,
+        101.64
+      ]
+    }
+  ]
+}

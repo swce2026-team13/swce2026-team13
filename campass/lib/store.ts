@@ -3,6 +3,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { AppError, calculateRoute, waypoints, type Route } from "./routing.ts";
+import { currentPlaceId } from "./catalog.ts";
 export const ADMIN_SESSION_SECONDS = 8 * 60 * 60;
 export type Session = {
   id: string;
@@ -147,7 +148,7 @@ export class Store {
     return this.transaction(() => {
       const session: Session = {
         id: randomUUID(),
-        destination,
+        destination: currentPlaceId(destination),
         route,
         currentStep: 0,
         version: 0,
@@ -171,7 +172,9 @@ export class Store {
       .get(id, owner) as { data: string } | undefined;
     if (!row)
       throw new AppError("안내 기록을 찾을 수 없어요.", 404, "NOT_FOUND");
-    return JSON.parse(row.data);
+    const session: Session = JSON.parse(row.data);
+    session.destination = currentPlaceId(session.destination);
+    return session;
   }
   active(id: string, owner: string, version?: number) {
     const s = this.get(id, owner);

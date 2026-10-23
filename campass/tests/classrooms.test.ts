@@ -14,7 +14,7 @@ test("classroom category shows buildings instead of individual rooms", () => {
     places.filter((p) => p.category === "classroom"),
     "classroom",
   );
-  assert.equal(result.candidates.length, 12);
+  assert.equal(result.candidates.length, 13);
   assert.ok(result.candidates.every((p) => p.category === "building"));
   assert.equal(result.selectedBuilding, undefined);
 });

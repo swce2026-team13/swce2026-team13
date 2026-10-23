@@ -8,6 +8,8 @@ export type Place = {
   verified: boolean;
   source: string;
   description: string;
+  // 경로 계산에 쓰는 도착 지점 id. 없으면 장소 id를 그대로 씀
+  arrival?: string;
 };
 export const sources = {
   map: "https://www.skuniv.ac.kr/campus-map",
@@ -20,18 +22,19 @@ export const campus = {
   checkedAt: "2026-10-08",
   sources,
 };
-const names: [string, string][] = [
+const names: [string, string, string?][] = [
   ["hyein", "혜인관"],
-  ["main", "본관"],
+  ["bon", "본관", "main"],
   ["yudam", "유담관"],
   ["bukak", "북악관"],
   ["munye", "문예관"],
   ["daeil", "대일관"],
-  ["cheongun", "청운관"],
-  ["hanlim", "한림관"],
+  ["chungwoon", "청운관"],
+  ["hallim", "한림관"],
   ["eunju1", "은주1관"],
   ["eunju2", "은주2관"],
   ["suin", "수인관"],
+  ["sangseung", "상승관"],
   ["creative", "크리에이티브센터"],
 ];
 export const places: Place[] = [
@@ -46,7 +49,7 @@ export const places: Place[] = [
     source: sources.figma,
     description: "시연용 행사 · 실제 면접 장소는 입학 공지 확인",
   },
-  ...names.map(([id, name]): Place => ({
+  ...names.map(([id, name, arrival]): Place => ({
     id,
     name,
     building: name,
@@ -56,6 +59,7 @@ export const places: Place[] = [
     verified: true,
     source: sources.notice,
     description: "서경대학교 공식 캠퍼스맵 등재",
+    ...(arrival ? { arrival } : {}),
   })),
   ...["301", "302", "303", "304", "305", "307", "311"].map((room): Place => ({
     id: `hyein-${room}`,
@@ -113,6 +117,17 @@ export const places: Place[] = [
      description: "한림관 6층 연결통로를 지나 도착하는 은주1관 5층 앞",
    }, 
 ];
+// 건물 id를 캠퍼스 데이터에 맞추기 전의 id. 저장된 세션과 이전 요청을 새 id로 받음
+const renamedPlaceIds: Record<string, string> = {
+  main: "bon",
+  cheongun: "chungwoon",
+  hanlim: "hallim",
+};
+export const currentPlaceId = (id: string) => renamedPlaceIds[id] ?? id;
+export function arrivalWaypoint(placeId: string) {
+  const place = places.find((p) => p.id === currentPlaceId(placeId));
+  return place && (place.arrival ?? place.id);
+}
 export function searchPlaces(
   query: string,
   category?: string,

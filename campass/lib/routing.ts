@@ -1,4 +1,4 @@
-import { places } from "./catalog.ts";
+import { arrivalWaypoint } from "./catalog.ts";
 export class AppError extends Error {
   status: number;
   code: string;
@@ -274,10 +274,8 @@ export function calculateRoute(
   destination: string,
   elevator: boolean,
 ): Route {
-  if (
-    !waypoints.some((w) => w.id === start) ||
-    !places.some((p) => p.id === destination)
-  )
+  const target = arrivalWaypoint(destination);
+  if (!waypoints.some((w) => w.id === start) || !target)
     throw new AppError("출발지 또는 목적지를 확인해 주세요.");
   const dist = new Map<string, number>([[start, 0]]);
   const previous = new Map<string, string>();
@@ -288,7 +286,7 @@ export function calculateRoute(
     )[0];
     if (!Number.isFinite(dist.get(id) ?? Infinity)) break;
     pending.delete(id);
-    if (id === destination) break;
+    if (id === target) break;
     for (const e of edges) {
       if (elevator && e.stairs) continue;
       const next = e.from === id ? e.to : e.to === id ? e.from : undefined;
@@ -300,20 +298,20 @@ export function calculateRoute(
       }
     }
   }
-  if (!dist.has(destination))
+  if (!dist.has(target))
     throw new AppError(
       "이 장소의 안내 경로는 아직 등록되지 않았어요. 공식 캠퍼스 지도를 확인해 주세요.",
       422,
       "ROUTE_UNAVAILABLE",
     );
-  const ids = [destination];
+  const ids = [target];
   while (ids[0] !== start) ids.unshift(previous.get(ids[0])!);
   const steps = ids.map((id, index) => {
     const point = { ...waypoints.find((w) => w.id === id)! };
     const branch = branchDetails[id]?.[ids[index + 1]];
     if (branch) point.detail = branch;
     // 역방향 경로 안내 갱신
-    if (!["interview", "eunju1_5f_front"].includes(destination) && index < ids.length - 1) {
+    if (!["interview", "eunju1_5f_front"].includes(target) && index < ids.length - 1) {
       point.instruction = `${waypoints.find((w) => w.id === ids[index + 1])!.name} 방향으로 이동하세요`;
       point.detail = "시연 경로 · 현장의 안내 표지를 함께 확인하세요.";
     }
@@ -335,7 +333,7 @@ export function calculateRoute(
 
 const connections = usedEdges.filter((edge) => edge.connection).length;
 const floorMoves = usedEdges.filter((edge) => edge.floorMove).length;
-  const distance = dist.get(destination)!;
+  const distance = dist.get(target)!;
   return {
   steps,
   distance,
