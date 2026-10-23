@@ -6,7 +6,7 @@ import {
   CheckCircle2,
   Columns2,
 } from "lucide-react";
-import { waypoints } from "@/lib/routing";
+import { startOptions, waypoints } from "@/lib/routing";
 import { Notice, Tag } from "@/components/ui";
 import { useCampus } from "@/components/campus-provider";
 export default function Screen() {
@@ -24,6 +24,7 @@ export default function Screen() {
     begin,
     destinationCard,
   } = useCampus();
+  const starts = startOptions(destination.id, elevator);
   return (
     <>
       <section className="content stack">
@@ -43,7 +44,7 @@ export default function Screen() {
         </div>
         {destinationCard}
         <h3>어디에서 출발하시나요?</h3>
-        {["gate", "main", "parking"].map((id) => (
+        {starts.map((id) => (
           <button
             key={id}
             disabled={busy}
@@ -56,7 +57,7 @@ export default function Screen() {
             </span>
           </button>
         ))}
-        {!["gate", "main", "parking"].includes(start) && (
+        {!starts.includes(start) && (
           <div className="choice selected">
             <CheckCircle2 size={20} />
             {waypoints.find((w) => w.id === start)?.name}

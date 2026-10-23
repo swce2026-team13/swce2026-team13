@@ -25,3 +25,7 @@ docs/
 [Dd]ocs/
 백엔드 구현.md
 .npm-cache/
+
+# Python (vision-server)
+__pycache__/
+*.pyc

@@ -161,7 +161,7 @@ test("HTTP enforces origin, route availability, and typed inputs", async () => {
     (
       await request(
         "sessions",
-        { start: "bus", destination: "interview", elevator: true },
+        { start: "bus_stop_2115", destination: "interview", elevator: true },
         { origin: "https://untrusted.invalid" },
       )
     ).status,
@@ -170,7 +170,7 @@ test("HTTP enforces origin, route availability, and typed inputs", async () => {
   assert.equal(
     (
       await request("routes", {
-        start: "bus",
+        start: "bus_stop_2115",
         destination: "bukak",
         elevator: true,
       })
@@ -180,7 +180,7 @@ test("HTTP enforces origin, route availability, and typed inputs", async () => {
   assert.equal(
     (
       await request("sessions", {
-        start: "bus",
+        start: "bus_stop_2115",
         destination: "interview",
         elevator: "yes",
       })
@@ -190,7 +190,7 @@ test("HTTP enforces origin, route availability, and typed inputs", async () => {
 });
 test("HTTP complete journey rejects IDOR/stale requests and persists deduplicated feedback", async () => {
   const created = await request("sessions", {
-    start: "bus",
+    start: "bus_stop_2115",
     destination: "interview",
     elevator: true,
   });
@@ -235,7 +235,7 @@ test("HTTP complete journey rejects IDOR/stale requests and persists deduplicate
   );
   const feedback = {
     confused: true,
-    waypointId: "bus",
+    waypointId: "bus_stop_2115",
     reason: "방향 혼란",
     comment: "테스트",
   };
