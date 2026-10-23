@@ -4,10 +4,10 @@ import {
   ArrowUp,
   ArrowUpRight,
   CornerUpLeft,
-  Camera,
   Minus,
   Plus,
 } from "lucide-react";
+import { CameraIcon } from "@/components/icons";
 import { useState } from "react";
 import type { Route } from "@/lib/routing";
 export function Tag({
@@ -80,11 +80,11 @@ export function Photo({
       {direction && (
         <div className={`direction ${direction === "backward" ? "turn" : ""}`}>
           {direction === "backward" ? (
-            <CornerUpLeft />
+            <CornerUpLeft strokeWidth={1.65} />
           ) : direction === "right" ? (
-            <ArrowUpRight />
+            <ArrowUpRight strokeWidth={1.65} />
           ) : (
-            <ArrowUp />
+            <ArrowUp strokeWidth={1.65} />
           )}
         </div>
       )}
@@ -102,7 +102,7 @@ export function Upload({
 }) {
   return (
     <label className={`button secondary upload ${busy ? "disabled" : ""}`}>
-      <Camera size={20} />
+      <CameraIcon size={20} />
       {busy ? "사진 확인 중…" : label}
       <input
         type="file"
@@ -283,14 +283,14 @@ export function CampusMap({
             disabled={zoom >= 1.5}
             onClick={() => setZoom(Math.min(1.5, zoom + 0.25))}
           >
-            <Plus size={18} />
+            <Plus size={18} strokeWidth={1.65} />
           </button>
           <button
             aria-label="지도 축소"
             disabled={zoom <= 1}
             onClick={() => setZoom(Math.max(1, zoom - 0.25))}
           >
-            <Minus size={18} />
+            <Minus size={18} strokeWidth={1.65} />
           </button>
         </div>
       </div>

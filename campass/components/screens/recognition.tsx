@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { CheckCircle2 } from "lucide-react";
+import { CheckIcon } from "@/components/icons";
 import { Notice, Photo, Tag } from "@/components/ui";
 import { useCampus } from "@/components/campus-provider";
 import { toRecognitionViewModel } from "@/lib/recognition-view";
@@ -87,7 +87,7 @@ const alternativeCandidates = candidateViews.slice(1);
                 )}
               </div>
 
-              <CheckCircle2 size={22} />
+              <CheckIcon size={22} />
             </div>
 
             <div className="recognition-tags">
@@ -147,7 +147,7 @@ const alternativeCandidates = candidateViews.slice(1);
                       )}
                     </div>
 
-                    <CheckCircle2 size={21} />
+                    <CheckIcon size={21} />
                   </div>
 
                   <div className="recognition-confidence">

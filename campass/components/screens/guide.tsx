@@ -1,12 +1,11 @@
 "use client";
+import { Sparkles } from "lucide-react";
 import {
-  ArrowRight,
-  Camera,
-  Check,
-  CheckCircle2,
-  Map,
-  Sparkles,
-} from "lucide-react";
+  ArrowRightIcon,
+  CameraIcon,
+  CheckIcon,
+  MapIcon,
+} from "@/components/icons";
 import { Notice, Photo, Progress } from "@/components/ui";
 import { useCampus } from "@/components/campus-provider";
 export default function Screen() {
@@ -39,7 +38,7 @@ export default function Screen() {
             {session.recovered && (
               <Notice tone="green">
                 <b className="row">
-                  <CheckCircle2 size={18} />
+                  <CheckIcon size={18} />
                   선택한 위치에서 안내를 복구했어요
                 </b>
                 <p>현재 위치를 기준으로 목적지까지 경로를 다시 계산했어요.</p>
@@ -80,7 +79,7 @@ export default function Screen() {
               onClick={lost}
               disabled={busy || session.status === "completed"}
             >
-              <Camera size={20} />
+              <CameraIcon size={20} />
               길을 잃었어요
             </button>
             <p className="fine-print">
@@ -88,7 +87,7 @@ export default function Screen() {
             </p>
             <div className="card">
               <span className="search-caption">
-                <Sparkles size={16} />
+                <Sparkles size={16} strokeWidth={1.65} />
                 이동 중 다른 장소를 찾으시나요?
               </span>
               <form
@@ -108,7 +107,7 @@ export default function Screen() {
                   aria-label="장소 질문 검색"
                   disabled={busy || !query.trim()}
                 >
-                  <ArrowRight size={18} />
+                  <ArrowRightIcon size={18} />
                 </button>
               </form>
             </div>
@@ -116,7 +115,7 @@ export default function Screen() {
               className="text-button centered"
               onClick={() => go("guide-map")}
             >
-              <Map size={16} />
+              <MapIcon size={16} />
               지도에서 현재 단계 보기
             </button>
             <p className="fine-print">
@@ -134,7 +133,7 @@ export default function Screen() {
               {session.status === "completed"
                 ? "도착 안내 보기"
                 : "다음 지점에 도착했어요"}
-              <Check size={18} />
+              <CheckIcon size={18} />
             </button>
             <span className="fine-print">
               자동 위치 추적 없이 직접 도착을 확인합니다

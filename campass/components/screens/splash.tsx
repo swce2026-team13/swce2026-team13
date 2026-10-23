@@ -35,7 +35,7 @@ export default function Splash({ onDone }: { onDone: () => void }) {
     <main className="splash-screen">
       <div className="splash-center">
         <div className="splash-logo">
-          <Compass />
+          <Compass strokeWidth={1.65} />
         </div>
 
         <h1 className="splash-title">

@@ -1,5 +1,5 @@
 "use client";
-import { ArrowLeft, Map, X } from "lucide-react";
+import { BackIcon, CloseIcon, MapIcon } from "./icons";
 import { useCampus } from "./campus-provider";
 import { titles, viewForPath } from "@/lib/navigation";
 import { usePathname } from "next/navigation";
@@ -16,7 +16,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       }`}
 >
           <button className="icon-button" aria-label="뒤로 가기" onClick={back}>
-            <ArrowLeft size={21} />
+            <BackIcon size={21} />
           </button>
           <strong>
           {view === "guide"
@@ -31,7 +31,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               aria-label="안내 중 지도 보기"
               onClick={() => go("guide-map")}
             >
-              <Map size={21} />
+              <MapIcon size={21} />
             </button>
           ) : (
             <button
@@ -39,7 +39,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               aria-label="홈으로"
               onClick={() => go("home")}
             >
-              <X size={21} />
+              <CloseIcon size={21} />
             </button>
           )}
         </header>
@@ -48,7 +48,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="error-banner" role="alert">
           {error}
           <button aria-label="오류 닫기" onClick={() => setError("")}>
-            <X size={17} />
+            <CloseIcon size={17} />
           </button>
         </div>
       )}

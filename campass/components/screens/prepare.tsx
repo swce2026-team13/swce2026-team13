@@ -1,11 +1,11 @@
 "use client";
+import { AlertTriangle } from "lucide-react";
 import {
-  AlertTriangle,
-  ArrowRight,
-  Camera,
-  CheckCircle2,
-  Columns2,
-} from "lucide-react";
+  ArrowRightIcon,
+  CameraIcon,
+  CheckIcon,
+  ElevatorIcon,
+} from "@/components/icons";
 import { startOptions, waypoints } from "@/lib/routing";
 import { Notice, Tag } from "@/components/ui";
 import { useCampus } from "@/components/campus-provider";
@@ -59,7 +59,7 @@ export default function Screen() {
         ))}
         {!starts.includes(start) && (
           <div className="choice selected">
-            <CheckCircle2 size={20} />
+            <CheckIcon size={20} />
             {waypoints.find((w) => w.id === start)?.name}
           </div>
         )}
@@ -71,13 +71,13 @@ export default function Screen() {
             go("photo", { recovering: "false" });
           }}
         >
-          <Camera size={20} />
+          <CameraIcon size={20} />
           현재 위치를 모르겠어요 · 사진으로 찾기
         </button>
         <div className="card">
           <div className="between">
             <strong className="row">
-              <Columns2 size={20} />
+              <ElevatorIcon size={20} />
               엘리베이터로 이동
             </strong>
             <button
@@ -124,7 +124,7 @@ export default function Screen() {
   >
     <div className="between">
       <strong className="row">
-        <AlertTriangle size={20} />
+        <AlertTriangle size={20} strokeWidth={1.65} />
         헤매는 사람이 많은 구간
       </strong>
       <span>자세히 보기 →</span>
@@ -146,7 +146,7 @@ export default function Screen() {
           onClick={begin}
         >
           안내 시작
-          <ArrowRight size={18} />
+          <ArrowRightIcon size={18} />
         </button>
       </div>
     </>

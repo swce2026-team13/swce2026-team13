@@ -1,11 +1,11 @@
 "use client";
 import {
-  ArrowRight,
-  Building2,
-  Map,
-  MessageSquareText,
-  Search,
-} from "lucide-react";
+  ArrowRightIcon,
+  BuildingIcon,
+  MapIcon,
+  MessageIcon,
+  SearchIcon,
+} from "@/components/icons";
 import { places } from "@/lib/catalog";
 import { Notice } from "@/components/ui";
 import { ClassroomPicker } from "@/components/classroom-picker";
@@ -39,7 +39,7 @@ export default function Screen() {
           if (query.trim()) search();
         }}
       >
-        <Search size={20} />
+        <SearchIcon size={20} />
         <input
           aria-label="검색어 수정"
           value={query}
@@ -47,7 +47,7 @@ export default function Screen() {
           onChange={(e) => setQuery(e.target.value)}
         />
         <button disabled={busy || !query.trim()} aria-label="다시 검색">
-          <ArrowRight />
+          <ArrowRightIcon />
         </button>
       </form>
       {searchIntent !== "destination" && <p>{searchNote}</p>}
@@ -87,7 +87,7 @@ export default function Screen() {
   </div>
 
   <div className="ai-assistant-label">
-    <MessageSquareText size={15} />
+    <MessageIcon size={15} />
     <span>CAMPASS</span>
   </div>
 
@@ -124,7 +124,7 @@ export default function Screen() {
     <div className="card ai-place-card" key={p.id}>
       <div className="row">
         <span className="icon-box">
-          <Building2 size={22} />
+          <BuildingIcon size={22} />
         </span>
 
         <div>
@@ -154,7 +154,7 @@ export default function Screen() {
     className="button secondary"
     onClick={() => go("map")}
   >
-    <Map size={19} />
+    <MapIcon size={19} />
     캠퍼스 지도에서 직접 고르기
   </button>
 </div>

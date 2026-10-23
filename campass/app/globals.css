@@ -2988,3 +2988,211 @@ progress::-moz-progress-bar {
     padding: 16px;
   }
 }
+
+/* 지도에서 출발·도착 고르기 */
+.map-pick-screen h1 {
+  color: #354863;
+  text-shadow: 0 2px 4px rgba(58, 101, 173, 0.18);
+}
+
+.map-pick-screen h1 + p {
+  margin-top: 6px;
+  color: #667389;
+  line-height: 20px;
+}
+
+.map-pick-card {
+  padding: 14px 16px 16px;
+  border-radius: 14px;
+}
+
+.map-pick-card > .between {
+  min-height: 24px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.map-pick-card > .between b {
+  font-weight: 500;
+  color: #192334;
+}
+
+.map-pick-card .text-button {
+  min-height: 24px;
+  font-size: 12px;
+}
+
+.map-pick-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-size: 13px;
+  color: #667389;
+}
+
+.map-pick-row + .map-pick-row {
+  border-top: 1px solid #dfe7f4;
+}
+
+.map-pick-row.turn,
+.map-pick-row strong {
+  color: #192334;
+  font-weight: 500;
+}
+
+.map-pick-row strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.map-pick-row strong svg {
+  color: #2563eb;
+}
+
+.map-pick-tag {
+  padding: 4px 9px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 17px;
+}
+
+.map-pick-tag.start {
+  background: #eaf7f0;
+  color: #17845d;
+}
+
+.map-pick-tag.destination {
+  background: #e3edff;
+  color: #2563eb;
+}
+
+.map-pick-dot {
+  width: 6px;
+  height: 6px;
+  margin-right: -4px;
+  border-radius: 3px;
+  background: #2563eb;
+}
+
+.overview-card {
+  overflow: hidden;
+  border: 1px solid #dfe7f4;
+  border-radius: 20px;
+  background: #e9eff8;
+}
+
+.overview-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 53px;
+  padding: 0 15px 0 13px;
+  background: rgba(255, 255, 255, 0.32);
+  font-size: 13px;
+  color: #192334;
+}
+
+.overview-heading span {
+  padding: 4px 9px;
+  border-radius: 8px;
+  background: #e3edff;
+  color: #2563eb;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 17px;
+}
+
+.overview-map {
+  position: relative;
+  overflow: hidden;
+}
+
+.overview-map > svg:first-child {
+  display: block;
+  width: 100%;
+  height: auto;
+  user-select: none;
+}
+
+.overview-building,
+.overview-marker {
+  cursor: pointer;
+  outline: none;
+}
+
+.overview-building:focus-visible polygon {
+  stroke: #2563eb;
+  stroke-width: 2;
+}
+
+.overview-marker:focus-visible text {
+  fill: #2563eb;
+}
+
+.overview-labels,
+.overview-marker-label {
+  pointer-events: none;
+}
+
+.overview-north {
+  position: absolute;
+  top: 6px;
+  right: 14px;
+  width: 7px;
+  height: 18px;
+}
+
+.overview-map .zoom {
+  bottom: 8px;
+  right: 12px;
+  border-radius: 12px;
+  background: white;
+}
+
+.overview-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 9px;
+  margin: 0;
+  padding: 6px 11px 8px;
+  list-style: none;
+  background: rgba(255, 255, 255, 0.32);
+  color: #66738a;
+  font-size: 8px;
+  font-weight: 500;
+  line-height: 12px;
+}
+
+.overview-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.overview-legend i {
+  width: 9px;
+  height: 7px;
+  border: 0.5px solid #bfc7d6;
+  border-radius: 2px;
+}
+
+.map-pick-actions > p {
+  color: #667389;
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+}
+
+.map-pick-actions > .map-pick-message {
+  color: #b45309;
+  font-weight: 600;
+}
+
+.map-pick-actions .button.primary:disabled {
+  background: #c7d1de;
+  box-shadow: none;
+  opacity: 1;
+}

@@ -1,53 +1,123 @@
 "use client";
-import { Building2, ChevronRight } from "lucide-react";
-import { places, sources } from "@/lib/catalog";
-import { CampusMap } from "@/components/ui";
+import { useState } from "react";
+import { places } from "@/lib/catalog";
+import { LEGEND, overviewMarkers } from "@/lib/campus-overview";
+import { emptyPick, pickOnMap, pickStatus, startPoints } from "@/lib/map-pick";
+import { CampusOverviewMap } from "@/components/campus-overview-map";
+import { CheckIcon } from "@/components/icons";
 import { useCampus } from "@/components/campus-provider";
+
+const startMarkers = overviewMarkers
+  .filter((m) => startPoints[m.id])
+  .map((m) => m.id);
+
+const markerNames: Record<string, string> = {
+  bus_stop_2115: "2115번 정류장",
+  gate_main: "정문",
+  parking_entrance_1: "1주차장",
+};
+
+const pickName = (id: string) =>
+  markerNames[id] ?? places.find((p) => p.id === id)?.name ?? id;
+
 export default function Screen() {
-  const { session, browseBuilding } = useCampus();
+  const { busy, ready, go } = useCampus();
+  const [pick, setPick] = useState(emptyPick);
+  const status = pickStatus(pick);
+  const turn = !pick.start ? "start" : !pick.destination ? "destination" : "";
+  const rows = [
+    {
+      key: "start" as const,
+      tag: "출발",
+      value: pick.start,
+      hint: "출발할 건물을 눌러 주세요",
+    },
+    {
+      key: "destination" as const,
+      tag: "도착",
+      value: pick.destination,
+      hint: "갈 건물을 눌러 주세요",
+    },
+  ];
+
   return (
-    <section className="content stack">
-      <h1>어느 건물을 찾으세요?</h1>
-      <p>건물을 선택하면 주요 장소를 확인할 수 있어요.</p>
+    <>
+      <section className="content stack map-pick-screen">
+        <div>
+          <h1>어디로 가세요?</h1>
+          <p>출발할 건물을 먼저 누르고, 갈 건물을 이어서 눌러 주세요.</p>
+        </div>
 
-      <CampusMap
-        route={undefined}
-        current={session?.currentStep}
-        onBuilding={browseBuilding}
-      />
-
-      <button
-        className="card place-result"
-        onClick={() => browseBuilding("혜인관")}
-      >
-        <span className="icon-box">
-          <Building2 />
-        </span>
-        <span>
-          <h2>혜인관</h2>
-          <small>층별 주요 장소 확인</small>
-        </span>
-        <ChevronRight />
-      </button>
-      <h3>서경대학교 건물</h3>
-      <div className="chips">
-        {places
-          .filter((p) => p.category === "building")
-          .map((p) => (
-            <button key={p.id} onClick={() => browseBuilding(p.name)}>
-              {p.name}
-            </button>
+        <div className="card map-pick-card">
+          <div className="between">
+            <b>고른 건물</b>
+            {(pick.start || pick.destination) && (
+              <button className="text-button" onClick={() => setPick(emptyPick)}>
+                다시 선택
+              </button>
+            )}
+          </div>
+          {rows.map((row) => (
+            <div
+              key={row.key}
+              className={`map-pick-row ${turn === row.key ? "turn" : ""}`}
+            >
+              <span className={`map-pick-tag ${row.key}`}>{row.tag}</span>
+              {turn === row.key && <span className="map-pick-dot" />}
+              {row.value ? (
+                <strong>
+                  {pickName(row.value)}
+                  <CheckIcon size={16} />
+                </strong>
+              ) : (
+                <span>{row.hint}</span>
+              )}
+            </div>
           ))}
-      </div>
+        </div>
 
-      <a
-        className="text-button centered"
-        href={sources.map}
-        target="_blank"
-        rel="noreferrer"
-      >
-        서경대학교 공식 캠퍼스맵 ↗
-      </a>
-    </section>
+        <div className="overview-card">
+          <div className="overview-heading">
+            <b>캠퍼스 개요도</b>
+            <span>건물을 눌러 보세요</span>
+          </div>
+          <CampusOverviewMap
+            selected={[pick.start, pick.destination].filter(
+              (id): id is string => Boolean(id),
+            )}
+            startable={startMarkers}
+            onSelect={(id, building) => setPick(pickOnMap(pick, id, building))}
+          />
+          <ul className="overview-legend" aria-label="학과 범례">
+            {LEGEND.map((item) => (
+              <li key={item.label}>
+                <i style={{ background: item.color }} />
+                {item.label}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+      <div className="actions map-pick-actions">
+        <p>지하 통로나 연결 통로로 갈 수 있으면 그쪽으로 안내해요</p>
+        {status.message && (
+          <p className="map-pick-message" role="status">
+            {status.message}
+          </p>
+        )}
+        <button
+          className="button primary"
+          disabled={!status.ready || busy || !ready}
+          onClick={() =>
+            go("prepare", {
+              destination: pick.destination!,
+              start: status.start!,
+            })
+          }
+        >
+          바로 안내 시작
+        </button>
+      </div>
+    </>
   );
 }

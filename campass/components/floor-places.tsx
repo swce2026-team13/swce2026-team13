@@ -2,6 +2,26 @@
 import { CalendarDays } from "lucide-react";
 import type { Place } from "@/lib/catalog";
 import { Tag } from "@/components/ui";
+import {
+  BuildingIcon,
+  ClassroomIcon,
+  CoffeeIcon,
+  DiningIcon,
+  ElevatorIcon,
+  StoreIcon,
+} from "@/components/icons";
+
+function PlaceIcon({ place }: { place: Place }) {
+  const name = `${place.name} ${place.aliases.join(" ")}`;
+  if (place.category === "classroom") return <ClassroomIcon size={20} />;
+  if (place.category === "event")
+    return <CalendarDays size={20} strokeWidth={1.65} />;
+  if (/엘리베이터|승강기/.test(name)) return <ElevatorIcon size={20} />;
+  if (/카페|커피/.test(name)) return <CoffeeIcon size={20} />;
+  if (/식당|학식|푸드/.test(name)) return <DiningIcon size={20} />;
+  if (/편의점|매점/.test(name)) return <StoreIcon size={20} />;
+  return <BuildingIcon size={20} />;
+}
 
 // 지도 층별 목록과 분류 목록이 함께 쓰는 장소 행
 export function FloorPlaceList({
@@ -17,7 +37,7 @@ export function FloorPlaceList({
 }) {
   return items.map((p) => (
     <div className="floor-place" key={p.id}>
-      <CalendarDays size={20} />
+      <PlaceIcon place={p} />
       <div>
         <b>{p.name}</b>
         {p.category === "facility" && !p.verified && (

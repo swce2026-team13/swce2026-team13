@@ -1,41 +1,64 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
+import { CircleHelp, Compass, Navigation } from "lucide-react";
 
 import {
-  ArrowRight,
-  Building2,
-  CircleHelp,
-  Coffee,
-  Compass,
-  Map,
-  MessageSquareText,
-  Navigation,
-} from "lucide-react";
-
+  ArrowRightIcon,
+  BuildingIcon,
+  CoffeeIcon,
+  MapIcon,
+  MessageIcon,
+} from "@/components/icons";
 import { useCampus } from "@/components/campus-provider";
+import { createRotation } from "@/lib/rotation";
+
+const events = [
+  {
+    title: "2026 수시 면접",
+    status: "진행 중",
+    place: "혜인관 3층",
+    time: "09:00–17:00",
+    query: "면접 보러 왔어요",
+  },
+  {
+    title: "공모전 발표",
+    status: "11/10",
+    place: "유담관 L층",
+    time: "발표 행사",
+    query: "공모전 발표 보러 왔어요",
+  },
+];
+
+// 10초마다 다음 행사로 넘김. 화면이 안 보이거나 마우스·키보드 포커스가 카드에 있으면 멈춤
+function useEventRotation(count: number) {
+  const [index, setIndex] = useState(0);
+  const rotation = useRef<ReturnType<typeof createRotation>>(null);
+  useEffect(() => {
+    const current = createRotation(count, setIndex);
+    rotation.current = current;
+    const onVisibility = () => current.hold("hidden", document.hidden);
+    onVisibility();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      current.stop();
+      rotation.current = null;
+    };
+  }, [count]);
+  return {
+    index,
+    select: (next: number) => rotation.current?.select(next),
+    hold: (reason: string, on: boolean) => rotation.current?.hold(reason, on),
+  };
+}
 
 export default function Screen() {
   const { query, setQuery, session, busy, ready, go, search } = useCampus();
 
-  const [eventIndex, setEventIndex] = useState(0);
-
-  const events = [
-    {
-      title: "2026 수시 면접",
-      status: "진행 중",
-      place: "혜인관 3층",
-      time: "09:00–17:00",
-      query: "면접 보러 왔어요",
-    },
-    {
-      title: "공모전 발표",
-      status: "11/10",
-      place: "유담관 L층",
-      time: "발표 행사",
-      query: "공모전 발표 보러 왔어요",
-    },
-  ];
+  const carousel = useEventRotation(events.length);
+  const eventIndex = carousel.index;
 
   return (
 
@@ -43,7 +66,7 @@ export default function Screen() {
       <header className="home-topbar">
         <div className="home-brand">
           <span className="home-brand-icon">
-            <Compass size={20} />
+            <Compass size={20} strokeWidth={1.65} />
           </span>
 
           <strong>
@@ -56,7 +79,7 @@ export default function Screen() {
           aria-label="도움말"
           onClick={() => go("help")}
         >
-          <CircleHelp size={21} />
+          <CircleHelp size={21} strokeWidth={1.65} />
         </button>
       </header>
 
@@ -76,7 +99,7 @@ export default function Screen() {
             }
           }}
         >
-          <MessageSquareText size={19} />
+          <MessageIcon size={19} />
 
           <input
             aria-label="목적지 검색"
@@ -90,12 +113,12 @@ export default function Screen() {
             aria-label="목적지 찾기"
             disabled={busy || !ready || !query.trim()}
           >
-            <ArrowRight />
+            <ArrowRightIcon />
           </button>
         </form>
 
         <div className="home-search-caption">
-          <MessageSquareText size={14} />
+          <MessageIcon size={14} />
           <span>건물·강의실을 검색하거나 목적지를 말해보세요</span>
         </div>
 
@@ -118,11 +141,27 @@ export default function Screen() {
         <section className="home-section">
   <h2>오늘의 행사</h2>
 
-  <div className="home-event-carousel">
+  <div
+    className="home-event-carousel"
+    onPointerEnter={(e) => {
+      if (e.pointerType === "mouse") carousel.hold("pointer", true);
+    }}
+    onPointerLeave={(e) => {
+      if (e.pointerType === "mouse") carousel.hold("pointer", false);
+    }}
+    onFocus={(e) => {
+      // 클릭으로 생긴 포커스는 빼고 키보드 포커스만 멈춤
+      if (e.target.matches(":focus-visible")) carousel.hold("focus", true);
+    }}
+    onBlur={(e) => {
+      if (!e.currentTarget.contains(e.relatedTarget))
+        carousel.hold("focus", false);
+    }}
+  >
     <button
       type="button"
       className="home-event-card card"
-      onClick={() => setEventIndex((eventIndex + 1) % events.length)}
+      onClick={() => carousel.select(eventIndex + 1)}
       aria-label="다음 행사 보기"
     >
       <div>
@@ -145,7 +184,7 @@ export default function Screen() {
           search(events[eventIndex].query);
         }}
       >
-        길찾기 <ArrowRight size={15} />
+        길찾기 <ArrowRightIcon size={15} />
       </span>
     </button>
   </div>
@@ -157,7 +196,7 @@ export default function Screen() {
         type="button"
         className={index === eventIndex ? "active" : ""}
         aria-label={`${index + 1}번째 행사 보기`}
-        onClick={() => setEventIndex(index)}
+        onClick={() => carousel.select(index)}
       />
     ))}
   </div>
@@ -173,7 +212,7 @@ export default function Screen() {
               onClick={() => go("find", { tab: "classroom" })}
             >
               <span className="home-quick-icon">
-                <Building2 size={22} />
+                <BuildingIcon size={22} />
               </span>
 
               <strong>건물·강의실</strong>
@@ -186,7 +225,7 @@ export default function Screen() {
               onClick={() => go("find", { tab: "facility" })}
             >
               <span className="home-quick-icon">
-                <Coffee size={22} />
+                <CoffeeIcon size={22} />
               </span>
 
               <strong>편의시설</strong>
@@ -198,7 +237,7 @@ export default function Screen() {
             className="button secondary home-map-button"
             onClick={() => go("map")}
           >
-            <Map size={20} />
+            <MapIcon size={20} />
             지도에서 고르기
           </button>
 
@@ -209,7 +248,7 @@ export default function Screen() {
                 go(session.status === "completed" ? "arrival" : "guide")
               }
             >
-              <Navigation size={18} />
+              <Navigation size={18} strokeWidth={1.65} />
               {session.status === "completed"
                 ? "최근 안내·피드백 보기"
                 : "이전 안내 이어가기"}
