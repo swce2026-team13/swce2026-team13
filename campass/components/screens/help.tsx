@@ -8,7 +8,7 @@ export default function Screen() {
   return (
     <section className="content stack">
       <span className="icon-box">
-        <Compass />
+        <Compass strokeWidth={1.65} />
       </span>
 
       <h1>
@@ -62,7 +62,7 @@ export default function Screen() {
   </div>
       <Notice tone="amber">
         <b className="row">
-          <Info size={18} />
+          <Info size={18} strokeWidth={1.65} />
           시연 안내
         </b>
         <p>

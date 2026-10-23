@@ -1,7 +1,11 @@
 "use client";
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { ArrowRight, Building2, Coffee } from "lucide-react";
+import {
+  ArrowRightIcon,
+  BuildingIcon,
+  CoffeeIcon,
+} from "@/components/icons";
 import { places } from "@/lib/catalog";
 import { classroomFloors } from "@/lib/classrooms";
 import { navigationHref } from "@/lib/navigation";
@@ -41,7 +45,7 @@ export default function Screen() {
           className={tab === "classroom" ? "active" : ""}
           onClick={() => update({ tab: "classroom" })}
         >
-          <Building2 size={17} />
+          <BuildingIcon size={17} />
           건물·강의실
         </button>
         <button
@@ -50,7 +54,7 @@ export default function Screen() {
           className={tab === "facility" ? "active" : ""}
           onClick={() => update({ tab: "facility" })}
         >
-          <Coffee size={17} />
+          <CoffeeIcon size={17} />
           편의시설
         </button>
       </div>
@@ -103,7 +107,7 @@ export default function Screen() {
                       onClick={() => setOpenFloor(open ? "" : f.floor)}
                     >
                       {f.rooms.length ? "길찾기" : "준비 중"}
-                      {f.rooms.length > 0 && <ArrowRight size={15} />}
+                      {f.rooms.length > 0 && <ArrowRightIcon size={15} />}
                     </button>
                   </div>
                   {open && (

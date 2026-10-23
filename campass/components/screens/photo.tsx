@@ -1,10 +1,7 @@
 "use client";
 
-import {
-  CheckCircle2,
-  Circle,
-  LoaderCircle,
-} from "lucide-react";
+import { Circle, LoaderCircle } from "lucide-react";
+import { CheckIcon } from "@/components/icons";
 
 import { Photo } from "@/components/ui";
 import { getDefaultAnalysisSteps } from "@/lib/recognition-view";
@@ -71,7 +68,7 @@ const analysisSteps = getDefaultAnalysisSteps();
             >
               {step.status === "done" && (
                 <>
-                  <CheckCircle2 size={16} />
+                  <CheckIcon size={16} />
                   완료
                 </>
               )}
@@ -80,6 +77,7 @@ const analysisSteps = getDefaultAnalysisSteps();
                 <>
                   <LoaderCircle
                     size={16}
+                    strokeWidth={1.65}
                     className="photo-analysis-spinner"
                   />
                   확인 중
@@ -88,7 +86,7 @@ const analysisSteps = getDefaultAnalysisSteps();
 
               {step.status === "pending" && (
                 <>
-                  <Circle size={15} />
+                  <Circle size={15} strokeWidth={1.65} />
                   대기
                 </>
               )}

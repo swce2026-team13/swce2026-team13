@@ -1,5 +1,5 @@
 "use client";
-import { Camera, Check } from "lucide-react";
+import { CameraIcon, CheckIcon } from "@/components/icons";
 import { Notice, Photo, Tag, Upload } from "@/components/ui";
 import { useCampus } from "@/components/campus-provider";
 export default function Screen() {
@@ -17,7 +17,7 @@ export default function Screen() {
       {preview && <Photo uploaded={preview} label="촬영한 사진" />}
       <Notice tone="amber">
         <b className="row">
-          <Camera size={18} />
+          <CameraIcon size={18} />
           위치를 찾지 못했어요
         </b>
         <p>
@@ -42,7 +42,7 @@ export default function Screen() {
         ].map(([title, desc]) => (
           <div className="row" key={title}>
             <span className="check-icon">
-              <Check size={17} />
+              <CheckIcon size={17} />
             </span>
             <div>
               <b>{title}</b>

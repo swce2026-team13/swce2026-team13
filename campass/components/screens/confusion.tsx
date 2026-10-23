@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AlertTriangle, ArrowLeft, Lightbulb, MapPin } from "lucide-react";
+import { AlertTriangle, Lightbulb, MapPin } from "lucide-react";
+import { BackIcon } from "@/components/icons";
 import { api, useCampus } from "@/components/campus-provider";
 
 export default function Screen() {
@@ -61,7 +62,7 @@ const riskyPoint = points
         className="confusion-back"
         onClick={() => go("prepare")}
       >
-        <ArrowLeft size={18} />
+        <BackIcon size={18} />
         돌아가기
       </button>
 
@@ -76,7 +77,7 @@ const riskyPoint = points
       <div className="confusion-highlight">
         <div className="confusion-highlight-top">
           <span className="confusion-icon">
-            <AlertTriangle size={22} />
+            <AlertTriangle size={22} strokeWidth={1.65} />
           </span>
 
          <span className="confusion-badge">
@@ -100,7 +101,7 @@ const riskyPoint = points
       <div className="confusion-mini-grid">
         <div className="confusion-mini-card">
   <span className="confusion-mini-icon">
-    <MapPin size={19} />
+    <MapPin size={19} strokeWidth={1.65} />
   </span>
 
   <div>
@@ -115,7 +116,7 @@ const riskyPoint = points
 
         <div className="confusion-mini-card">
           <span className="confusion-mini-icon">
-            <Lightbulb size={19} />
+            <Lightbulb size={19} strokeWidth={1.65} />
           </span>
 
           <div>

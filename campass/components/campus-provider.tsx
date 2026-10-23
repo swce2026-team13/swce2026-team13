@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Building2, ChevronRight, MapPin } from "lucide-react";
+import { MapPin } from "lucide-react";
+import { BuildingIcon, ChevronRightIcon } from "./icons";
 import { places, type Place } from "@/lib/catalog";
 import { DEFAULT_START, waypoints, type Route } from "@/lib/routing";
 import type { Session } from "@/lib/store";
@@ -427,7 +428,7 @@ function useCampusState() {
     <div className="card destination-card">
       <div className="row">
         <span className="icon-box">
-          <Building2 />
+          <BuildingIcon />
         </span>
         <div>
           <h2>
@@ -461,9 +462,9 @@ function useCampusState() {
             disabled={busy}
             onClick={() => confirmLocation(w.id)}
           >
-            <MapPin size={18} />
+            <MapPin size={18} strokeWidth={1.65} />
             <span>{w.name}</span>
-            <ChevronRight size={18} />
+            <ChevronRightIcon size={18} />
           </button>
         ))}
     </div>

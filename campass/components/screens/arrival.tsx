@@ -1,5 +1,5 @@
 "use client";
-import { CheckCircle2, ChevronDown } from "lucide-react";
+import { CheckIcon, ChevronDownIcon } from "@/components/icons";
 import { waypoints } from "@/lib/routing";
 import { Notice, Progress } from "@/components/ui";
 import { useCampus } from "@/components/campus-provider";
@@ -46,7 +46,7 @@ export default function Screen() {
           <section className="content stack">
             <div className="arrival-intro">
               <span className="arrival-icon">
-                <CheckCircle2 size={39} />
+                <CheckIcon size={39} />
               </span>
               <h1>목적지에 도착했어요</h1>
               <p>캠퍼스 길찾기가 여러분의 방문을 응원할게요.</p>
@@ -96,7 +96,7 @@ export default function Screen() {
                           </option>
                         ))}
                       </select>
-                      <ChevronDown size={17} />
+                      <ChevronDownIcon size={17} />
                     </div>
                     <div className="chips">
                       {["방향 혼란", "사진 불일치", "표지판 부족", "기타"].map(

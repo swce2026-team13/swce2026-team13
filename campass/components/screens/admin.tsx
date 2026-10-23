@@ -51,7 +51,7 @@ export default function Screen() {
           }}
         >
           <div className="admin-login-heading">
-            <ShieldCheck className="blue-text" />
+            <ShieldCheck className="blue-text" strokeWidth={1.65} />
             <h3>관리자 인증</h3>
             <p>관리자 계정으로 로그인해 주세요.</p>
           </div>
