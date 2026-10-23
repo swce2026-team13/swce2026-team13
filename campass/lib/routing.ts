@@ -1,4 +1,4 @@
-import { arrivalWaypoint } from "./catalog.ts";
+import { arrivalWaypoint, type Place } from "./catalog.ts";
 export class AppError extends Error {
   status: number;
   code: string;
@@ -269,12 +269,14 @@ export type Route = {
   verified: false;
   elevator: boolean;
 };
+// list: 목적지를 찾을 장소 목록. 서버는 호실까지 넣어서 넘김
 export function calculateRoute(
   start: string,
   destination: string,
   elevator: boolean,
+  list?: Place[],
 ): Route {
-  const target = arrivalWaypoint(destination);
+  const target = arrivalWaypoint(destination, list);
   if (!waypoints.some((w) => w.id === start) || !target)
     throw new AppError("출발지 또는 목적지를 확인해 주세요.");
   const dist = new Map<string, number>([[start, 0]]);

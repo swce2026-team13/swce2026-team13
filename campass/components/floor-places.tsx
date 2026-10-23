@@ -28,7 +28,12 @@ export function FloorPlaceList({
   items,
   busy,
   onChoose,
-  detail = (p) => (p.verified ? "공식 공지에 등재" : "예시 · 현장 확인 필요"),
+  detail = (p) =>
+    p.number
+      ? `${p.number}호 · ${p.description}`
+      : p.verified
+        ? "공식 공지에 등재"
+        : "예시 · 현장 확인 필요",
 }: {
   items: Place[];
   busy: boolean;

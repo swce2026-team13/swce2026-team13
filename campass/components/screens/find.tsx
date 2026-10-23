@@ -6,7 +6,7 @@ import {
   BuildingIcon,
   CoffeeIcon,
 } from "@/components/icons";
-import { places } from "@/lib/catalog";
+import { places, type Place } from "@/lib/catalog";
 import { classroomFloors } from "@/lib/classrooms";
 import { navigationHref } from "@/lib/navigation";
 import { Notice } from "@/components/ui";
@@ -16,7 +16,7 @@ import { useCampus } from "@/components/campus-provider";
 const buildings = places.filter((p) => p.category === "building");
 const facilities = places.filter((p) => p.category === "facility");
 
-export default function Screen() {
+export default function Screen({ rooms }: { rooms: Place[] }) {
   const params = useSearchParams();
   const { busy, choose } = useCampus();
   const tab = params.get("tab") === "facility" ? "facility" : "classroom";
@@ -24,7 +24,7 @@ export default function Screen() {
     buildings.find((b) => b.name === params.get("building"))?.name ??
     "혜인관";
   const [openFloor, setOpenFloor] = useState("");
-  const floors = classroomFloors(building);
+  const floors = classroomFloors(building, [...places, ...rooms]);
 
   // 탭과 건물 선택은 기록을 쌓지 않고 주소에만 남겨 새로고침해도 유지
   function update(values: Record<string, string>) {

@@ -8,7 +8,8 @@ export type AskGemini = (
   signal: AbortSignal,
 ) => Promise<string>;
 
-const catalog = places.map((p) => ({
+// 호실은 넣지 않음. 넣으면 보내는 양이 너무 커짐
+export const geminiCatalog = places.map((p) => ({
   id: p.id,
   name: p.name,
   aliases: p.aliases,
@@ -21,7 +22,7 @@ const instruction = `당신은 서경대학교 캠퍼스 길찾기 앱의 질문
 목록에 없는 장소는 만들지 말고, 알 수 없으면 placeIds를 빈 배열로 두세요.
 intent는 목적지를 찾으면 "destination", 이동 조건(엘리베이터·계단)만 말하면 "condition", 지금 위치에서 다음 이동을 물으면 "next"입니다.
 elevator는 엘리베이터를 원하면 true, 계단을 원하면 false, 언급이 없으면 null입니다.
-장소 목록(JSON): ${JSON.stringify(catalog)}`;
+장소 목록(JSON): ${JSON.stringify(geminiCatalog)}`;
 
 const schema = {
   type: "object",

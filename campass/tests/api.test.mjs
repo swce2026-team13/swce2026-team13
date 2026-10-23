@@ -439,3 +439,24 @@ test("HTTP photo validates uploads and unconfigured model returns unavailable", 
   assert.equal(r.status, "unavailable");
   assert.deepEqual(r.candidates, []);
 });
+test("HTTP 호실 장소는 검색되고 id로 찾을 수 있으며 경로는 422로 안내", async () => {
+  const found = await (await request("places?q=H04")).json();
+  assert.equal(found.places[0].id, "room-yudam-541");
+  const place = await (await request("places/room-yudam-541")).json();
+  assert.equal(place.place.name, "541호 H04");
+  assert.equal(place.place.floor, "5층");
+  assert.equal((await request("places/room-yudam-0000")).status, 404);
+  for (const path of ["routes", "sessions"]) {
+    const response = await request(path, {
+      start: "bus_stop_2115",
+      destination: "room-yudam-541",
+      elevator: true,
+    });
+    assert.equal(response.status, 422, path);
+    assert.equal((await response.json()).error.code, "ROUTE_UNAVAILABLE");
+  }
+  const intent = await (await request("intent", { query: "H04" })).json();
+  assert.equal(intent.places[0].id, "room-yudam-541");
+  const find = await (await fetch(`${origin}/find?tab=classroom&building=유담관`)).text();
+  assert.match(find, /room-yudam-541/);
+});

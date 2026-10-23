@@ -13,6 +13,7 @@ import {
   versionField,
 } from "@/lib/server";
 import { interpretIntent, recognizePhoto } from "@/lib/providers";
+import { allPlaces, findPlace } from "@/lib/rooms";
 import { ADMIN_SESSION_SECONDS } from "@/lib/store";
 async function handle(request: NextRequest) {
   const { token, owner } = ownerToken(
@@ -96,8 +97,16 @@ async function handle(request: NextRequest) {
           q,
           request.nextUrl.searchParams.get("category") || undefined,
           request.nextUrl.searchParams.get("building") || undefined,
+          allPlaces(),
         ),
       });
+    }
+    // 화면에 없는 장소(호실)를 id로 찾을 때 씀
+    if (method === "GET" && parts[0] === "places" && parts.length === 2) {
+      const place = findPlace(decodeURIComponent(parts[1]));
+      if (!place)
+        throw new AppError("장소를 찾을 수 없어요.", 404, "NOT_FOUND");
+      return response({ place });
     }
     if (method === "GET" && parts.join("/") === "route-insights") {
   const start = textField(request.nextUrl.searchParams.get("start"));
@@ -115,6 +124,7 @@ async function handle(request: NextRequest) {
     start,
     destination,
     elevatorValue === "true",
+    allPlaces(),
   );
 
   const routeIds = new Set(route.steps.map((step) => step.id));
@@ -223,7 +233,9 @@ async function handle(request: NextRequest) {
         if (typeof body.elevator !== "boolean")
           throw new AppError("엘리베이터 옵션을 확인해 주세요.");
         if (parts[0] === "routes")
-          return response(calculateRoute(start, destination, body.elevator));
+          return response(
+            calculateRoute(start, destination, body.elevator, allPlaces()),
+          );
         db.limit(`create:${owner}`, 20, 60000);
         return response(
           db.create(owner, start, destination, body.elevator),

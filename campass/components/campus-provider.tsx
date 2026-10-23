@@ -115,8 +115,17 @@ function useCampusState() {
     let cancelled = false;
     Promise.resolve().then(async () => {
       if (cancelled) return;
+      // 호실은 화면 장소 목록에 없어서 서버에서 찾아옴
       const destination =
-        places.find((place) => place.id === selectedDestination) || places[0];
+        places.find((place) => place.id === selectedDestination) ||
+        (await api<{ place: Place }>(
+          `places/${encodeURIComponent(selectedDestination)}`,
+        ).then(
+          (value) => value.place,
+          () => undefined,
+        )) ||
+        places[0];
+      if (cancelled) return;
       setDestination(destination);
       setStart(selectedStart);
       setElevator(selectedElevator);
