@@ -1,7 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { places, type Place } from "@/lib/catalog";
+import { api } from "./campus-provider";
+
+const normalizeRoom = (value: string) =>
+  value.replace(/강의실|호|\s/g, "").toLowerCase();
+
+// '541', 'H04', '541호 H04' 어느 쪽으로 입력해도 찾음
+const roomKeys = (p: Place) =>
+  [p.name, p.number ?? "", p.name.replace(/^\S+호\s*/, "")]
+    .map(normalizeRoom)
+    .filter(Boolean);
 
 export function ClassroomPicker({
   building,
@@ -19,14 +29,32 @@ export function ClassroomPicker({
   const [roomInput, setRoomInput] = useState(
     initialRoom?.name.replace(/호 강의실$/, "") || "",
   );
-  const rooms = places.filter(
-    (p) => p.category === "classroom" && p.building === building.name,
-  );
-  const normalizeRoom = (value: string) => value.replace(/강의실|호|\s/g, "");
-  const room = rooms.find(
-    (p) =>
-      normalizeRoom(p.name) === normalizeRoom(roomInput) && roomInput.trim(),
-  );
+  const [rooms, setRooms] = useState(() => {
+    const known = places.filter(
+      (p) => p.category === "classroom" && p.building === building.name,
+    );
+    return initialRoom?.building === building.name &&
+      !known.some((p) => p.id === initialRoom.id)
+      ? [...known, initialRoom]
+      : known;
+  });
+  // 호실은 서버 장소 목록에만 있어 건물을 고르면 불러옴
+  useEffect(() => {
+    let cancelled = false;
+    api<{ places: Place[] }>(
+      `places?category=classroom&building=${encodeURIComponent(building.name)}`,
+    )
+      .then((value) => {
+        if (!cancelled && value.places.length) setRooms(value.places);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [building.name]);
+  const room = roomInput.trim()
+    ? rooms.find((p) => roomKeys(p).includes(normalizeRoom(roomInput)))
+    : undefined;
   return (
     <div className="card stack classroom-picker">
       <div className="between">

@@ -4,6 +4,7 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { AppError, calculateRoute, waypoints, type Route } from "./routing.ts";
 import { currentPlaceId } from "./catalog.ts";
+import { allPlaces } from "./rooms.ts";
 export const ADMIN_SESSION_SECONDS = 8 * 60 * 60;
 export type Session = {
   id: string;
@@ -144,7 +145,7 @@ export class Store {
     destination: string,
     elevator: boolean,
   ): Session {
-    const route = calculateRoute(start, destination, elevator);
+    const route = calculateRoute(start, destination, elevator, allPlaces());
     return this.transaction(() => {
       const session: Session = {
         id: randomUUID(),
@@ -223,7 +224,12 @@ export class Store {
       if (!["forward", "backward", "unknown"].includes(direction))
         throw new AppError("위치 방향을 확인해 주세요.");
       const s = this.active(id, owner, version);
-      s.route = calculateRoute(waypointId, s.destination, s.route.elevator);
+      s.route = calculateRoute(
+        waypointId,
+        s.destination,
+        s.route.elevator,
+        allPlaces(),
+      );
       s.currentStep = 0;
       s.version++;
       s.recovered = true;

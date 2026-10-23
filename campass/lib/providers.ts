@@ -1,5 +1,6 @@
 import { AppError, waypoints } from "./routing.ts";
 import { places, searchPlaces, type Place } from "./catalog.ts";
+import { allPlaces } from "./rooms.ts";
 import { askGemini, type AskGemini, type GeminiConfig } from "./gemini.ts";
 export type Candidate = {
   waypointId: string;
@@ -62,7 +63,10 @@ export function classifyIntent(query: string, matchedPlaces?: Place[]) {
   // searchPlaces('')는 전체 장소를 돌려주므로 조건만 말한 경우엔 빈 결과로 둠
   // 엘리베이터 조건이 있으면 엘리베이터 시설은 목적지에서 뺌
   const candidates = (
-    matchedPlaces ?? (searchQuery ? searchPlaces(searchQuery) : [])
+    matchedPlaces ??
+    (searchQuery
+      ? searchPlaces(searchQuery, undefined, undefined, allPlaces())
+      : [])
   ).filter((p) => conditions.elevator === undefined || p.id !== "elevator");
   const intent: Intent = candidates.length
     ? "destination"

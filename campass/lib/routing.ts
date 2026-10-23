@@ -1,4 +1,4 @@
-import { arrivalWaypoint } from "./catalog.ts";
+import { arrivalWaypoint, type Place } from "./catalog.ts";
 export class AppError extends Error {
   status: number;
   code: string;
@@ -95,7 +95,7 @@ export const waypoints: Waypoint[] = [
   },
   {
     id: "interview",
-    name: "혜인관 5층 면접 대기실",
+    name: "혜인관 3층 면접 대기실",
     instruction: "면접 대기실에 도착했어요",
     detail: "시연용 목적지입니다. 실제 행사 장소를 확인해 주세요.",
     photo: "corridor",
@@ -263,18 +263,19 @@ export function startOptions(destination: string, elevator: boolean) {
 export type Route = {
   steps: Waypoint[];
   distance: number;
-  minutes: number;
   connections: number;
   floorMoves: number;
   verified: false;
   elevator: boolean;
 };
+// list: 목적지를 찾을 장소 목록. 서버는 호실까지 넣어서 넘김
 export function calculateRoute(
   start: string,
   destination: string,
   elevator: boolean,
+  list?: Place[],
 ): Route {
-  const target = arrivalWaypoint(destination);
+  const target = arrivalWaypoint(destination, list);
   if (!waypoints.some((w) => w.id === start) || !target)
     throw new AppError("출발지 또는 목적지를 확인해 주세요.");
   const dist = new Map<string, number>([[start, 0]]);
@@ -337,7 +338,6 @@ const floorMoves = usedEdges.filter((edge) => edge.floorMove).length;
   return {
   steps,
   distance,
-  minutes: Math.max(1, Math.ceil(distance / 40) + (elevator ? 3 : 1)),
   connections,
   floorMoves,
   verified: false,

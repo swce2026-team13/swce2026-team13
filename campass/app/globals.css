@@ -995,6 +995,14 @@ progress::-moz-progress-bar {
 .find-floor .floor-place:first-of-type {
   margin-top: 14px;
 }
+.find-facilities .floor-place > div {
+  min-width: 0;
+}
+.find-facilities .floor-place small {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
 .find-facilities .floor-place:first-child {
   margin-top: 0;
   padding-top: 8px;

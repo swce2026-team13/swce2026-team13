@@ -32,13 +32,13 @@ export default function Screen() {
       </div>
       {shownFloors.map((f) => (
         <div
-          className={`card floor-card ${f === "5층" ? "selected" : ""}`}
+          className={`card floor-card ${f === "3층" ? "selected" : ""}`}
           key={f}
         >
           <div className="between">
             <h2>{f}</h2>
-            <Tag tone={f === "5층" ? "blue" : "gray"}>
-              {f === "5층" ? "시연 행사" : "주요 장소"}
+            <Tag tone={f === "3층" ? "blue" : "gray"}>
+              {f === "3층" ? "시연 행사" : "주요 장소"}
             </Tag>
           </div>
           <FloorPlaceList

@@ -205,7 +205,7 @@ export function CampusMap({
               혜인관
             </text>
             <text x="220" y="93" className="map-small blue-text">
-              5층 · 면접 대기실
+              3층 · 면접 대기실
             </text>
             <polyline
               points="52,303 52,160 160,160 160,240 263,240 263,115"

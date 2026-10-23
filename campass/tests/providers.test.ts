@@ -4,6 +4,7 @@ import { createServer } from "node:http";
 import { recognizePhoto, interpretIntent } from "../lib/providers.ts";
 import * as providers from "../lib/providers.ts";
 import { places, searchPlaces } from "../lib/catalog.ts";
+import { allPlaces } from "../lib/rooms.ts";
 
 async function fixture(
   value: unknown,
@@ -106,7 +107,7 @@ const intentCases = [
     first: "elevator",
   },
   {
-    query: "엘리베이터 타고 혜인관 5층",
+    query: "엘리베이터 타고 혜인관 3층",
     intent: "destination",
     conditions: { elevator: true },
     first: "interview",
@@ -150,7 +151,7 @@ for (const example of intentCases) {
     assert.deepEqual(result.conditions, example.conditions);
     assert.equal(result.places[0]?.id, example.first);
     if (!example.first) assert.deepEqual(result.places, []);
-    assert.ok(result.places.every((place) => places.includes(place)));
+    assert.ok(result.places.every((place) => allPlaces().includes(place)));
     if ("elevator" in example.conditions)
       assert.ok(result.places.every((place) => place.id !== "elevator"));
     const response = await interpretIntent(example.query, {});
@@ -223,7 +224,7 @@ test("intent classification preserves facility searches and destination priority
   for (const query of ["면접 보러 왔어요", "헤인관 면접"]) {
     assert.deepEqual(
       providers.classifyIntent(query).places,
-      searchPlaces(query),
+      searchPlaces(query, undefined, undefined, allPlaces()),
     );
   }
   const missing = providers.classifyIntent("존재하지않는장소xyz");

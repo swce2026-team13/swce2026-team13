@@ -10,6 +10,10 @@ export type Place = {
   description: string;
   // 경로 계산에 쓰는 도착 지점 id. 없으면 장소 id를 그대로 씀
   arrival?: string;
+  // 학교 캠퍼스맵 호실 번호 (호실 장소만)
+  number?: string;
+  // 운영시간 첫 부분 (학교 편의시설만)
+  hours?: string;
 };
 export const sources = {
   map: "https://www.skuniv.ac.kr/campus-map",
@@ -42,9 +46,9 @@ export const places: Place[] = [
     id: "interview",
     name: "면접 대기실",
     building: "혜인관",
-    floor: "5층",
+    floor: "3층",
     category: "event",
-    aliases: ["면접", "수시", "면접 보러 왔어요", "혜인관 5층"],
+    aliases: ["면접", "수시", "면접 보러 왔어요", "혜인관 3층"],
     verified: false,
     source: sources.figma,
     description: "시연용 행사 · 실제 면접 장소는 입학 공지 확인",
@@ -124,19 +128,21 @@ const renamedPlaceIds: Record<string, string> = {
   hanlim: "hallim",
 };
 export const currentPlaceId = (id: string) => renamedPlaceIds[id] ?? id;
-export function arrivalWaypoint(placeId: string) {
-  const place = places.find((p) => p.id === currentPlaceId(placeId));
+export function arrivalWaypoint(placeId: string, list: Place[] = places) {
+  const place = list.find((p) => p.id === currentPlaceId(placeId));
   return place && (place.arrival ?? place.id);
 }
+// 서버에서는 호실까지 넣은 목록을 list로 넘김
 export function searchPlaces(
   query: string,
   category?: string,
   building?: string,
+  list: Place[] = places,
 ): Place[] {
   const normalize = (s: string) =>
     s.toLowerCase().replaceAll("헤인", "혜인").replace(/\s/g, "");
   const q = normalize(query.trim());
-  const filtered = places.filter(
+  const filtered = list.filter(
     (p) =>
       (!category || p.category === category) &&
       (!building || p.building === building),
