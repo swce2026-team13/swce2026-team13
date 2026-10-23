@@ -22,6 +22,12 @@ export type Feedback = {
   reason?: string;
   comment?: string;
 };
+export type RecognitionFeedback = {
+  predictedWaypointId: string;
+  confidence: number;
+  direction: "forward" | "backward" | "unknown";
+  correctedWaypointId?: string;
+};
 export class Store {
   db: DatabaseSync;
   constructor(path: string) {
@@ -33,6 +39,11 @@ export class Store {
       CREATE TABLE IF NOT EXISTS passages (session_id TEXT REFERENCES sessions(id), waypoint_id TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(session_id,waypoint_id));
       CREATE TABLE IF NOT EXISTS confusions (session_id TEXT, waypoint_id TEXT, reason TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(session_id,waypoint_id), FOREIGN KEY(session_id,waypoint_id) REFERENCES passages(session_id,waypoint_id));
       CREATE TABLE IF NOT EXISTS feedback (session_id TEXT PRIMARY KEY REFERENCES sessions(id), data TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+      CREATE TABLE IF NOT EXISTS recognition_feedback (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        data TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
       CREATE TABLE IF NOT EXISTS rate_limits (key TEXT PRIMARY KEY, hits INTEGER NOT NULL, expires INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS admin_sessions (id TEXT PRIMARY KEY, expires INTEGER NOT NULL);
       PRAGMA user_version=1;`);
@@ -257,6 +268,23 @@ export class Store {
       this.save(s);
       return { saved: true, duplicate: false };
     });
+  }
+    recognitionFeedback(input: RecognitionFeedback) {
+    if (
+      !input.predictedWaypointId ||
+      typeof input.confidence !== "number" ||
+      !["forward", "backward", "unknown"].includes(input.direction)
+    ) {
+      throw new AppError("사진 인식 피드백 내용을 확인해 주세요.");
+    }
+
+    this.db
+      .prepare(
+        "INSERT INTO recognition_feedback(data) VALUES (?)",
+      )
+      .run(JSON.stringify(input));
+
+    return { saved: true };
   }
   insights() {
     const rows = this.db

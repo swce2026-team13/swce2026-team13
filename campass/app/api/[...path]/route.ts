@@ -177,6 +177,39 @@ async function handle(request: NextRequest) {
         );
       return response(await recognizePhoto(image));
     }
+    if (
+  method === "POST" &&
+  parts.join("/") === "recognition-feedback"
+) {
+  const body = await request.json();
+
+  const predictedWaypointId = textField(body.predictedWaypointId);
+  const confidence = Number(body.confidence);
+  const direction = body.direction;
+
+  if (
+    !Number.isFinite(confidence) ||
+    confidence < 0 ||
+    confidence > 1 ||
+    !["forward", "backward", "unknown"].includes(direction)
+  ) {
+    throw new AppError(
+      "사진 인식 피드백 내용을 확인해 주세요.",
+    );
+  }
+
+  return response(
+    db.recognitionFeedback({
+      predictedWaypointId,
+      confidence,
+      direction,
+      correctedWaypointId:
+        body.correctedWaypointId === undefined
+          ? undefined
+          : textField(body.correctedWaypointId),
+    }),
+  );
+}
     if (method === "POST") {
       const body = await readJson(request);
       if (parts.join("/") === "intent") {

@@ -364,6 +364,17 @@ function useCampusState() {
       await updateRoute(id);
     }
   }
+  async function sendRecognitionFeedback() {
+  if (!candidate) return;
+
+  await run(async () => {
+    await api("recognition-feedback", {
+      predictedWaypointId: candidate.waypointId,
+      confidence: candidate.confidence,
+      direction: candidate.direction,
+    });
+  });
+}
   async function sendFeedback() {
     if (!session) return;
     await run(async () => {
@@ -523,6 +534,7 @@ function useCampusState() {
     lost,
     upload,
     confirmLocation,
+    sendRecognitionFeedback,
     sendFeedback,
     browseBuilding,
     back,

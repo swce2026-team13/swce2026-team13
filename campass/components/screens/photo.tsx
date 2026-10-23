@@ -1,10 +1,24 @@
 "use client";
 
+import {
+  CheckCircle2,
+  Circle,
+  LoaderCircle,
+} from "lucide-react";
+
+import { Photo } from "@/components/ui";
+import { getDefaultAnalysisSteps } from "@/lib/recognition-view";
 import { useRef, useState } from "react";
 import { useCampus } from "@/components/campus-provider";
 
 export default function Screen() {
-  const { busy, upload, manualPicker } = useCampus();
+  const {
+  busy,
+  preview,
+  upload,
+  manualPicker,
+} = useCampus();
+const analysisSteps = getDefaultAnalysisSteps();
 
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const albumInputRef = useRef<HTMLInputElement | null>(null);
@@ -16,6 +30,90 @@ export default function Screen() {
     if (!file || busy) return;
     upload(file);
   }
+
+  if (busy) {
+  return (
+    <section className="content photo-analyzing-page">
+      {preview && (
+        <Photo
+          uploaded={preview}
+          label="찍은 사진"
+        />
+      )}
+
+      <header className="photo-analyzing-header">
+        <h1>어디인지 살펴보고 있어요</h1>
+        <p>
+          보통 10초 안에 끝나요. 잠시만 기다려 주세요.
+        </p>
+      </header>
+
+      <div className="photo-analysis-card">
+        {analysisSteps.map((step) => (
+          <div
+            className="photo-analysis-step"
+            key={step.id}
+          >
+            <div>
+              <strong>{step.label}</strong>
+
+              <p>
+                {step.id === "upload"
+                  ? "촬영한 사진을 확인했어요."
+                  : step.id === "compare"
+                    ? "등록해 둔 위치 사진과 비교해요."
+                    : "가장 가까운 위치 후보를 정리해요."}
+              </p>
+            </div>
+
+            <span
+              className={`photo-analysis-status ${step.status}`}
+            >
+              {step.status === "done" && (
+                <>
+                  <CheckCircle2 size={16} />
+                  완료
+                </>
+              )}
+
+              {step.status === "active" && (
+                <>
+                  <LoaderCircle
+                    size={16}
+                    className="photo-analysis-spinner"
+                  />
+                  확인 중
+                </>
+              )}
+
+              {step.status === "pending" && (
+                <>
+                  <Circle size={15} />
+                  대기
+                </>
+              )}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <div className="photo-analysis-privacy">
+        <strong>사진은 저장하지 않아요</strong>
+        <p>
+          위치 확인에만 쓰고, 내 위치를 계속 따라가지 않아요.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        className="text-button centered"
+        disabled
+      >
+        취소하고 출발 위치 직접 고르기
+      </button>
+    </section>
+  );
+}
 
   return (
     <section className="photo-capture-page">
