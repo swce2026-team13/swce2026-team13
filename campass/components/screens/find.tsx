@@ -14,9 +14,23 @@ import { FloorPlaceList } from "@/components/floor-places";
 import { useCampus } from "@/components/campus-provider";
 
 const buildings = places.filter((p) => p.category === "building");
-const facilities = places.filter((p) => p.category === "facility");
+const demoFacilities = places.filter((p) => p.category === "facility");
 
-export default function Screen({ rooms }: { rooms: Place[] }) {
+// '유담관 9층 · 학기중 08:00~20:00'. 시연 지점은 지금 문구를 그대로 씀
+const facilityDetail = (p: Place) =>
+  p.hours === undefined
+    ? p.floor
+      ? `${p.building} ${p.floor}`
+      : p.description
+    : [`${p.building} ${p.floor}`.trim(), p.hours].filter(Boolean).join(" · ");
+
+export default function Screen({
+  rooms,
+  facilities,
+}: {
+  rooms: Place[];
+  facilities: Place[];
+}) {
   const params = useSearchParams();
   const { busy, choose } = useCampus();
   const tab = params.get("tab") === "facility" ? "facility" : "classroom";
@@ -128,12 +142,10 @@ export default function Screen({ rooms }: { rooms: Place[] }) {
           <p>등록된 편의시설을 골라 길찾기를 시작해요.</p>
           <div className="card floor-card find-floor find-facilities">
             <FloorPlaceList
-              items={facilities}
+              items={[...demoFacilities, ...facilities]}
               busy={busy}
               onChoose={choose}
-              detail={(p) =>
-                p.floor ? `${p.building} ${p.floor}` : p.description
-              }
+              detail={facilityDetail}
             />
           </div>
         </>

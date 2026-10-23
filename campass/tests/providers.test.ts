@@ -107,7 +107,7 @@ const intentCases = [
     first: "elevator",
   },
   {
-    query: "엘리베이터 타고 혜인관 5층",
+    query: "엘리베이터 타고 혜인관 3층",
     intent: "destination",
     conditions: { elevator: true },
     first: "interview",

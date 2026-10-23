@@ -95,7 +95,7 @@ export const waypoints: Waypoint[] = [
   },
   {
     id: "interview",
-    name: "혜인관 5층 면접 대기실",
+    name: "혜인관 3층 면접 대기실",
     instruction: "면접 대기실에 도착했어요",
     detail: "시연용 목적지입니다. 실제 행사 장소를 확인해 주세요.",
     photo: "corridor",
@@ -263,7 +263,6 @@ export function startOptions(destination: string, elevator: boolean) {
 export type Route = {
   steps: Waypoint[];
   distance: number;
-  minutes: number;
   connections: number;
   floorMoves: number;
   verified: false;
@@ -339,7 +338,6 @@ const floorMoves = usedEdges.filter((edge) => edge.floorMove).length;
   return {
   steps,
   distance,
-  minutes: Math.max(1, Math.ceil(distance / 40) + (elevator ? 3 : 1)),
   connections,
   floorMoves,
   verified: false,

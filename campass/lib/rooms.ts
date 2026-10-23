@@ -1,7 +1,11 @@
 import { currentPlaceId, places, type Place } from "./catalog.ts";
-import { campusBuildings, loadRooms } from "./campus3d/types.ts";
+import {
+  campusBuildings,
+  loadPlaces,
+  loadRooms,
+} from "./campus3d/types.ts";
 
-// 서버 전용: rooms.tsv를 읽어 강의실 장소로 바꿈. 화면 코드에서는 가져오지 말 것
+// 서버 전용: rooms.tsv·places.tsv를 읽어 강의실·편의시설 장소로 바꿈. 화면 코드에서는 가져오지 말 것
 const roomUses = ["강의실", "멀티미디어강의실", "실험실습실"];
 
 function floorLabel(buildingId: string, floor: string) {
@@ -61,9 +65,39 @@ export function roomPlaces() {
   return (rooms = [...list.filter(first), ...list.filter((p) => !first(p))]);
 }
 
-// 서버에서 쓰는 전체 장소 목록: 기존 장소 + 호실
+// 학교 편의시설. 건물이 없는 곳(산책로)은 빼고, 연락처는 넣지 않음
+let facilities: Place[] | undefined;
+export function facilityPlaces() {
+  if (facilities) return facilities;
+  const counts = new Map<string, number>();
+  const list = loadPlaces()
+    .filter((p) => p.category === "편의/복지" && p.buildingId)
+    .map((p): Place => {
+      const index = (counts.get(p.buildingId) ?? 0) + 1;
+      counts.set(p.buildingId, index);
+      return {
+        id: `facility-${p.buildingId}-${index}`,
+        name: p.name,
+        building: p.building,
+        floor: p.floor ? floorLabel(p.buildingId, p.floor) : "",
+        category: "facility",
+        aliases: [`${p.building} ${p.name}`],
+        verified: true,
+        source: "학교 캠퍼스맵",
+        description: p.hours,
+        hours: p.hours.split("/")[0].trim(),
+      };
+    });
+  // 건물 이름순. 같은 건물 안에서는 places.tsv 순서를 유지
+  return (facilities = list.sort((a, b) =>
+    a.building.localeCompare(b.building, "ko"),
+  ));
+}
+
+// 서버에서 쓰는 전체 장소 목록: 기존 장소 + 호실 + 학교 편의시설
 let all: Place[] | undefined;
-export const allPlaces = () => (all ??= [...places, ...roomPlaces()]);
+export const allPlaces = () =>
+  (all ??= [...places, ...roomPlaces(), ...facilityPlaces()]);
 
 export const findPlace = (id: string) =>
   allPlaces().find((p) => p.id === currentPlaceId(id));

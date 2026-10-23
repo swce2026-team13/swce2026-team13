@@ -1,5 +1,5 @@
 "use client";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, HeartPulse } from "lucide-react";
 import type { Place } from "@/lib/catalog";
 import { Tag } from "@/components/ui";
 import {
@@ -17,9 +17,10 @@ function PlaceIcon({ place }: { place: Place }) {
   if (place.category === "event")
     return <CalendarDays size={20} strokeWidth={1.65} />;
   if (/엘리베이터|승강기/.test(name)) return <ElevatorIcon size={20} />;
+  if (/AED/.test(name)) return <HeartPulse size={20} strokeWidth={1.65} />;
   if (/카페|커피/.test(name)) return <CoffeeIcon size={20} />;
-  if (/식당|학식|푸드/.test(name)) return <DiningIcon size={20} />;
-  if (/편의점|매점/.test(name)) return <StoreIcon size={20} />;
+  if (/식당|학식|푸드|버거|우동/.test(name)) return <DiningIcon size={20} />;
+  if (/편의점|매점|서점|문구/.test(name)) return <StoreIcon size={20} />;
   return <BuildingIcon size={20} />;
 }
 

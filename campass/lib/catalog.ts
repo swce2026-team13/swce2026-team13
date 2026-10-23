@@ -12,6 +12,8 @@ export type Place = {
   arrival?: string;
   // 학교 캠퍼스맵 호실 번호 (호실 장소만)
   number?: string;
+  // 운영시간 첫 부분 (학교 편의시설만)
+  hours?: string;
 };
 export const sources = {
   map: "https://www.skuniv.ac.kr/campus-map",
@@ -44,9 +46,9 @@ export const places: Place[] = [
     id: "interview",
     name: "면접 대기실",
     building: "혜인관",
-    floor: "5층",
+    floor: "3층",
     category: "event",
-    aliases: ["면접", "수시", "면접 보러 왔어요", "혜인관 5층"],
+    aliases: ["면접", "수시", "면접 보러 왔어요", "혜인관 3층"],
     verified: false,
     source: sources.figma,
     description: "시연용 행사 · 실제 면접 장소는 입학 공지 확인",

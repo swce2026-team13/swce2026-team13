@@ -1,7 +1,7 @@
 import Screen from "@/components/screens/find";
-import { roomPlaces } from "@/lib/rooms";
+import { facilityPlaces, roomPlaces } from "@/lib/rooms";
 
-// rooms.tsv는 서버에서만 읽을 수 있어 호실 목록을 여기서 만들어 넘김
+// rooms.tsv·places.tsv는 서버에서만 읽을 수 있어 목록을 여기서 만들어 넘김
 export default function Page() {
-  return <Screen rooms={roomPlaces()} />;
+  return <Screen rooms={roomPlaces()} facilities={facilityPlaces()} />;
 }

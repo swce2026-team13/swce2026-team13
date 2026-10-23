@@ -124,7 +124,7 @@ test("HTTP intent exposes destination, condition and next responses with travel 
     ["엘리베이터로 갈래요", "condition", { elevator: true }, undefined],
     ["엘리베이터 어디 있어요", "destination", {}, "elevator"],
     [
-      "엘리베이터 타고 혜인관 5층",
+      "엘리베이터 타고 혜인관 3층",
       "destination",
       { elevator: true },
       "interview",
