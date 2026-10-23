@@ -35,7 +35,7 @@ test("vision adapter accepts the documented HTTP contract and filters low confid
   await fixture(
     {
       candidates: [
-        { waypointId: "bus", confidence: 0.9, direction: "forward" },
+        { waypointId: "bus_stop_2115", confidence: 0.9, direction: "forward" },
         { waypointId: "main", confidence: 0.4, direction: "unknown" },
       ],
     },
@@ -45,7 +45,7 @@ test("vision adapter accepts the documented HTTP contract and filters low confid
       });
       assert.equal(result.status, "matched");
       assert.equal(result.candidates.length, 1);
-      assert.equal(result.candidates[0].waypointId, "bus");
+      assert.equal(result.candidates[0].waypointId, "bus_stop_2115");
     },
   );
 });

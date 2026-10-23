@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Building2, ChevronRight, MapPin } from "lucide-react";
 import { places, type Place } from "@/lib/catalog";
-import { waypoints, type Route } from "@/lib/routing";
+import { DEFAULT_START, waypoints, type Route } from "@/lib/routing";
 import type { Session } from "@/lib/store";
 import type {
   Candidate,
@@ -58,7 +58,7 @@ function useCampusState() {
   const view = viewForPath(usePathname());
   const params = useSearchParams();
   const selectedDestination = params.get("destination") || places[0].id;
-  const selectedStart = params.get("start") || "gate";
+  const selectedStart = params.get("start") || DEFAULT_START;
   const selectedElevator = params.get("elevator") !== "false";
   const selectedBuilding = params.get("building") || "혜인관";
   const selectedQuery = params.get("q") || "";
@@ -75,7 +75,7 @@ function useCampusState() {
   );
   const [searchRevision, setSearchRevision] = useState(0);
   const [destination, setDestination] = useState<Place>(places[0]),
-    [start, setStart] = useState("bus"),
+    [start, setStart] = useState(DEFAULT_START),
     [elevator, setElevator] = useState(true),
     [route, setRoute] = useState<Route | null>(null);
   const [session, setSession] = useState<Session | null>(null),
@@ -280,8 +280,9 @@ function useCampusState() {
   }
   async function choose(p: Place) {
     setDestination(p);
+    setStart(DEFAULT_START);
     setRoute(null);
-    go("prepare", { destination: p.id });
+    go("prepare", { destination: p.id, start: DEFAULT_START });
   }
   async function updateRoute(nextStart = start, nextElevator = elevator) {
     setStart(nextStart);

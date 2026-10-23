@@ -31,16 +31,6 @@ export const waypoints: Waypoint[] = [
     y: 320,
   },
   {
-    id: "bus",
-    name: "1164·2115번 정류장",
-    instruction: "정류장에서 출발하세요",
-    detail: "본관 입구 방향으로 이동해 주세요.",
-    photo: "bus",
-    direction: "forward",
-    x: 52,
-    y: 303,
-  },
-  {
     id: "main",
     name: "본관 1층 로비",
     instruction: "본관 1층 로비를 지나 이동하세요",
@@ -229,7 +219,7 @@ type Edge = {
 };
 const edges: Edge[] = [
   { from: "gate", to: "main", meters: 40, connection: true },
-  { from: "bus", to: "main", meters: 40, connection: true },
+  { from: "bus_stop_2115", to: "main", meters: 40, connection: true },
   { from: "main", to: "parking-entry", meters: 30, connection: true },
   { from: "parking-entry", to: "parking", meters: 25 },
   { from: "parking", to: "hyein", meters: 45, connection: true },
@@ -247,6 +237,29 @@ const edges: Edge[] = [
   { from: "hallim_6f_elevator", to: "hallim_6f_corridor", meters: 20 },
   { from: "hallim_6f_corridor", to: "eunju1_5f_front", meters: 40, connection: true },
 ];
+// 공통 출발지 안내 문구 (다음 지점별)
+const branchDetails: Record<string, Record<string, string>> = {
+  bus_stop_2115: {
+    main: "본관 1층 로비 방향으로 이동해 주세요.",
+    main_bus_stop_passage: "본관과 이어진 연결통로 방향으로 이동해 주세요.",
+  },
+};
+export const DEFAULT_START = "bus_stop_2115";
+const startCandidates = [DEFAULT_START, "gate", "main", "parking"];
+// 2115 정류장으로 되돌아가는 출발지는 제외
+export function startOptions(destination: string, elevator: boolean) {
+  return startCandidates.filter((start) => {
+    try {
+      const route = calculateRoute(start, destination, elevator);
+      return (
+        start === DEFAULT_START ||
+        !route.steps.some((step) => step.id === DEFAULT_START)
+      );
+    } catch {
+      return false;
+    }
+  });
+}
 export type Route = {
   steps: Waypoint[];
   distance: number;
@@ -297,6 +310,8 @@ export function calculateRoute(
   while (ids[0] !== start) ids.unshift(previous.get(ids[0])!);
   const steps = ids.map((id, index) => {
     const point = { ...waypoints.find((w) => w.id === id)! };
+    const branch = branchDetails[id]?.[ids[index + 1]];
+    if (branch) point.detail = branch;
     // 역방향 경로 안내 갱신
     if (!["interview", "eunju1_5f_front"].includes(destination) && index < ids.length - 1) {
       point.instruction = `${waypoints.find((w) => w.id === ids[index + 1])!.name} 방향으로 이동하세요`;

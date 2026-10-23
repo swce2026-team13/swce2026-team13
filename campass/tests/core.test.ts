@@ -14,14 +14,52 @@ test("catalog finds official Hyein rooms and accepts the Figma spelling alias", 
 
 test("routing is connected, excludes stairs when requested, and rejects unknown/unreachable nodes", async () => {
   const { calculateRoute } = await import("../lib/routing.ts");
-  const normal = calculateRoute("bus", "interview", false);
-  const accessible = calculateRoute("bus", "interview", true);
+  const normal = calculateRoute("bus_stop_2115", "interview", false);
+  const accessible = calculateRoute("bus_stop_2115", "interview", true);
   assert.equal(normal.steps.at(-1)?.id, "interview");
   assert.ok(accessible.steps.some((s) => s.id === "elevator"));
   assert.ok(!accessible.steps.some((s) => s.id === "stairs"));
   assert.equal(accessible.verified, false);
-  assert.throws(() => calculateRoute("bus", "unknown", false));
-  assert.throws(() => calculateRoute("bus", "bukak", false), /경로/);
+  assert.throws(() => calculateRoute("bus_stop_2115", "unknown", false));
+  assert.throws(() => calculateRoute("bus_stop_2115", "bukak", false), /경로/);
+});
+
+test("2115 정류장에서 면접 대기실과 은주1관 5층 앞 경로가 나뉘고, 출발지 선택지가 목적지에 맞게 바뀐다", async () => {
+  const { calculateRoute, startOptions, waypoints, DEFAULT_START } =
+    await import("../lib/routing.ts");
+  assert.equal(DEFAULT_START, "bus_stop_2115");
+  assert.ok(!waypoints.some((w) => w.id === "bus"));
+
+  const interview = calculateRoute("bus_stop_2115", "interview", true);
+  const interviewIds = interview.steps.map((s) => s.id);
+  assert.deepEqual(interviewIds, [
+    "bus_stop_2115",
+    "main",
+    "parking-entry",
+    "parking",
+    "hyein",
+    "elevator",
+    "interview",
+  ]);
+  assert.match(interview.steps[0].detail, /본관 1층 로비/);
+
+  const eunju = calculateRoute("bus_stop_2115", "eunju1_5f_front", true);
+  const eunjuIds = eunju.steps.map((s) => s.id);
+  assert.equal(eunjuIds[0], "bus_stop_2115");
+  assert.equal(eunjuIds.at(-1), "eunju1_5f_front");
+  for (const id of ["main_bus_stop_passage", "to_hallim", "hallim_6f_corridor"])
+    assert.ok(eunjuIds.includes(id), id);
+  assert.ok(!eunjuIds.includes("main"));
+  assert.match(eunju.steps[0].detail, /연결통로/);
+
+  assert.deepEqual(startOptions("interview", true), [
+    "bus_stop_2115",
+    "gate",
+    "main",
+    "parking",
+  ]);
+  assert.deepEqual(startOptions("eunju1_5f_front", true), ["bus_stop_2115"]);
+  assert.deepEqual(startOptions("bukak", true), []);
 });
 
 test("sessions persist, reject other owners and stale progress, deduplicate confusion and feedback", async () => {
@@ -31,7 +69,7 @@ test("sessions persist, reject other owners and stale progress, deduplicate conf
     "test.sqlite",
   );
   let store = new Store(path);
-  let session = store.create("owner", "bus", "interview", true);
+  let session = store.create("owner", "bus_stop_2115", "interview", true);
   assert.throws(() => store.get(session.id, "other"), /찾을/);
   assert.throws(() => store.advance(session.id, "owner", 4), /단계/);
   store.confusion(session.id, "owner");
@@ -45,7 +83,7 @@ test("sessions persist, reject other owners and stale progress, deduplicate conf
     session = store.advance(session.id, "owner", session.version);
   const input = {
     confused: true,
-    waypointId: "bus",
+    waypointId: "bus_stop_2115",
     reason: "방향 혼란",
     comment: "표지판이 필요해요",
   };
@@ -63,7 +101,7 @@ test("sessions persist, reject other owners and stale progress, deduplicate conf
 test("recovery only accepts valid locations and does not erase observed history", async () => {
   const { Store } = await import("../lib/store.ts");
   const store = new Store(":memory:");
-  const session = store.create("owner", "bus", "interview", true);
+  const session = store.create("owner", "bus_stop_2115", "interview", true);
   assert.throws(() =>
     store.recover(session.id, "owner", "missing", session.version),
   );
@@ -97,7 +135,7 @@ test("unconfigured AI never fabricates predictions and invalid provider response
   );
   assert.throws(() =>
     validatePrediction({
-      candidates: [{ waypointId: "bus", confidence: 92, direction: "forward" }],
+      candidates: [{ waypointId: "bus_stop_2115", confidence: 92, direction: "forward" }],
     }),
   );
 });
@@ -105,7 +143,7 @@ test("unconfigured AI never fabricates predictions and invalid provider response
 test("recovery orientation belongs to the confirmed location and is cleared on next step", async () => {
   const { Store } = await import("../lib/store.ts");
   const store = new Store(":memory:");
-  const s = store.create("owner", "bus", "interview", true);
+  const s = store.create("owner", "bus_stop_2115", "interview", true);
   const recovered = store.recover(
     s.id,
     "owner",
