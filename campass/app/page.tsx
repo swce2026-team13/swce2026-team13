@@ -1,22 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import Home from "@/components/screens/home";
 import Splash from "@/components/screens/splash";
 
+// 시작 화면은 앱을 처음 열 때 한 번만 표시. 앱 안에서 홈으로 돌아오면 바로 홈
+let splashDone = false;
+
 export default function Page() {
-  const [showSplash, setShowSplash] = useState(true);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setShowSplash(false);
-    }, 800);
-
-    return () => window.clearTimeout(timer);
+  const [showSplash, setShowSplash] = useState(() => !splashDone);
+  const finish = useCallback(() => {
+    splashDone = true;
+    setShowSplash(false);
   }, []);
 
   if (showSplash) {
-    return <Splash />;
+    return <Splash onDone={finish} />;
   }
 
   return <Home />;

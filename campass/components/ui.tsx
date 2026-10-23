@@ -230,7 +230,7 @@ export function CampusMap({
               strokeWidth="2"
             />
             <text x="70" y="307" className="map-small">
-              1164·2115번 정류장
+              2115번 정류장
             </text>
             {point && (
               <g>

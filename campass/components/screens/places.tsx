@@ -1,7 +1,7 @@
 "use client";
-import { CalendarDays } from "lucide-react";
 import { sources } from "@/lib/catalog";
 import { Notice, Tag } from "@/components/ui";
+import { FloorPlaceList } from "@/components/floor-places";
 import { useCampus } from "@/components/campus-provider";
 export default function Screen() {
   const {
@@ -41,26 +41,11 @@ export default function Screen() {
               {f === "5층" ? "시연 행사" : "주요 장소"}
             </Tag>
           </div>
-          {buildingPlaces
-            .filter((p) => p.floor === f)
-            .map((p) => (
-              <div className="floor-place" key={p.id}>
-                <CalendarDays size={20} />
-                <div>
-                  <b>{p.name}</b>
-                  <small>
-                    {p.verified ? "공식 공지에 등재" : "예시 · 현장 확인 필요"}
-                  </small>
-                </div>
-                <button
-                  className="text-button"
-                  disabled={busy}
-                  onClick={() => choose(p)}
-                >
-                  선택
-                </button>
-              </div>
-            ))}
+          <FloorPlaceList
+            items={buildingPlaces.filter((p) => p.floor === f)}
+            busy={busy}
+            onChoose={choose}
+          />
         </div>
       ))}
       {buildingPlaces.length === 0 && (

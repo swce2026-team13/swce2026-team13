@@ -28,9 +28,20 @@ test("사진 재촬영의 복구 상태와 한글 검색어 보존", () => {
   assert.equal(navigationHref("home", { recovering: "true" }), "/");
 });
 
+test("바로 찾기 분류 화면의 탭과 건물을 주소에 보존", () => {
+  const find = new URL(
+    navigationHref("find", { tab: "facility", building: "혜인관" }),
+    "http://localhost",
+  );
+  assert.equal(find.pathname, "/find");
+  assert.equal(find.searchParams.get("tab"), "facility");
+  assert.equal(find.searchParams.get("building"), "혜인관");
+});
+
 const pages = [
   "",
   "search",
+  "find",
   "directions",
   "directions/photo",
   "directions/recognition",
