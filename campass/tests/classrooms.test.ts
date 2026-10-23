@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { places, searchPlaces } from "../lib/catalog.ts";
 import {
+  classroomFloors,
   classroomSearch,
   roomsOnFloor,
   digitsOnly,
@@ -53,4 +54,24 @@ test("floor input accepts digits and floor filter distinguishes basement", () =>
   assert.equal(roomsOnFloor("혜인관", "1", true).length, 4);
   assert.equal(roomsOnFloor("혜인관", "", false).length, 0);
   assert.equal(roomsOnFloor("본관", "3", false).length, 0);
+});
+
+test("분류 목록은 등록 강의실만 보여 주고 나머지 층과 건물은 준비 중", () => {
+  const floors = classroomFloors("혜인관");
+  assert.deepEqual(
+    floors.map((f) => [f.floor, f.rooms.length]),
+    [
+      ["지하 1층", 4],
+      ["1층", 0],
+      ["2층", 0],
+      ["3층", 7],
+      ["4층", 0],
+      ["5층", 0],
+    ],
+  );
+  assert.ok(
+    floors.every((f) => f.rooms.every((p) => p.category === "classroom")),
+  );
+  assert.deepEqual(classroomFloors("본관"), []);
+  assert.deepEqual(classroomFloors("은주1관"), []);
 });

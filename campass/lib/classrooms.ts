@@ -17,6 +17,30 @@ export function roomsOnFloor(
   );
 }
 
+const floorLevel = (floor: string) =>
+  (floor.startsWith("지하") ? -1 : 1) * Number(floor.match(/\d+/)?.[0] ?? 0);
+
+// 분류 목록의 층 카드. 강의실이 등록된 건물만 지상 1층부터 등록 장소의 최고층까지 채우고, 강의실이 없는 층은 빈 목록(준비 중)
+export function classroomFloors(building: string) {
+  const inBuilding = places.filter(
+    (p) => p.building === building && p.category !== "building" && p.floor,
+  );
+  const rooms = inBuilding.filter((p) => p.category === "classroom");
+  if (rooms.length === 0) return [];
+  const levels = inBuilding.map((p) => floorLevel(p.floor));
+  const top = Math.max(...levels);
+  const shown = [
+    ...new Set([
+      ...levels.filter((level) => level < 0),
+      ...Array.from({ length: Math.max(top, 0) }, (_, i) => i + 1),
+    ]),
+  ].sort((a, b) => a - b);
+  return shown.map((level) => {
+    const floor = level < 0 ? `지하 ${-level}층` : `${level}층`;
+    return { floor, rooms: rooms.filter((p) => p.floor === floor) };
+  });
+}
+
 export function classroomSearch(
   query: string,
   results: Place[],

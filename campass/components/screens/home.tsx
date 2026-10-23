@@ -170,7 +170,7 @@ export default function Screen() {
             <button
               className="home-quick-card card"
               disabled={busy || !ready}
-              onClick={() => search("", "classroom")}
+              onClick={() => go("find", { tab: "classroom" })}
             >
               <span className="home-quick-icon">
                 <Building2 size={22} />
@@ -183,7 +183,7 @@ export default function Screen() {
             <button
               className="home-quick-card card"
               disabled={busy || !ready}
-              onClick={() => search("", "facility")}
+              onClick={() => go("find", { tab: "facility" })}
             >
               <span className="home-quick-icon">
                 <Coffee size={22} />

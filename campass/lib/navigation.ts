@@ -1,6 +1,7 @@
 export const routes = {
   home: "/",
   search: "/search",
+  find: "/find",
   prepare: "/directions",
   confusion: "/directions/confusion",
   photo: "/directions/photo",
@@ -27,6 +28,7 @@ export function navigationHref(view: View, values: Record<string, string>) {
 export const titles: Record<View, string> = {
   home: "캠퍼스 길찾기",
   search: "목적지 검색",
+  find: "바로 찾기",
   prepare: "길찾기",
   confusion: "헷갈리는 구간 안내",
   photo: "사진으로 위치 확인",
