@@ -247,6 +247,10 @@ async function handle(request: NextRequest) {
         switch (parts[2]) {
           case "advance":
             return response(db.advance(id, owner, versionField(body.version)));
+          case "previous":
+            return response(
+             db.previous(id, owner, versionField(body.version))
+            );
           case "confusion":
             return response(db.confusion(id, owner));
           case "recover": {

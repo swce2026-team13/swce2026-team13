@@ -130,7 +130,7 @@ progress::-moz-progress-bar {
 }
 .phone {
   width: 100%;
-  max-width: 402px;
+  max-width: 390px;
   min-height: 100dvh;
   margin: 0 auto;
   background:
@@ -249,7 +249,7 @@ progress::-moz-progress-bar {
   background: transparent;
   flex: 1;
   width: 100%;
-  font-size: 12px;
+  font-size: 16px;
   color: var(--foreground);
 }
 .search-box input::placeholder {
@@ -579,7 +579,10 @@ progress::-moz-progress-bar {
 .actions {
   position: sticky;
   bottom: 0;
-  padding: 14px 20px 11px;
+  padding:
+    14px
+    20px
+    calc(11px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -776,7 +779,7 @@ progress::-moz-progress-bar {
   border: 1px solid var(--line);
   border-radius: 13px;
   padding: 13px;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 400;
 }
 .field-label > textarea {
@@ -1162,8 +1165,13 @@ progress::-moz-progress-bar {
   .phone {
     margin: 24px auto;
     min-height: calc(100dvh - 48px);
+    max-height: calc(100dvh - 48px);
     border-radius: 24px;
     overflow: clip;
+  }
+
+  .phone > main {
+    overflow-y: auto;
   }
 }
 @media (max-width: 350px) {
@@ -1187,9 +1195,6 @@ progress::-moz-progress-bar {
   .card {
     padding: 14px;
   }
-  .search-box input {
-    font-size: 10px;
-  }
 }
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -1202,8 +1207,8 @@ progress::-moz-progress-bar {
 }
 
 .route-modal {
-  width: min(100%, 402px);
-  max-width: 100%;
+  width: calc(100% - 24px);
+  max-width: 390px;
   max-height: calc(100dvh - 32px);
   margin: auto;
   padding: 0;

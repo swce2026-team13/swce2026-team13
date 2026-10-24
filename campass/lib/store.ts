@@ -202,6 +202,34 @@ export class Store {
       return s;
     });
   }
+  previous(id: string, owner: string, version: number) {
+  return this.transaction(() => {
+    const s = this.get(id, owner);
+
+    if (s.version !== version)
+      throw new AppError(
+        "단계가 변경되었어요. 새로고침해 주세요.",
+        409,
+        "STALE_VERSION",
+      );
+
+    if (s.currentStep <= 0)
+      throw new AppError(
+        "첫 번째 단계입니다.",
+        409,
+        "FIRST_STEP",
+      );
+
+    s.currentStep--;
+    s.version++;
+    s.status = "active";
+    s.recovered = false;
+    s.recoveryDirection = "unknown";
+
+    this.save(s);
+    return s;
+  });
+}
   confusion(id: string, owner: string) {
     return this.transaction(() => {
       const s = this.active(id, owner);

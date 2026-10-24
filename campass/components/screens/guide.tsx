@@ -1,4 +1,6 @@
 "use client";
+import { GuideMapViewport } from "@/components/guide-map-viewport";
+import { toGuideViewModel } from "@/lib/guide-view";
 import { Sparkles } from "lucide-react";
 import {
   ArrowRightIcon,
@@ -6,7 +8,7 @@ import {
   CheckIcon,
   MapIcon,
 } from "@/components/icons";
-import { Notice, Photo, Progress } from "@/components/ui";
+import { Notice, Progress } from "@/components/ui";
 import { useCampus } from "@/components/campus-provider";
 export default function Screen() {
   const {
@@ -17,11 +19,13 @@ export default function Screen() {
     go,
     search,
     advance,
+    previous,
     lost,
     step,
     nextStep,
     hasSession,
   } = useCampus();
+  const guide = toGuideViewModel(session);
   return (
     <>
       {!hasSession && (
@@ -44,17 +48,23 @@ export default function Screen() {
                 <p>현재 위치를 기준으로 목적지까지 경로를 다시 계산했어요.</p>
               </Notice>
             )}
+            <div className="guide-stage-header">
+             <div>
+             <strong>
+              {guide.currentNumber} / {guide.totalSteps} 단계
+            </strong>
+            <p>3D 지도를 보며 이동해요</p>
+            </div>
+
+            <span className="guide-stage-status">이동 중</span>
+            </div>
             <Progress
-              current={session.currentStep + 1}
-              total={session.route.steps.length}
+             current={guide.currentNumber}
+             total={guide.totalSteps}
             />
-            <Photo
-              src={step.photo}
-              direction={
-                session.recovered && session.recoveryDirection === "backward"
-                  ? "backward"
-                  : step.direction
-              }
+            <GuideMapViewport
+                currentStep={guide.current}
+                nextStep={guide.next}
             />
             <div className="card instruction">
               <h1>
@@ -63,16 +73,25 @@ export default function Screen() {
                   : step.instruction}
               </h1>
               <p>{step.detail}</p>
-              <div className="current-next">
-                <div>
-                  <span>● 현재</span>
-                  <b>{step.name}</b>
-                </div>
-                <div>
-                  <span>○ 다음</span>
-                  <b>{nextStep?.name || "목적지"}</b>
-                </div>
-              </div>
+              <div className="guide-location-flow">
+  <div className="guide-location-block">
+    <span className="guide-location-label">현재</span>
+    <strong>{guide.current?.name ?? "현재 위치"}</strong>
+  </div>
+
+  <div className="guide-location-arrow" aria-hidden="true">
+    ↓
+  </div>
+
+  <div className="guide-location-block">
+    <span className="guide-location-label">
+      {guide.next ? "다음" : "도착"}
+    </span>
+    <strong>
+      {guide.next?.name ?? session.destination}
+    </strong>
+  </div>
+</div>
             </div>
             <button
               className="button secondary"

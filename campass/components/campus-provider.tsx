@@ -323,6 +323,21 @@ function useCampusState() {
       go(s.status === "completed" ? "arrival" : "guide");
     });
   }
+  async function previous() {
+  if (!session) return;
+
+  await run(async () => {
+    const s = await api<Session>(
+      `sessions/${session.id}/previous`,
+      {
+        version: session.version,
+      },
+    );
+
+    saveSession(s);
+    go("guide");
+  });
+}
   async function lost() {
     if (!session) return;
     await run(async () => {
@@ -542,6 +557,7 @@ function useCampusState() {
     updateRoute,
     begin,
     advance,
+    previous,
     lost,
     upload,
     confirmLocation,
