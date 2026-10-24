@@ -144,8 +144,11 @@ export class Store {
     start: string,
     destination: string,
     elevator: boolean,
+    option?: string,
   ): Session {
-    const route = calculateRoute(start, destination, elevator, allPlaces());
+    const route = calculateRoute(start, destination, elevator, allPlaces(), {
+      option,
+    });
     return this.transaction(() => {
       const session: Session = {
         id: randomUUID(),
@@ -252,12 +255,25 @@ export class Store {
       if (!["forward", "backward", "unknown"].includes(direction))
         throw new AppError("위치 방향을 확인해 주세요.");
       const s = this.active(id, owner, version);
-      s.route = calculateRoute(
+      // 복구 전에 고른 길과 같은 이름의 후보가 있으면 그 길로 이어 감
+      const chosen = s.route.options?.find((o) => o.id === s.route.option);
+      const route = calculateRoute(
         waypointId,
         s.destination,
         s.route.elevator,
         allPlaces(),
       );
+      const same = route.options.find((o) => o.name === chosen?.name);
+      s.route =
+        same && same.id !== route.option
+          ? calculateRoute(
+              waypointId,
+              s.destination,
+              s.route.elevator,
+              allPlaces(),
+              { option: same.id },
+            )
+          : route;
       s.currentStep = 0;
       s.version++;
       s.recovered = true;

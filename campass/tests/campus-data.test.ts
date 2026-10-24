@@ -14,9 +14,9 @@ import { places } from "../lib/catalog.ts";
 import { calculateRoute } from "../lib/routing.ts";
 import { Store } from "../lib/store.ts";
 
-test("캠퍼스 데이터는 건물 13, 연결 20(삭제 제외), 입구 35", () => {
+test("캠퍼스 데이터는 건물 13, 연결 21(삭제 제외), 입구 35", () => {
   assert.equal(campusBuildings().length, 13);
-  assert.equal(campusLinks().length, 20);
+  assert.equal(campusLinks().length, 21);
   assert.ok(campusLinks().every((l) => l.status !== "삭제"));
   assert.equal(campusEntrances().length, 35);
 });
@@ -64,11 +64,11 @@ test("본관 경로는 바꾸기 전과 같고 예전 id로도 같은 경로", (
       route.steps.map((s) => s.id),
       ["bus_stop_2115", "main"],
     );
-    assert.equal(route.distance, 40);
+    assert.equal(route.distance, 36);
     assert.deepEqual(calculateRoute("bus_stop_2115", "main", elevator), route);
   }
   assert.deepEqual(
-    calculateRoute("bus_stop_2115", "hyein", true).steps.map((s) => s.id),
+    calculateRoute("bus_stop_2115", "hyein", false).steps.map((s) => s.id),
     ["bus_stop_2115", "main", "parking-entry", "parking", "hyein"],
   );
 });

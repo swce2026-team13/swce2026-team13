@@ -1,10 +1,13 @@
 import type { Session } from "./store";
 
+type RouteStep = Session["route"]["steps"][number];
 export type GuideStepViewModel = {
   id: string;
   name: string;
   instruction: string;
   detail?: string;
+  photo?: RouteStep["photo"];
+  direction?: RouteStep["direction"];
 };
 
 export type GuideViewModel = {
@@ -49,6 +52,8 @@ export function toGuideViewModel(
           name: currentStep.name,
           instruction: currentStep.instruction,
           detail: currentStep.detail,
+          photo: currentStep.photo,
+          direction: currentStep.direction,
         }
       : null,
     next: nextStep
@@ -57,6 +62,8 @@ export function toGuideViewModel(
           name: nextStep.name,
           instruction: nextStep.instruction,
           detail: nextStep.detail,
+          photo: nextStep.photo,
+          direction: nextStep.direction,
         }
       : null,
   };

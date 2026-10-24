@@ -50,7 +50,7 @@ export async function api<T>(path: string, body?: unknown): Promise<T> {
   if (!response.ok)
     throw Object.assign(
       new Error(value.error?.message || "요청을 완료하지 못했어요."),
-      { status: response.status },
+      { status: response.status, code: value.error?.code as string | undefined },
     );
   return value;
 }
@@ -64,6 +64,9 @@ function useCampusState() {
   const selectedBuilding = params.get("building") || "혜인관";
   const selectedQuery = params.get("q") || "";
   const selectedCategory = params.get("category") || "";
+  // 고른 경로 후보 id. 주소에만 두고 바꿔도 경로를 다시 받지 않음
+  const selectedOption = params.get("option") || "";
+  const recoveringParam = params.get("recovering");
   const [query, setQuery] = useState(""),
     [results, setResults] = useState<Place[]>([]),
     [searchNote, setSearchNote] = useState("");
@@ -130,7 +133,7 @@ function useCampusState() {
       setStart(selectedStart);
       setElevator(selectedElevator);
       setBuilding(selectedBuilding);
-      setRecovering(view === "recovery" || params.get("recovering") === "true");
+      setRecovering(view === "recovery" || recoveringParam === "true");
       if (view === "prepare") {
         setRoute(null);
         try {
@@ -141,12 +144,11 @@ function useCampusState() {
           });
           if (!cancelled) setRoute(route);
         } catch (error) {
-          if (!cancelled)
-            setError(
-              error instanceof Error
-                ? error.message
-                : "경로를 불러오지 못했어요.",
-            );
+          if (cancelled) return;
+          // 엘리베이터로만 못 가는 곳은 '엘리베이터를 끄면 계단 길을 볼 수 있어요' 안내가 그대로 나감
+          setError(
+            error instanceof Error ? error.message : "경로를 불러오지 못했어요.",
+          );
         }
       }
     });
@@ -155,7 +157,7 @@ function useCampusState() {
     };
   }, [
     view,
-    params,
+    recoveringParam,
     selectedDestination,
     selectedStart,
     selectedElevator,
@@ -294,11 +296,27 @@ function useCampusState() {
     setRoute(null);
     go("prepare", { destination: p.id, start: DEFAULT_START });
   }
+  // 고른 길 id가 새 후보 목록에 있으면 그대로, 없으면 첫 후보
+  const routeOption =
+    route?.options.find((o) => o.id === selectedOption) ?? route?.options[0];
+  function chooseOption(id: string) {
+    const url = new URL(window.location.href);
+    url.searchParams.set("option", id);
+    window.history.replaceState(
+      null,
+      "",
+      `${url.pathname}${url.search}${url.hash}`,
+    );
+  }
   async function updateRoute(nextStart = start, nextElevator = elevator) {
     setStart(nextStart);
     setElevator(nextElevator);
     setRoute(null);
-    go("prepare", { start: nextStart, elevator: String(nextElevator) });
+    go("prepare", {
+      start: nextStart,
+      elevator: String(nextElevator),
+      ...(routeOption ? { option: routeOption.id } : {}),
+    });
   }
   async function begin() {
     await run(async () => {
@@ -306,6 +324,7 @@ function useCampusState() {
         start,
         destination: destination.id,
         elevator,
+        ...(routeOption ? { option: routeOption.id } : {}),
       });
       saveSession(s);
       setRecovering(false);
@@ -430,6 +449,8 @@ function useCampusState() {
     else if (["photo", "recognition", "failed", "recovery"].includes(view))
       go(recovering ? "guide" : "prepare");
     else if (view === "places") go("map");
+    // 편의시설 정보(A4a)에서는 목록으로
+    else if (view === "find" && params.get("place")) router.back();
     else go("home");
   }
   const step = session?.route.steps[session.currentStep],
@@ -515,6 +536,8 @@ function useCampusState() {
     setElevator,
     route,
     setRoute,
+    routeOption,
+    chooseOption,
     session,
     setSession,
     building,

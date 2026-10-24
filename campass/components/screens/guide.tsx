@@ -48,51 +48,63 @@ export default function Screen() {
                 <p>현재 위치를 기준으로 목적지까지 경로를 다시 계산했어요.</p>
               </Notice>
             )}
-            <div className="guide-stage-header">
-             <div>
-             <strong>
-              {guide.currentNumber} / {guide.totalSteps} 단계
-            </strong>
-            <p>3D 지도를 보며 이동해요</p>
-            </div>
-
-            <span className="guide-stage-status">이동 중</span>
-            </div>
-            <Progress
-             current={guide.currentNumber}
-             total={guide.totalSteps}
-            />
-            <GuideMapViewport
-                currentStep={guide.current}
-                nextStep={guide.next}
-            />
-            <div className="card instruction">
-              <h1>
-                {session.recovered && session.recoveryDirection === "backward"
-                  ? "뒤돌아 통로를 따라 가세요"
-                  : step.instruction}
-              </h1>
-              <p>{step.detail}</p>
-              <div className="guide-location-flow">
-  <div className="guide-location-block">
-    <span className="guide-location-label">현재</span>
-    <strong>{guide.current?.name ?? "현재 위치"}</strong>
-  </div>
-
-  <div className="guide-location-arrow" aria-hidden="true">
-    ↓
-  </div>
-
-  <div className="guide-location-block">
-    <span className="guide-location-label">
-      {guide.next ? "다음" : "도착"}
-    </span>
+           <div className="guide-stage-header">
+  <div>
     <strong>
-      {guide.next?.name ?? session.destination}
+      {guide.currentNumber} / {guide.totalSteps} 단계
     </strong>
+    <p>3D 지도를 보며 이동해요</p>
+  </div>
+
+  <span className="guide-stage-status">이동 중</span>
+</div>
+
+<Progress
+  current={guide.currentNumber}
+  total={guide.totalSteps}
+/>
+
+<GuideMapViewport
+  currentStep={guide.current}
+  nextStep={guide.next}
+  recoveredBackward={
+    session.recovered &&
+    session.recoveryDirection === "backward"
+  }
+/>
+
+<div className="card instruction">
+  <h1>
+    {session.recovered && session.recoveryDirection === "backward"
+      ? "되돌아가는 방향으로 이동해 주세요"
+      : guide.current?.instruction}
+  </h1>
+
+  <p>{guide.current?.detail}</p>
+
+  <div className="guide-location-flow">
+    <div className="guide-location-block">
+      <span className="guide-location-label">현재</span>
+      <strong>{guide.current?.name ?? "현재 위치"}</strong>
+    </div>
+
+    <div
+      className="guide-location-arrow"
+      aria-hidden="true"
+    >
+      ↓
+    </div>
+
+    <div className="guide-location-block">
+      <span className="guide-location-label">
+        {guide.next ? "다음" : "도착"}
+      </span>
+      <strong>
+        {guide.next?.name ?? session.destination}
+      </strong>
+    </div>
   </div>
 </div>
-            </div>
             <button
               className="button secondary"
               onClick={lost}

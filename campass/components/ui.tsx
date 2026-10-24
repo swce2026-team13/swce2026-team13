@@ -62,20 +62,25 @@ export function Photo({
 }) {
   return (
     <div className="photo">
-      <Image
-        src={uploaded || `/images/${src}.jpg`}
-        alt={
-          uploaded
-            ? "선택한 주변 사진"
-            : src === "bus"
-              ? "정류장 예시 사진"
-              : "복도 예시 사진"
-        }
-        width={700}
-        height={484}
-        unoptimized={Boolean(uploaded)}
-        priority
-      />
+      {/* 사진 안내 지점이 없는 글자 단계는 사진 없이 보여 줌 */}
+      {!uploaded && !src ? (
+        <div className="photo-empty" />
+      ) : (
+        <Image
+          src={uploaded || `/images/${src}.jpg`}
+          alt={
+            uploaded
+              ? "선택한 주변 사진"
+              : src === "bus"
+                ? "정류장 예시 사진"
+                : "복도 예시 사진"
+          }
+          width={700}
+          height={484}
+          unoptimized={Boolean(uploaded)}
+          priority
+        />
+      )}
       <span className="photo-label">{label}</span>
       {direction && (
         <div className={`direction ${direction === "backward" ? "turn" : ""}`}>

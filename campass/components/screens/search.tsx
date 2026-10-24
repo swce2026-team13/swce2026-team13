@@ -9,8 +9,12 @@ import {
 import { places } from "@/lib/catalog";
 import { Notice } from "@/components/ui";
 import { ClassroomPicker } from "@/components/classroom-picker";
+import { PlaceIcon } from "@/components/floor-places";
+import { FacilityStatus, useNow } from "@/components/facility-status";
+import { withCopula } from "@/lib/hangul";
 import { useCampus } from "@/components/campus-provider";
 export default function Screen() {
+  const now = useNow();
   const {
     query,
     setQuery,
@@ -107,7 +111,7 @@ export default function Screen() {
       <>
         <h3>
     {results.length === 1
-      ? `${results[0].name}이에요`
+      ? withCopula(results[0].name)
       : "목적지가 여러 곳이에요. 어디를 찾으시나요?"}
         </h3>
 
@@ -122,18 +126,25 @@ export default function Screen() {
 
   {results.map((p) => (
     <div className="card ai-place-card" key={p.id}>
-      <div className="row">
+      {/* 학교 편의시설은 카드를 누르면 편의시설 정보(A4a)로 */}
+      <button
+        type="button"
+        className="row ai-place-open"
+        disabled={p.hours === undefined}
+        onClick={() => go("find", { tab: "facility", place: p.id })}
+      >
         <span className="icon-box">
-          <BuildingIcon size={22} />
+          {p.kind ? <PlaceIcon place={p} size={22} /> : <BuildingIcon size={22} />}
         </span>
 
-        <div>
+        <span>
           <strong>{p.name}</strong>
-          <p className="muted small">
-            {p.building} {p.floor}
-          </p>
-        </div>
-      </div>
+          <span className="muted small">
+            {[`${p.building} ${p.floor}`.trim(), p.note].filter(Boolean).join(" · ")}
+          </span>
+          <FacilityStatus place={p} now={now} />
+        </span>
+      </button>
 
       <button
         className="button primary"

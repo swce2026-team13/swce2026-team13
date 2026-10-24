@@ -33,19 +33,45 @@ test("정류장·정문 같은 지도 표시는 출발로만 고름", () => {
 
 test("본관 → 혜인관, 2115번 정류장 → 혜인관은 안내 가능", () => {
   const fromMain = pickStatus({ start: "bon", destination: "hyein" });
-  assert.deepEqual(fromMain, { ready: true, start: "main", message: "" });
+  assert.deepEqual(fromMain, {
+    ready: true,
+    start: "bon",
+    elevator: true,
+    message: "",
+  });
   const fromBusStop = pickStatus({ start: "bus_stop_2115", destination: "hyein" });
-  assert.deepEqual(fromBusStop, { ready: true, start: "bus_stop_2115", message: "" });
+  assert.deepEqual(fromBusStop, {
+    ready: true,
+    start: "bus_stop_2115",
+    elevator: true,
+    message: "",
+  });
+  assert.equal(pickStatus({ start: "gate_main", destination: "hyein" }).start, "gate");
 });
 
-test("한림관 → 혜인관은 출발 지점이 없어 안내 불가", () => {
-  const status = pickStatus({ start: "hallim", destination: "hyein" });
-  assert.equal(status.ready, false);
-  assert.equal(status.message, "아직 이 건물에서 출발하는 안내가 없어요");
+test("건물끼리: 본관 → 한림관, 스콘스퀘어 → 혜인관은 안내 가능", () => {
+  assert.equal(pickStatus({ start: "bon", destination: "hallim" }).ready, true);
+  assert.deepEqual(pickStatus({ start: "스콘스퀘어", destination: "hyein" }), {
+    ready: true,
+    start: "스콘스퀘어",
+    elevator: true,
+    message: "",
+  });
+  assert.equal(pickStatus({ start: "hallim", destination: "스콘스퀘어" }).ready, true);
 });
 
-test("경로가 없는 도착 건물은 막고 안내 문구를 보여 줌", () => {
-  const status = pickStatus({ start: "bon", destination: "bukak" });
+test("크리에이티브센터 → 혜인관은 경로가 없어 막고 안내 문구를 보여 줌", () => {
+  const status = pickStatus({ start: "creative", destination: "hyein" });
   assert.equal(status.ready, false);
-  assert.equal(status.message, "아직 안내 경로가 없는 건물이에요");
+  assert.equal(status.message, "아직 안내 경로가 없는 곳이에요");
+});
+
+test("1주차장 출발은 확인 전 연결까지 써서 엘리베이터 길로 안내", () => {
+  const status = pickStatus({ start: "parking_entrance_1", destination: "hyein" });
+  assert.deepEqual(status, {
+    ready: true,
+    start: "parking",
+    elevator: true,
+    message: "",
+  });
 });

@@ -98,17 +98,13 @@ test("검색 화면은 호실 이름으로 그 호실을 고름", () => {
   );
 });
 
-test("호실 id로 경로를 요청하면 경로 없음(422)", () => {
-  assert.throws(
-    () => calculateRoute("bus_stop_2115", "room-yudam-541", true, allPlaces()),
-    (error: { status: number; code: string }) =>
-      error.status === 422 && error.code === "ROUTE_UNAVAILABLE",
-  );
+test("호실 id로 경로를 요청하면 장소로 인정하고 확인 전 연결까지 써서 길을 찾음", () => {
+  const route = calculateRoute("bus_stop_2115", "room-yudam-541", true, allPlaces());
+  assert.equal(route.options[0].unverified, true);
+  assert.equal(route.options[0].nodes.at(-1), "yudam|5");
   const store = new Store(":memory:");
-  assert.throws(
-    () => store.create("owner", "bus_stop_2115", "room-yudam-541", true),
-    (error: { status: number }) => error.status === 422,
-  );
+  const session = store.create("owner", "bus_stop_2115", "room-yudam-541", true);
+  assert.equal(session.destination, "room-yudam-541");
   store.close();
 });
 
