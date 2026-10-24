@@ -1,5 +1,6 @@
 "use client";
 
+import { getConfusionAdvice } from "@/lib/confusion-advice";
 import { useEffect, useState } from "react";
 import { AlertTriangle, Lightbulb, MapPin } from "lucide-react";
 import { BackIcon } from "@/components/icons";
@@ -33,27 +34,6 @@ const riskyPoint = points
   .filter((point) => point.confusions > 0)
   .sort((a, b) => b.rate - a.rate || b.confusions - a.confusions)[0];
 
-  function getAdvice(reason: string | null | undefined) {
-  switch (reason) {
-    case "방향 혼란":
-      return "갈림길에서는 이동 방향을 한 번 더 확인하고 안내 화살표를 따라가 주세요.";
-
-    case "사진 불일치":
-      return "주변 모습이 안내와 다르면 사진으로 현재 위치를 다시 확인해 주세요.";
-
-    case "표지판 부족":
-      return "갈림길에 도착하면 건물명과 층 표지를 먼저 확인해 주세요.";
-
-    case "위치 재확인":
-      return "현재 위치가 확실하지 않다면 이동하기 전에 사진으로 위치를 확인해 주세요.";
-
-    case "기타":
-      return "주변 안내 표지와 현재 위치를 확인한 뒤 천천히 이동해 주세요.";
-
-    default:
-      return "아직 충분한 기록이 없어 기본 경로 안내를 따라 이동해 주세요.";
-  }
-}
 
   return (
     <section className="content confusion-page">
@@ -121,7 +101,7 @@ const riskyPoint = points
 
           <div>
             <span className="confusion-mini-title">이렇게 이동하세요</span>
-            <p>{getAdvice(riskyPoint?.topReason)}</p>
+            <p>{getConfusionAdvice(riskyPoint?.topReason)}</p>
           </div>
         </div>
       </div>
