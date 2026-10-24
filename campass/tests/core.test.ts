@@ -34,14 +34,28 @@ test("2115 정류장에서 면접 대기실과 은주1관 5층 앞 경로가 나
   const interviewIds = interview.steps.map((s) => s.id);
   assert.deepEqual(interviewIds, [
     "bus_stop_2115",
-    "main",
-    "parking-entry",
-    "parking",
-    "hyein",
+    "main_bus_stop_passage",
+    "main_corridor",
+    "main_elevator_front",
+    "to_hallim",
+    "hallim_to_elevator",
+    "hallim_elevator_front",
+    "hallim_6f_elevator",
+    "hallim_6f_corridor",
+    "eunju1_5f_front",
+    "스콘스퀘어",
     "elevator",
     "interview",
   ]);
-  assert.match(interview.steps[0].detail, /본관 1층 로비/);
+  assert.match(interview.steps[0].detail, /연결통로/);
+  assert.deepEqual(
+    calculateRoute("bus_stop_2115", "interview", false).steps.map((s) => s.id),
+    ["bus_stop_2115", "main", "parking-entry", "parking", "hyein", "stairs", "interview"],
+  );
+  assert.match(
+    calculateRoute("bus_stop_2115", "interview", false).steps[0].detail,
+    /본관 1층 로비/,
+  );
 
   const eunju = calculateRoute("bus_stop_2115", "eunju1_5f_front", true);
   const eunjuIds = eunju.steps.map((s) => s.id);
@@ -52,13 +66,23 @@ test("2115 정류장에서 면접 대기실과 은주1관 5층 앞 경로가 나
   assert.ok(!eunjuIds.includes("main"));
   assert.match(eunju.steps[0].detail, /연결통로/);
 
+  // 지하주차장은 계단으로만 이어져 엘리베이터 길의 출발지에서 빠짐
   assert.deepEqual(startOptions("interview", true), [
+    "bus_stop_2115",
+    "gate",
+    "main",
+  ]);
+  assert.deepEqual(startOptions("interview", false), [
     "bus_stop_2115",
     "gate",
     "main",
     "parking",
   ]);
-  assert.deepEqual(startOptions("eunju1_5f_front", true), ["bus_stop_2115"]);
+  assert.deepEqual(startOptions("eunju1_5f_front", true), [
+    "bus_stop_2115",
+    "gate",
+    "main",
+  ]);
   assert.deepEqual(startOptions("bukak", true), []);
 });
 

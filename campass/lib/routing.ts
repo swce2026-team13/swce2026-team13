@@ -1,4 +1,23 @@
-import { arrivalWaypoint, type Place } from "./catalog.ts";
+import { currentPlaceId, places, type Place } from "./catalog.ts";
+import {
+  campusBuildings,
+  floorCode,
+  nodeKey,
+  type LinkStatus,
+} from "./campus3d/types.ts";
+import {
+  PARKING,
+  PLAZA,
+  buildingById,
+  findPaths,
+  floorLabel,
+  graphNodes,
+  isFloorMove,
+  nodeArea,
+  nodeLabel,
+  type GraphPath,
+  type Hop,
+} from "./campus3d/route.ts";
 export class AppError extends Error {
   status: number;
   code: string;
@@ -208,35 +227,30 @@ export const waypoints: Waypoint[] = [
     stage: true,
   },
 ];
-// 시연 동선 · 실내 연결 미검증
-type Edge = {
-  from: string;
-  to: string;
-  meters: number;
-  stairs?: boolean;
-  connection?: boolean;
-  floorMove?: boolean;
+// 출발 위치로 쓸 때 사진 안내 지점이 놓인 그래프 노드
+const waypointNodes: Record<string, string> = {
+  gate: "gate_main",
+  bus_stop_2115: "bus_stop_2115",
+  main: "bon|1",
+  main_bus_stop_passage: "bon|1",
+  main_corridor: "bon|1",
+  main_elevator_front: "bon|1",
+  "parking-entry": "bon|1",
+  parking: PARKING,
+  hallim_to_elevator: "hallim|3",
+  hallim_elevator_front: "hallim|3",
+  hallim_6f_elevator: "hallim|6",
+  eunju1_5f_front: "eunju1|5",
+  hyein: "hyein|B1",
+  elevator: "hyein|B1",
+  stairs: "hyein|B1",
+  interview: "hyein|3",
 };
-const edges: Edge[] = [
-  { from: "gate", to: "main", meters: 40, connection: true },
-  { from: "bus_stop_2115", to: "main", meters: 40, connection: true },
-  { from: "main", to: "parking-entry", meters: 30, connection: true },
-  { from: "parking-entry", to: "parking", meters: 25 },
-  { from: "parking", to: "hyein", meters: 45, connection: true },
-  { from: "hyein", to: "elevator", meters: 15 },
-  { from: "elevator", to: "interview", meters: 35, floorMove: true },
-  { from: "hyein", to: "stairs", meters: 5 },
-  { from: "stairs", to: "interview", meters: 30, stairs: true, floorMove: true },
-  { from: "bus_stop_2115", to: "main_bus_stop_passage", meters: 40, connection: true },
-  { from: "main_bus_stop_passage", to: "main_corridor", meters: 30 },
-  { from: "main_corridor", to: "main_elevator_front", meters: 20 },
-  { from: "main_elevator_front", to: "to_hallim", meters: 30, connection: true },
-  { from: "to_hallim", to: "hallim_to_elevator", meters: 25 },
-  { from: "hallim_to_elevator", to: "hallim_elevator_front", meters: 10 },
-  { from: "hallim_elevator_front", to: "hallim_6f_elevator", meters: 15, floorMove: true },
-  { from: "hallim_6f_elevator", to: "hallim_6f_corridor", meters: 20 },
-  { from: "hallim_6f_corridor", to: "eunju1_5f_front", meters: 40, connection: true },
-];
+// 연결통로 위에 있는 사진 안내 지점
+const waypointLinks: Record<string, string> = {
+  to_hallim: "bon-5__hallim-3",
+  hallim_6f_corridor: "hallim-6__eunju1-5",
+};
 // 공통 출발지 안내 문구 (다음 지점별)
 const branchDetails: Record<string, Record<string, string>> = {
   bus_stop_2115: {
@@ -244,6 +258,7 @@ const branchDetails: Record<string, Record<string, string>> = {
     main_bus_stop_passage: "본관과 이어진 연결통로 방향으로 이동해 주세요.",
   },
 };
+const GENERIC_DETAIL = "시연 경로 · 현장의 안내 표지를 함께 확인하세요.";
 export const DEFAULT_START = "bus_stop_2115";
 const startCandidates = [DEFAULT_START, "gate", "main", "parking"];
 // 2115 정류장으로 되돌아가는 출발지는 제외
@@ -253,13 +268,29 @@ export function startOptions(destination: string, elevator: boolean) {
       const route = calculateRoute(start, destination, elevator);
       return (
         start === DEFAULT_START ||
-        !route.steps.some((step) => step.id === DEFAULT_START)
+        !route.options[0].nodes.includes(DEFAULT_START)
       );
     } catch {
       return false;
     }
   });
 }
+export type RouteOption = {
+  // 같은 조건이면 같은 값 (노드 목록 기준)
+  id: string;
+  name: "엘리베이터 길" | "지하통로 길" | "연결통로 길";
+  nodes: string[];
+  links: string[];
+  // 건물 단위 단계 (예: 본관 1층 → 5층)
+  legs: { building: string; from: string; to: string }[];
+  steps: Waypoint[];
+  connections: number;
+  floorMoves: number;
+  stepFree: boolean | null;
+  // '추정' 출발 연결(실외 길 대략)을 지나면 true
+  approximate: boolean;
+};
+// 기존 필드는 고른 후보(없으면 첫 후보) 값으로 채움
 export type Route = {
   steps: Waypoint[];
   distance: number;
@@ -267,80 +298,300 @@ export type Route = {
   floorMoves: number;
   verified: false;
   elevator: boolean;
+  option: string;
+  options: RouteOption[];
 };
-// list: 목적지를 찾을 장소 목록. 서버는 호실까지 넣어서 넘김
-export function calculateRoute(
-  start: string,
-  destination: string,
-  elevator: boolean,
-  list?: Place[],
-): Route {
-  const target = arrivalWaypoint(destination, list);
-  if (!waypoints.some((w) => w.id === start) || !target)
-    throw new AppError("출발지 또는 목적지를 확인해 주세요.");
-  const dist = new Map<string, number>([[start, 0]]);
-  const previous = new Map<string, string>();
-  const pending = new Set(waypoints.map((w) => w.id));
-  while (pending.size) {
-    const id = [...pending].sort(
-      (a, b) => (dist.get(a) ?? Infinity) - (dist.get(b) ?? Infinity),
-    )[0];
-    if (!Number.isFinite(dist.get(id) ?? Infinity)) break;
-    pending.delete(id);
-    if (id === target) break;
-    for (const e of edges) {
-      if (elevator && e.stairs) continue;
-      const next = e.from === id ? e.to : e.to === id ? e.from : undefined;
-      if (!next || !pending.has(next)) continue;
-      const value = dist.get(id)! + e.meters;
-      if (value < (dist.get(next) ?? Infinity)) {
-        dist.set(next, value);
-        previous.set(next, id);
-      }
-    }
+export type RouteChoice = {
+  // 후보 id. 없으면 첫 후보
+  option?: string;
+  // 기본은 '확인' 연결만 씀
+  statuses?: LinkStatus[];
+};
+
+function startPoint(start: string) {
+  if (waypointLinks[start]) return { node: start, link: waypointLinks[start] };
+  if (waypointNodes[start]) return { node: waypointNodes[start] };
+  if (graphNodes.includes(start)) return { node: start };
+  // 지도에서 건물을 출발로 고를 때: 1층, 없으면 가장 아래층
+  const building = buildingById(start);
+  if (building) {
+    const floor = building.floors.find((f) => f.floor === "1") ?? building.floors[0];
+    return { node: nodeKey(building.id, floor.floor) };
   }
-  if (!dist.has(target))
-    throw new AppError(
-      "이 장소의 안내 경로는 아직 등록되지 않았어요. 공식 캠퍼스 지도를 확인해 주세요.",
-      422,
-      "ROUTE_UNAVAILABLE",
-    );
-  const ids = [target];
-  while (ids[0] !== start) ids.unshift(previous.get(ids[0])!);
-  const steps = ids.map((id, index) => {
-    const point = { ...waypoints.find((w) => w.id === id)! };
-    const branch = branchDetails[id]?.[ids[index + 1]];
-    if (branch) point.detail = branch;
-    // 역방향 경로 안내 갱신
-    if (!["interview", "eunju1_5f_front"].includes(target) && index < ids.length - 1) {
-      point.instruction = `${waypoints.find((w) => w.id === ids[index + 1])!.name} 방향으로 이동하세요`;
-      point.detail = "시연 경로 · 현장의 안내 표지를 함께 확인하세요.";
+}
+
+function destinationNodes(destination: string, list: Place[]) {
+  const id = currentPlaceId(destination);
+  if (id === "parking") return [PARKING];
+  if (id === "eunju1_5f_front") return ["eunju1|5"];
+  const place = list.find((p) => p.id === id);
+  if (!place) return;
+  const building = campusBuildings().find((b) => b.name === place.building);
+  if (!building) return [];
+  const floor =
+    place.category === "building" || !place.floor
+      ? ""
+      : (building.floors.find((f) => f.label === place.floor)?.floor ??
+        floorCode(building.id, place.floor));
+  const node = nodeKey(building.id, floor);
+  // 건물 장소는 그 건물의 아무 층이나 먼저 닿는 층
+  return graphNodes.includes(node)
+    ? [node]
+    : building.floors.map((f) => nodeKey(building.id, f.floor));
+}
+
+// 노드에 붙는 사진 안내 지점. 들어오고 나가는 방향이 맞는 것만
+function nodeWaypoints(
+  node: string,
+  prev: Hop | undefined,
+  next: Hop | undefined,
+  arrival: string,
+) {
+  const up = Boolean(next && isFloorMove(next.edge));
+  const byElevator = next?.edge.kind === "elevator";
+  switch (node) {
+    case "bus_stop_2115":
+      return ["bus_stop_2115"];
+    case "gate_main":
+      return ["gate"];
+    case PARKING:
+      return ["parking"];
+    case "eunju1|5":
+      return ["eunju1_5f_front"];
+    case "hallim|6":
+      return prev && isFloorMove(prev.edge) ? ["hallim_6f_elevator"] : [];
+    case "hallim|3":
+      return byElevator ? ["hallim_to_elevator", "hallim_elevator_front"] : [];
+    case "bon|1":
+      return [
+        prev?.from === "bus_stop_2115" && up ? "main_bus_stop_passage" : "main",
+        ...(next?.edge.id === "bon-1__지하주차장-B1" ? ["parking-entry"] : []),
+        ...(up ? ["main_corridor"] : []),
+        ...(byElevator ? ["main_elevator_front"] : []),
+      ];
+  }
+  const list: string[] = [];
+  if (node === "hyein|B1" && prev?.edge.id === "hyein-B1__지하주차장-B1")
+    list.push("hyein");
+  // 혜인관 층 이동을 시작하는 층
+  if (nodeArea(node) === "hyein" && up)
+    list.push(byElevator ? "elevator" : "stairs");
+  if (node === "hyein|3" && !next && arrival === "interview")
+    list.push("interview");
+  return list;
+}
+
+function linkWaypoint(hop: Hop) {
+  if (hop.edge.id === "bon-5__hallim-3" && hop.to === "hallim|3")
+    return "to_hallim";
+  if (hop.edge.id === "hallim-6__eunju1-5" && hop.to === "eunju1|5")
+    return "hallim_6f_corridor";
+}
+
+// 받침이 있으면 '으로', 없거나 ㄹ이면 '로'
+function toward(word: string) {
+  const code = word.charCodeAt(word.length - 1) - 0xac00;
+  const final = code >= 0 && code < 11172 ? code % 28 : 0;
+  return `${word}${final && final !== 8 ? "으로" : "로"}`;
+}
+
+// 사진 안내 지점이 없는 곳은 글자 단계로
+function textStep(path: GraphPath, index: number): Waypoint {
+  const node = path.nodes[index];
+  const next = path.hops[index];
+  let instruction = "목적지에 도착했어요";
+  if (next && isFloorMove(next.edge)) {
+    let end = index;
+    while (path.hops[end] && isFloorMove(path.hops[end].edge)) end++;
+    instruction = `${next.edge.kind === "elevator" ? "엘리베이터로" : "계단으로"} ${toward(floorLabel(path.nodes[end]))} 가세요`;
+  } else if (next && node === PLAZA)
+    instruction = `${toward(PLAZA)} 나가 ${toward(nodeLabel(next.to))} 가세요`;
+  else if (next) instruction = `${toward(nodeLabel(next.to))} 이어진 길로 가세요`;
+  return {
+    id: node,
+    name: nodeLabel(node),
+    instruction,
+    detail: GENERIC_DETAIL,
+    photo: "",
+    direction: next && isFloorMove(next.edge) ? "up" : "forward",
+    x: 0,
+    y: 0,
+  };
+}
+
+const liftPoints = [
+  "main_elevator_front",
+  "hallim_elevator_front",
+  "elevator",
+  "stairs",
+];
+
+function buildSteps(path: GraphPath, start: string, destination: string) {
+  const arrival = currentPlaceId(destination);
+  const entries: (string | Waypoint)[] = [];
+  path.nodes.forEach((node, index) => {
+    const prev = path.hops[index - 1];
+    const next = path.hops[index];
+    // 같은 건물 안에서 이어지는 층 이동의 중간 층은 건너뜀
+    if (
+      prev &&
+      next &&
+      isFloorMove(prev.edge) &&
+      isFloorMove(next.edge) &&
+      nodeArea(prev.from) === nodeArea(next.to)
+    )
+      return;
+    const onLink = next && linkWaypoint(next);
+    if (index === 0 && waypointLinks[start]) entries.push(start);
+    else {
+      const attached = nodeWaypoints(node, prev, next, arrival);
+      entries.push(...attached);
+      // 층 이동을 알려 주는 지점이 없으면 글자 단계를 더함
+      const movesFloor =
+        next &&
+        isFloorMove(next.edge) &&
+        !attached.some((id) => liftPoints.includes(id));
+      if ((!attached.length && !onLink) || movesFloor)
+        entries.push(textStep(path, index));
     }
-    if (index === ids.length - 1) {
+    if (onLink && !(index === 0 && waypointLinks[start])) entries.push(onLink);
+  });
+  // 사진 안내 지점에서 출발하면 그 지점이 첫 단계
+  if (waypoints.some((w) => w.id === start)) {
+    const first = entries.indexOf(start);
+    if (first >= 0) entries.splice(0, first);
+    else entries.unshift(start);
+  }
+  const points = entries.map((entry) =>
+    typeof entry === "string"
+      ? { ...waypoints.find((w) => w.id === entry)! }
+      : entry,
+  );
+  // 글자 단계는 바로 앞(없으면 뒤) 지점 좌표를 씀
+  points.forEach((point, index) => {
+    if (point.photo) return;
+    const near =
+      points.slice(0, index).reverse().find((p) => p.photo) ??
+      points.slice(index + 1).find((p) => p.photo);
+    point.x = near?.x ?? 0;
+    point.y = near?.y ?? 0;
+  });
+  const demo = ["interview", "eunju1_5f_front"];
+  return points.map((point, index) => {
+    const nextPoint = points[index + 1];
+    const branch = nextPoint && branchDetails[point.id]?.[nextPoint.id];
+    if (branch) point.detail = branch;
+    // 시연 목적지가 아니면 '다음 지점 방향으로' 안내. 도중에 지나는 시연 도착 지점도 같게
+    if (
+      nextPoint &&
+      point.photo &&
+      (!demo.includes(arrival) || demo.includes(point.id))
+    ) {
+      point.instruction = `${nextPoint.name} 방향으로 이동하세요`;
+      point.detail = GENERIC_DETAIL;
+    }
+    if (!nextPoint) {
       point.instruction = "목적지에 도착했어요";
       point.detail = "주변 안내 표지와 목적지를 확인해 주세요.";
     }
     return point;
   });
-  const usedEdges = ids.slice(0, -1).map((id, index) => {
-  const nextId = ids[index + 1];
+}
 
-  return edges.find(
-    (edge) =>
-      (edge.from === id && edge.to === nextId) ||
-      (edge.from === nextId && edge.to === id),
-  )!;
-});
+// 노드 목록으로 만든 짧은 id
+function optionId(nodes: string[]) {
+  let hash = 5381;
+  for (const char of nodes.join(">"))
+    hash = (hash * 33 + char.charCodeAt(0)) >>> 0;
+  return `route-${hash.toString(36)}`;
+}
 
-const connections = usedEdges.filter((edge) => edge.connection).length;
-const floorMoves = usedEdges.filter((edge) => edge.floorMove).length;
-  const distance = dist.get(target)!;
+function toOption(
+  path: GraphPath,
+  elevator: boolean,
+  start: string,
+  destination: string,
+): RouteOption {
+  const edges = path.hops.map((h) => h.edge);
+  const legs: RouteOption["legs"] = [];
+  for (const node of path.nodes) {
+    const area = nodeArea(node);
+    if (!buildingById(area) && area !== PLAZA && area !== PARKING) continue;
+    const name = buildingById(area)?.name ?? area;
+    const last = legs.at(-1);
+    if (last?.building === name) last.to = floorLabel(node);
+    else legs.push({ building: name, from: floorLabel(node), to: floorLabel(node) });
+  }
   return {
-  steps,
-  distance,
-  connections,
-  floorMoves,
-  verified: false,
-  elevator,
-};
+    id: optionId(path.nodes),
+    name: path.nodes.includes(PARKING)
+      ? "지하통로 길"
+      : elevator
+        ? "엘리베이터 길"
+        : "연결통로 길",
+    nodes: path.nodes,
+    links: path.hops.map((h) =>
+      isFloorMove(h.edge) ? `${h.from}>${h.to}` : h.edge.id,
+    ),
+    legs,
+    steps: buildSteps(path, start, destination),
+    connections: edges.filter((e) => e.kind === "link").length,
+    // 같은 건물에서 이어지는 층 이동은 한 번으로 셈
+    floorMoves: edges.filter(
+      (e, i) => isFloorMove(e) && !(i > 0 && isFloorMove(edges[i - 1])),
+    ).length,
+    stepFree: edges.some((e) => e.stepFree === false)
+      ? false
+      : edges.some((e) => e.stepFree === null)
+        ? null
+        : true,
+    approximate: edges.some((e) => e.approximate),
+  };
+}
+
+// list: 목적지를 찾을 장소 목록. 서버는 호실 · 편의시설까지 넣어서 넘김
+export function calculateRoute(
+  start: string,
+  destination: string,
+  elevator: boolean,
+  list: Place[] = places,
+  choice: RouteChoice = {},
+): Route {
+  const from = startPoint(start);
+  const targets = destinationNodes(destination, list);
+  if (!from || !targets)
+    throw new AppError("출발지 또는 목적지를 확인해 주세요.");
+  const paths = findPaths(from, targets, {
+    elevator,
+    statuses: choice.statuses,
+  });
+  if (!paths.length)
+    throw new AppError(
+      "이 장소의 안내 경로는 아직 등록되지 않았어요. 공식 캠퍼스 지도를 확인해 주세요.",
+      422,
+      "ROUTE_UNAVAILABLE",
+    );
+  const options = paths.map((path) =>
+    toOption(path, elevator, start, destination),
+  );
+  const chosen = choice.option
+    ? options.find((o) => o.id === choice.option)
+    : options[0];
+  if (!chosen) throw new AppError("경로 후보를 확인해 주세요.");
+  const path = paths[options.indexOf(chosen)];
+  return {
+    steps: chosen.steps,
+    // 층 이동을 뺀 건물 사이 거리(m)
+    distance: Math.round(
+      path.hops
+        .filter((h) => !isFloorMove(h.edge))
+        .reduce((sum, h) => sum + h.edge.cost, 0),
+    ),
+    connections: chosen.connections,
+    floorMoves: chosen.floorMoves,
+    verified: false,
+    elevator,
+    option: chosen.id,
+    options,
+  };
 }

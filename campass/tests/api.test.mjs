@@ -460,3 +460,19 @@ test("HTTP 호실 장소는 검색되고 id로 찾을 수 있으며 경로는 42
   const find = await (await fetch(`${origin}/find?tab=classroom&building=유담관`)).text();
   assert.match(find, /room-yudam-541/);
 });
+test("HTTP 경로 응답에 후보 목록이 있고 후보 id로 고를 수 있음", async () => {
+  const body = { start: "bus_stop_2115", destination: "interview", elevator: false };
+  const route = await (await request("routes", body)).json();
+  assert.equal(route.options.length, 2);
+  assert.equal(route.options[0].name, "지하통로 길");
+  assert.deepEqual(route.steps, route.options[0].steps);
+  const second = await (
+    await request("routes", { ...body, option: route.options[1].id })
+  ).json();
+  assert.deepEqual(second.steps, route.options[1].steps);
+  assert.equal((await request("routes", { ...body, option: "x" })).status, 400);
+  const session = await (
+    await request("sessions", { ...body, option: route.options[1].id })
+  ).json();
+  assert.equal(session.route.option, route.options[1].id);
+});

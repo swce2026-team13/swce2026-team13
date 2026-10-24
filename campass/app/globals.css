@@ -624,6 +624,9 @@ progress::-moz-progress-bar {
   object-fit: cover;
   display: block;
 }
+.photo-empty {
+  height: 242px;
+}
 .photo-label {
   position: absolute;
   left: 12px;

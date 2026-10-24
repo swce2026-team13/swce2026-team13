@@ -144,8 +144,11 @@ export class Store {
     start: string,
     destination: string,
     elevator: boolean,
+    option?: string,
   ): Session {
-    const route = calculateRoute(start, destination, elevator, allPlaces());
+    const route = calculateRoute(start, destination, elevator, allPlaces(), {
+      option,
+    });
     return this.transaction(() => {
       const session: Session = {
         id: randomUUID(),
