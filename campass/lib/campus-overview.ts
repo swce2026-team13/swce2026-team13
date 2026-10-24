@@ -6,6 +6,8 @@ import {
   type LinkStatus,
   type LocalPoint,
 } from "./campus3d/types.ts";
+import { nodeArea, PARKING } from "./campus3d/route.ts";
+import type { GuideMapData } from "./guide-view.ts";
 
 // 캠퍼스 개요도(B2)에 그릴 도형과 색. 좌표는 지도 픽셀로 바꿔서 돌려줌
 export const MAP_WIDTH = 360;
@@ -148,7 +150,10 @@ export const overviewMarkers: OverviewMarker[] = markerList.map((m) => {
   const near = markerList
     .filter((other) => other.id !== m.id)
     .map((other) => project(entrance(other.id).local))
-    .filter(([x, y]) => Math.abs(x - position[0]) < 40 && Math.abs(y - position[1]) < 12);
+    .filter(
+      ([x, y]) =>
+        Math.abs(x - position[0]) < 40 && Math.abs(y - position[1]) < 12,
+    );
   const labelAt = near.some(([x]) => x > position[0])
     ? "left"
     : near.length
@@ -173,23 +178,62 @@ const statusRank: Record<LinkStatus, number> = {
 
 // 지하주차장은 스콘스퀘어 아래라 광장 윤곽으로 이음
 const area = (id: string) => (id === "지하주차장" ? "스콘스퀘어" : id);
+
+// 층이 다른 연결도 개요도에서는 같은 두 건물 사이 선으로 표시함
+export function overviewLinkPair(id: string): string | undefined {
+  const link = campusLinks().find((link) => link.id === id);
+  return link
+    ? [area(link.from.building), area(link.to.building)].sort().join("|")
+    : undefined;
+}
+
+export function overviewRouteHighlight(map: GuideMapData) {
+  const marker = (node: string) =>
+    node === PARKING ? "parking_entrance_1" : node;
+  return {
+    areas: new Set(map.nodes.map((node) => area(nodeArea(node)))),
+    currentArea: map.current.node
+      ? area(nodeArea(map.current.node))
+      : undefined,
+    pairs: new Set(
+      map.links.map(overviewLinkPair).filter((pair) => pair !== undefined),
+    ),
+    currentPair: map.current.link
+      ? overviewLinkPair(map.current.link)
+      : undefined,
+    markers: new Set(map.nodes.map(marker)),
+    currentMarker: map.current.node ? marker(map.current.node) : undefined,
+  };
+}
+
+export type OverviewRouteHighlight = ReturnType<typeof overviewRouteHighlight>;
 function outline(id: string) {
   if (id === "스콘스퀘어") return plaza.polygon!;
   return campusBuildings().find((b) => b.id === id)?.footprint.polygon;
 }
 
-function closestOnSegment(p: LocalPoint, a: LocalPoint, b: LocalPoint): LocalPoint {
+function closestOnSegment(
+  p: LocalPoint,
+  a: LocalPoint,
+  b: LocalPoint,
+): LocalPoint {
   const dx = b[0] - a[0];
   const dy = b[1] - a[1];
   const length = dx * dx + dy * dy;
   const t = length
-    ? Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / length))
+    ? Math.max(
+        0,
+        Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / length),
+      )
     : 0;
   return [a[0] + dx * t, a[1] + dy * t];
 }
 
 // 두 윤곽에서 서로 가장 가까운 점 한 쌍
-export function closestPoints(a: LocalPoint[], b: LocalPoint[]): [LocalPoint, LocalPoint] {
+export function closestPoints(
+  a: LocalPoint[],
+  b: LocalPoint[],
+): [LocalPoint, LocalPoint] {
   let best: [LocalPoint, LocalPoint] = [a[0], b[0]];
   let bestDistance = Infinity;
   const check = (from: LocalPoint[], to: LocalPoint[], swap: boolean) => {
@@ -209,7 +253,10 @@ export function closestPoints(a: LocalPoint[], b: LocalPoint[]): [LocalPoint, Lo
 }
 
 // 같은 두 곳을 잇는 연결이 여러 층에 있으면 가장 확실한 것 하나만 그림
-const pairs = new Map<string, { id: string; status: LinkStatus; a: string; b: string }>();
+const pairs = new Map<
+  string,
+  { id: string; status: LinkStatus; a: string; b: string }
+>();
 for (const link of campusLinks()) {
   const a = area(link.from.building);
   const b = area(link.to.building);

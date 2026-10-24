@@ -1,9 +1,12 @@
 "use client";
 import { sources } from "@/lib/catalog";
-import { CampusMap, Notice, Progress, Tag } from "@/components/ui";
+import { Notice, Progress, Tag } from "@/components/ui";
+import { GuideMapViewport } from "@/components/guide-map-viewport";
+import { toGuideViewModel } from "@/lib/guide-view";
 import { useCampus } from "@/components/campus-provider";
 export default function Screen() {
   const { session, go, step, nextStep, hasSession } = useCampus();
+  const guide = toGuideViewModel(session);
   return (
     <>
       {!hasSession && (
@@ -20,10 +23,13 @@ export default function Screen() {
             current={session!.currentStep + 1}
             total={session!.route.steps.length}
           />
-          <CampusMap
-            route={session!.route}
-            current={session?.currentStep}
-            onBuilding={undefined}
+          <GuideMapViewport
+            map={guide.map ?? undefined}
+            currentStep={guide.current}
+            nextStep={guide.next}
+            recoveredBackward={
+              session.recovered && session.recoveryDirection === "backward"
+            }
           />
 
           <div className="card">
@@ -32,7 +38,7 @@ export default function Screen() {
             <p>다음 · {nextStep?.name || "목적지"}</p>
           </div>
           <button className="button primary" onClick={() => go("guide")}>
-            사진 안내로 돌아가기
+            단계 안내로 돌아가기
           </button>
 
           <a

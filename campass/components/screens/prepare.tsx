@@ -17,6 +17,8 @@ import {
   startMapIds,
 } from "@/lib/route-start";
 import { CampusOverviewMap } from "@/components/campus-overview-map";
+import { GuideMapViewport } from "@/components/guide-map-viewport";
+import { toGuideMapData } from "@/lib/guide-view";
 import { Tag } from "@/components/ui";
 import { api, useCampus } from "@/components/campus-provider";
 
@@ -106,9 +108,12 @@ export default function Screen() {
         ?.scrollIntoView({ block: "start" });
   }, [pickStart]);
   const candidates = startChoices(startQuery ?? "", registeredPlaces);
+  // 경로가 나오면 지도 자리에 미리보기를 보여 주고, '지도에서 출발지 바꾸기'를 누르면 고르기 지도로
+  const [pickingOnMap, setPickingOnMap] = useState(false);
   const selectStart = (id: string) => {
     if (busy) return;
     setStartQuery(null);
+    setPickingOnMap(false);
     void updateRoute(id);
   };
   const options = route?.options ?? [];
@@ -236,19 +241,39 @@ export default function Screen() {
               ))}
             </div>
           )}
-          <div className="overview-card">
-            <div className="overview-heading">
-              <b>캠퍼스 지도</b>
-              <span>출발할 곳을 눌러 주세요</span>
+          {routeOption && !pickingOnMap ? (
+            <div className="overview-card route-preview">
+              <div className="overview-heading">
+                <b>경로 미리보기</b>
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={() => setPickingOnMap(true)}
+                >
+                  지도에서 출발지 바꾸기
+                </button>
+              </div>
+              <GuideMapViewport
+                map={toGuideMapData(routeOption)}
+                currentStep={null}
+                nextStep={null}
+              />
             </div>
-            <CampusOverviewMap
-              selected={startMapIds(start, registeredPlaces)}
-              startable={Object.keys(markerStarts)}
-              onSelect={(id, building) =>
-                selectStart(building ? id : markerStarts[id])
-              }
-            />
-          </div>
+          ) : (
+            <div className="overview-card">
+              <div className="overview-heading">
+                <b>캠퍼스 지도</b>
+                <span>출발할 곳을 눌러 주세요</span>
+              </div>
+              <CampusOverviewMap
+                selected={startMapIds(start, registeredPlaces)}
+                startable={Object.keys(markerStarts)}
+                onSelect={(id, building) =>
+                  selectStart(building ? id : markerStarts[id])
+                }
+              />
+            </div>
+          )}
         </div>
         <button
           className="button secondary"

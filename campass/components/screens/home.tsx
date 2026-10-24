@@ -12,6 +12,7 @@ import {
   MessageIcon,
 } from "@/components/icons";
 import { useCampus } from "@/components/campus-provider";
+import { places } from "@/lib/catalog";
 import { createRotation } from "@/lib/rotation";
 
 const events = [
@@ -20,14 +21,14 @@ const events = [
     status: "진행 중",
     place: "혜인관 3층",
     time: "09:00–17:00",
-    query: "면접 보러 왔어요",
+    placeId: "interview",
   },
   {
     title: "공모전 발표",
-    status: "11/10",
+    status: "11/12",
     place: "유담관 L층",
     time: "발표 행사",
-    query: "공모전 발표 보러 왔어요",
+    placeId: "contest-final",
   },
 ];
 
@@ -55,7 +56,8 @@ function useEventRotation(count: number) {
 }
 
 export default function Screen() {
-  const { query, setQuery, session, busy, ready, go, search } = useCampus();
+  const { query, setQuery, session, busy, ready, go, search, choose } =
+    useCampus();
 
   const carousel = useEventRotation(events.length);
   const eventIndex = carousel.index;
@@ -158,35 +160,41 @@ export default function Screen() {
         carousel.hold("focus", false);
     }}
   >
-    <button
-      type="button"
-      className="home-event-card card"
-      onClick={() => carousel.select(eventIndex + 1)}
-      aria-label="다음 행사 보기"
-    >
-      <div>
-        <div className="home-event-title">
+    {/* 카드 안 버튼이 겹치지 않게 '다음 행사'와 '길찾기'를 따로 둠 */}
+    <div className="home-event-card card">
+      <button
+        type="button"
+        className="home-event-next"
+        onClick={() => carousel.select(eventIndex + 1)}
+        aria-label={`${events[eventIndex].title} · 다음 행사 보기`}
+      >
+        <span className="home-event-title">
           <strong>{events[eventIndex].title}</strong>
           <span className="home-event-status">
             {events[eventIndex].status}
           </span>
-        </div>
+        </span>
 
-        <p>
+        <span className="home-event-place">
           {events[eventIndex].place} · {events[eventIndex].time}
-        </p>
-      </div>
+        </span>
+      </button>
 
-      <span
+      {/* 검색을 거치지 않고 그 행사 장소로 바로 경로 준비 */}
+      <button
+        type="button"
         className="home-event-link"
-        onClick={(e) => {
-          e.stopPropagation();
-          search(events[eventIndex].query);
+        disabled={busy}
+        onClick={() => {
+          const place = places.find(
+            (p) => p.id === events[eventIndex].placeId,
+          );
+          if (place) void choose(place);
         }}
       >
         길찾기 <ArrowRightIcon size={15} />
-      </span>
-    </button>
+      </button>
+    </div>
   </div>
 
   <div className="home-carousel-dots">

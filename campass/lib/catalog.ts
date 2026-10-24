@@ -55,6 +55,26 @@ export const places: Place[] = [
     source: sources.figma,
     description: "시연용 행사 · 실제 면접 장소는 입학 공지 확인",
   },
+  {
+    id: "contest-final",
+    name: "공모전 발표",
+    building: "유담관",
+    floor: "L층",
+    category: "event",
+    aliases: [
+      "공모전",
+      "공모전 발표",
+      "본선",
+      "결선",
+      "Co-Working Space",
+      "코워킹 스페이스",
+      "유담관 L층",
+    ],
+    verified: false,
+    source: sources.figma,
+    description:
+      "시연용 행사 · 본선 장소(공모전 OT 기준 11/12 유담관 L층 Co-Working Space)",
+  },
   ...names.map(([id, name]): Place => ({
     id,
     name,
