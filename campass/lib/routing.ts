@@ -281,14 +281,18 @@ export type RouteOption = {
   name: "엘리베이터 길" | "지하통로 길" | "연결통로 길";
   nodes: string[];
   links: string[];
-  // 건물 단위 단계 (예: 본관 1층 → 5층)
-  legs: { building: string; from: string; to: string }[];
+  // 건물 단위 단계 (예: 본관 1층 → 5층). 스콘스퀘어는 앞 단계에 via로 붙임
+  legs: { building: string; from: string; to: string; via?: string }[];
   steps: Waypoint[];
   connections: number;
   floorMoves: number;
+  // 층 이동 수단
+  lifts: ("elevator" | "stairs")[];
   stepFree: boolean | null;
   // '추정' 출발 연결(실외 길 대략)을 지나면 true
   approximate: boolean;
+  // '확인'이 아닌 건물 사이 연결을 하나라도 지나면 true
+  unverified?: true;
 };
 // 기존 필드는 고른 후보(없으면 첫 후보) 값으로 채움
 export type Route = {
@@ -322,6 +326,7 @@ function startPoint(start: string) {
 
 function destinationNodes(destination: string, list: Place[]) {
   const id = currentPlaceId(destination);
+  if (id === PLAZA) return [PLAZA];
   if (id === "parking") return [PARKING];
   if (id === "eunju1_5f_front") return ["eunju1|5"];
   const place = list.find((p) => p.id === id);
@@ -389,7 +394,7 @@ function linkWaypoint(hop: Hop) {
 }
 
 // 받침이 있으면 '으로', 없거나 ㄹ이면 '로'
-function toward(word: string) {
+export function toward(word: string) {
   const code = word.charCodeAt(word.length - 1) - 0xac00;
   const final = code >= 0 && code < 11172 ? code % 28 : 0;
   return `${word}${final && final !== 8 ? "으로" : "로"}`;
@@ -519,7 +524,8 @@ function toOption(
     if (!buildingById(area) && area !== PLAZA && area !== PARKING) continue;
     const name = buildingById(area)?.name ?? area;
     const last = legs.at(-1);
-    if (last?.building === name) last.to = floorLabel(node);
+    if (area === PLAZA && last) last.via = PLAZA;
+    else if (last?.building === name) last.to = floorLabel(node);
     else legs.push({ building: name, from: floorLabel(node), to: floorLabel(node) });
   }
   return {
@@ -540,13 +546,32 @@ function toOption(
     floorMoves: edges.filter(
       (e, i) => isFloorMove(e) && !(i > 0 && isFloorMove(edges[i - 1])),
     ).length,
+    lifts: (["elevator", "stairs"] as const).filter((kind) =>
+      edges.some((e) => e.kind === kind),
+    ),
     stepFree: edges.some((e) => e.stepFree === false)
       ? false
       : edges.some((e) => e.stepFree === null)
         ? null
         : true,
     approximate: edges.some((e) => e.approximate),
+    ...(edges.some((e) => e.kind === "link" && e.status !== "확인")
+      ? { unverified: true as const }
+      : {}),
   };
+}
+
+// 상태를 따로 주지 않으면 '확인' 연결로 먼저 찾고, 없으면 '확인 필요' · '추정'까지 넣어 다시 찾음
+const wideStatuses: LinkStatus[] = ["확인 필요", "추정"];
+function searchPaths(
+  from: NonNullable<ReturnType<typeof startPoint>>,
+  targets: string[],
+  elevator: boolean,
+  statuses?: LinkStatus[],
+) {
+  const paths = findPaths(from, targets, { elevator, statuses });
+  if (paths.length || statuses) return paths;
+  return findPaths(from, targets, { elevator, statuses: wideStatuses });
 }
 
 // list: 목적지를 찾을 장소 목록. 서버는 호실 · 편의시설까지 넣어서 넘김
@@ -561,16 +586,20 @@ export function calculateRoute(
   const targets = destinationNodes(destination, list);
   if (!from || !targets)
     throw new AppError("출발지 또는 목적지를 확인해 주세요.");
-  const paths = findPaths(from, targets, {
-    elevator,
-    statuses: choice.statuses,
-  });
-  if (!paths.length)
+  const paths = searchPaths(from, targets, elevator, choice.statuses);
+  if (!paths.length) {
+    if (elevator && searchPaths(from, targets, false, choice.statuses).length)
+      throw new AppError(
+        "엘리베이터로는 아직 갈 수 없어요. 엘리베이터를 끄면 계단 길을 볼 수 있어요",
+        422,
+        "ELEVATOR_ROUTE_UNAVAILABLE",
+      );
     throw new AppError(
       "이 장소의 안내 경로는 아직 등록되지 않았어요. 공식 캠퍼스 지도를 확인해 주세요.",
       422,
       "ROUTE_UNAVAILABLE",
     );
+  }
   const options = paths.map((path) =>
     toOption(path, elevator, start, destination),
   );

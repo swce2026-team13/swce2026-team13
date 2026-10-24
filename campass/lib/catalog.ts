@@ -10,8 +10,12 @@ export type Place = {
   description: string;
   // 학교 캠퍼스맵 호실 번호 (호실 장소만)
   number?: string;
-  // 운영시간 첫 부분 (학교 편의시설만)
+  // 운영 시간 원문 (학교 편의시설만)
   hours?: string;
+  // 편의시설 종류
+  kind?: "cafe" | "store" | "dining" | "aed" | "etc";
+  // 위치 보충 (예: 서경스포렉스 안, 로비)
+  note?: string;
 };
 export const sources = {
   map: "https://www.skuniv.ac.kr/campus-map",
@@ -117,6 +121,17 @@ export const places: Place[] = [
      source: "시연 동선(임시)",
      description: "한림관 6층 연결통로를 지나 도착하는 은주1관 5층 앞",
    }, 
+  {
+    id: "스콘스퀘어",
+    name: "스콘스퀘어",
+    building: "스콘스퀘어",
+    floor: "",
+    category: "facility",
+    aliases: ["스콘스퀘어", "광장"],
+    verified: true,
+    source: sources.map,
+    description: "은주1관 · 혜인관 사이 광장 · 아래가 지하주차장",
+  },
 ];
 // 건물 id를 캠퍼스 데이터에 맞추기 전의 id. 저장된 세션과 이전 요청을 새 id로 받음
 const renamedPlaceIds: Record<string, string> = {

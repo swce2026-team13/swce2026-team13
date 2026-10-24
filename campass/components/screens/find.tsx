@@ -1,28 +1,16 @@
 "use client";
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import {
-  ArrowRightIcon,
-  BuildingIcon,
-  CoffeeIcon,
-} from "@/components/icons";
+import { ArrowRightIcon, BuildingIcon, CoffeeIcon } from "@/components/icons";
 import { places, type Place } from "@/lib/catalog";
 import { classroomFloors } from "@/lib/classrooms";
 import { navigationHref } from "@/lib/navigation";
 import { Notice } from "@/components/ui";
 import { FloorPlaceList } from "@/components/floor-places";
+import { FacilityFinder } from "@/components/facility-finder";
 import { useCampus } from "@/components/campus-provider";
 
 const buildings = places.filter((p) => p.category === "building");
-const demoFacilities = places.filter((p) => p.category === "facility");
-
-// '유담관 9층 · 학기중 08:00~20:00'. 시연 지점은 지금 문구를 그대로 씀
-const facilityDetail = (p: Place) =>
-  p.hours === undefined
-    ? p.floor
-      ? `${p.building} ${p.floor}`
-      : p.description
-    : [`${p.building} ${p.floor}`.trim(), p.hours].filter(Boolean).join(" · ");
 
 export default function Screen({
   rooms,
@@ -35,10 +23,12 @@ export default function Screen({
   const { busy, choose } = useCampus();
   const tab = params.get("tab") === "facility" ? "facility" : "classroom";
   const building =
-    buildings.find((b) => b.name === params.get("building"))?.name ??
-    "혜인관";
+    buildings.find((b) => b.name === params.get("building"))?.name ?? "혜인관";
   const [openFloor, setOpenFloor] = useState("");
   const floors = classroomFloors(building, [...places, ...rooms]);
+  // 편의시설 상세(A4a)에서는 탭을 숨김
+  const detail =
+    tab === "facility" && facilities.some((p) => p.id === params.get("place"));
 
   // 탭과 건물 선택은 기록을 쌓지 않고 주소에만 남겨 새로고침해도 유지
   function update(values: Record<string, string>) {
@@ -52,26 +42,28 @@ export default function Screen({
 
   return (
     <section className="content stack find-screen">
-      <div className="find-tabs" role="tablist" aria-label="찾을 장소 분류">
-        <button
-          role="tab"
-          aria-selected={tab === "classroom"}
-          className={tab === "classroom" ? "active" : ""}
-          onClick={() => update({ tab: "classroom" })}
-        >
-          <BuildingIcon size={17} />
-          건물·강의실
-        </button>
-        <button
-          role="tab"
-          aria-selected={tab === "facility"}
-          className={tab === "facility" ? "active" : ""}
-          onClick={() => update({ tab: "facility" })}
-        >
-          <CoffeeIcon size={17} />
-          편의시설
-        </button>
-      </div>
+      {!detail && (
+        <div className="find-tabs" role="tablist" aria-label="찾을 장소 분류">
+          <button
+            role="tab"
+            aria-selected={tab === "classroom"}
+            className={tab === "classroom" ? "active" : ""}
+            onClick={() => update({ tab: "classroom" })}
+          >
+            <BuildingIcon size={17} />
+            건물·강의실
+          </button>
+          <button
+            role="tab"
+            aria-selected={tab === "facility"}
+            className={tab === "facility" ? "active" : ""}
+            onClick={() => update({ tab: "facility" })}
+          >
+            <CoffeeIcon size={17} />
+            편의시설
+          </button>
+        </div>
+      )}
 
       {tab === "classroom" ? (
         <>
@@ -137,18 +129,7 @@ export default function Screen({
           )}
         </>
       ) : (
-        <>
-          <h1>어떤 편의시설을 찾으세요?</h1>
-          <p>등록된 편의시설을 골라 길찾기를 시작해요.</p>
-          <div className="card floor-card find-floor find-facilities">
-            <FloorPlaceList
-              items={[...demoFacilities, ...facilities]}
-              busy={busy}
-              onChoose={choose}
-              detail={facilityDetail}
-            />
-          </div>
-        </>
+        <FacilityFinder facilities={facilities} />
       )}
     </section>
   );

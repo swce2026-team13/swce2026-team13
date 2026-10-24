@@ -50,18 +50,25 @@ test("엘리베이터를 끄면 지하통로 길이 먼저, 연결통로 길이 
   });
 });
 
-test("본관에서 한림관은 경로가 있고 북악관에서 혜인관은 경로 없음(422)", () => {
+test("본관에서 한림관은 경로가 있고 크리에이티브센터에서 혜인관은 경로 없음(422)", () => {
   const route = calculateRoute("bon", "hallim", false);
   assert.equal(route.options[0].nodes[0], "bon|1");
   assert.ok(route.options[0].nodes.at(-1)!.startsWith("hallim|"));
   assert.throws(
-    () => calculateRoute("bukak", "hyein", false),
+    () => calculateRoute("creative", "hyein", false),
     (error: { status: number; code: string }) =>
       error.status === 422 && error.code === "ROUTE_UNAVAILABLE",
   );
-  assert.throws(
-    () => calculateRoute("bus_stop_2115", "room-yudam-541", true, allPlaces()),
-    (error: { status: number }) => error.status === 422,
+  // 확인된 연결로 안 이어지면 '확인 필요' · '추정' 연결까지 씀
+  const bukak = calculateRoute("bukak", "hyein", false);
+  assert.ok(bukak.options.every((o) => o.unverified));
+  assert.equal(
+    calculateRoute("bus_stop_2115", "interview", true).options[0].unverified,
+    undefined,
+  );
+  assert.ok(
+    calculateRoute("bus_stop_2115", "room-yudam-541", true, allPlaces()).options[0]
+      .unverified,
   );
 });
 
@@ -104,11 +111,22 @@ test("층 이동 연결은 계단 16, 엘리베이터 50 + 층 수 차이 × 3",
   assert.ok(!graphEdges.some((e) => e.kind === "elevator" && e.a.startsWith("chungwoon|")));
 });
 
-test("정문 출발은 대략적인 길로 표시하고, 엘리베이터 길 출발지에서 지하주차장은 빠짐", () => {
+test("정문 출발은 대략적인 길로 표시하고, 엘리베이터로만 못 가면 따로 안내", () => {
   const route = calculateRoute("gate", "interview", false);
   assert.ok(route.options.every((o) => o.approximate));
   assert.ok(!calculateRoute("bus_stop_2115", "interview", false).options[0].approximate);
-  assert.throws(() => calculateRoute("parking", "interview", true), /경로/);
+  // 지하주차장은 '확인 필요' 연결로 엘리베이터 길이 이어짐
+  assert.ok(calculateRoute("parking", "interview", true).options[0].unverified);
+  // 청운관은 엘리베이터가 없어 L층(교내 서점)은 계단으로만 감
+  const bookstore = allPlaces().find((p) => p.name === "교내 서점(문구점)")!.id;
+  assert.throws(
+    () => calculateRoute("bus_stop_2115", bookstore, true, allPlaces()),
+    (error: { status: number; code: string; message: string }) =>
+      error.status === 422 &&
+      error.code === "ELEVATOR_ROUTE_UNAVAILABLE" &&
+      /엘리베이터를 끄면/.test(error.message),
+  );
+  assert.ok(calculateRoute("bus_stop_2115", bookstore, false, allPlaces()).options.length);
 });
 
 test("세션은 고른 후보로 만들고 복구도 같은 그래프로 다시 계산", () => {

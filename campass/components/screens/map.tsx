@@ -2,13 +2,13 @@
 import { useState } from "react";
 import { places } from "@/lib/catalog";
 import { LEGEND, overviewMarkers } from "@/lib/campus-overview";
-import { emptyPick, pickOnMap, pickStatus, startPoints } from "@/lib/map-pick";
+import { emptyPick, markerStarts, pickOnMap, pickStatus } from "@/lib/map-pick";
 import { CampusOverviewMap } from "@/components/campus-overview-map";
 import { CheckIcon } from "@/components/icons";
 import { useCampus } from "@/components/campus-provider";
 
 const startMarkers = overviewMarkers
-  .filter((m) => startPoints[m.id])
+  .filter((m) => markerStarts[m.id])
   .map((m) => m.id);
 
 const markerNames: Record<string, string> = {
@@ -112,6 +112,7 @@ export default function Screen() {
             go("prepare", {
               destination: pick.destination!,
               start: status.start!,
+              elevator: String(status.elevator),
             })
           }
         >
