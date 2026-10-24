@@ -205,6 +205,34 @@ export class Store {
       return s;
     });
   }
+  previous(id: string, owner: string, version: number) {
+  return this.transaction(() => {
+    const s = this.get(id, owner);
+
+    if (s.version !== version)
+      throw new AppError(
+        "단계가 변경되었어요. 새로고침해 주세요.",
+        409,
+        "STALE_VERSION",
+      );
+
+    if (s.currentStep <= 0)
+      throw new AppError(
+        "첫 번째 단계입니다.",
+        409,
+        "FIRST_STEP",
+      );
+
+    s.currentStep--;
+    s.version++;
+    s.status = "active";
+    s.recovered = false;
+    s.recoveryDirection = "unknown";
+
+    this.save(s);
+    return s;
+  });
+}
   confusion(id: string, owner: string) {
     return this.transaction(() => {
       const s = this.active(id, owner);
@@ -275,9 +303,13 @@ export class Store {
         input.confused &&
         (!input.waypointId ||
           !s.visited.includes(input.waypointId) ||
-          !["방향 혼란", "사진 불일치", "표지판 부족", "기타"].includes(
-            input.reason ?? "",
-          ))
+          ![
+            "방향 혼란",
+            "사진 불일치",
+            "지도랑 달랐어요",
+           "표지판 부족",
+            "기타",
+          ].includes(input.reason ?? ""))
       )
         throw new AppError("방문한 구간과 혼란 이유를 선택해 주세요.");
       if (input.confused)
