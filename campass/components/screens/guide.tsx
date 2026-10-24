@@ -23,7 +23,6 @@ export default function Screen() {
     session,
     busy,
     go,
-    search,
     advance,
     previous,
     lost,
@@ -31,7 +30,6 @@ export default function Screen() {
     destination,
     elevator,
     step,
-    nextStep,
     hasSession,
   } = useCampus();
   const guide = toGuideViewModel(session);
@@ -68,7 +66,7 @@ export default function Screen() {
       {guide.currentNumber} / {guide.totalSteps} 단계
     </strong>
 
-    <span>3D 지도 보며 이동 중</span>
+    <span>지도 보며 이동 중</span>
   </div>
 
   <div
@@ -90,6 +88,7 @@ export default function Screen() {
 </div>
 
 <GuideMapViewport
+  map={guide.map ?? undefined}
   currentStep={guide.current}
   nextStep={guide.next}
   recoveredBackward={

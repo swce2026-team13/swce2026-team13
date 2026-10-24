@@ -5,6 +5,7 @@ import { dirname } from "node:path";
 import { AppError, calculateRoute, waypoints, type Route } from "./routing.ts";
 import { currentPlaceId } from "./catalog.ts";
 import { allPlaces } from "./rooms.ts";
+import { nodeLabel } from "./campus3d/route.ts";
 export const ADMIN_SESSION_SECONDS = 8 * 60 * 60;
 export type Session = {
   id: string;
@@ -364,7 +365,8 @@ export class Store {
 
     return {
       ...r,
-      name: waypoints.find((w) => w.id === r.id)?.name ?? r.id,
+      // 사진 안내 지점이 아니면 그래프 노드 이름으로 (예: bon|5 → 본관 5층)
+      name: waypoints.find((w) => w.id === r.id)?.name ?? nodeLabel(r.id),
       rate: Math.round((r.confusions / r.passages) * 1000) / 10,
       topReason: topReason?.reason ?? null,
     };

@@ -8,6 +8,8 @@ import {
   overviewLinks,
   overviewMarkers,
   overviewPlaza,
+  overviewLinkPair,
+  type OverviewRouteHighlight,
   type MarkerKind,
 } from "@/lib/campus-overview";
 
@@ -29,7 +31,14 @@ function MarkerGlyph({ kind }: { kind: MarkerKind }) {
       : { rx: kind === "bus" ? 8 : 4, fill: "#2563EB" };
   return (
     <>
-      <rect x="1" y="1" width="16" height="16" rx={badge.rx} fill={badge.fill} />
+      <rect
+        x="1"
+        y="1"
+        width="16"
+        height="16"
+        rx={badge.rx}
+        fill={badge.fill}
+      />
       <rect
         x="0.6"
         y="0.6"
@@ -79,7 +88,8 @@ export const pinColors: Record<PinKind, string> = {
 const pinGlyphs: Record<PinKind, string> = {
   cafe: "M2 4H7V6.5A2 2 0 0 1 5 8.5H4A2 2 0 0 1 2 6.5Z M7 4.8H7.6A1.1 1.1 0 0 1 7.6 7H7",
   store: "M2.2 4H7.8L7.3 8.6H2.7Z M3.6 4A1.4 1.4 0 0 1 6.4 4",
-  dining: "M3 1.5V8.5 M2 1.5V3.3A1 1 0 0 0 4 3.3V1.5 M7 1.5C6 2.5 6 4.3 7 5V8.5",
+  dining:
+    "M3 1.5V8.5 M2 1.5V3.3A1 1 0 0 0 4 3.3V1.5 M7 1.5C6 2.5 6 4.3 7 5V8.5",
   aed: "M5 8.3S1.6 6.2 1.6 3.9A1.7 1.7 0 0 1 5 3.1A1.7 1.7 0 0 1 8.4 3.9C8.4 6.2 5 8.3 5 8.3Z M5 3.6L4.4 5.2H5.6L5 6.6",
   etc: "M2.8 8.6V2H7.2V8.6 M4 3.6H6 M4 5.2H6 M4 6.8H6",
   mixed: "M2.5 5H7.5 M5 2.5V7.5",
@@ -92,6 +102,7 @@ export function CampusOverviewMap({
   pins,
   selectedPin,
   onPin,
+  highlight,
 }: {
   selected?: string[];
   // 출발로 고를 수 있는 지도 표시 id
@@ -101,8 +112,23 @@ export function CampusOverviewMap({
   pins?: MapPin[];
   selectedPin?: string;
   onPin?: (id: string) => void;
+  highlight?: OverviewRouteHighlight;
 }) {
-  const viewOnly = Boolean(pins);
+  const viewOnly = Boolean(pins || highlight);
+  const state = (area: string) =>
+    highlight?.currentArea === area
+      ? "current"
+      : highlight?.areas.has(area)
+        ? "route"
+        : undefined;
+  const routeFill = (area: string) =>
+    state(area) === "current"
+      ? "#2563EB"
+      : state(area) === "route"
+        ? "#BFDBFE"
+        : undefined;
+  const labelFill = (area: string, fallback: string) =>
+    state(area) === "current" ? "white" : fallback;
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const [zoom, setZoom] = useState(0);
   const scale = ZOOMS[zoom];
@@ -131,9 +157,11 @@ export function CampusOverviewMap({
         width={MAP_WIDTH}
         height={MAP_HEIGHT}
         aria-label={
-          viewOnly
-            ? "캠퍼스 개요도. 편의시설 핀을 눌러 보세요"
-            : "캠퍼스 개요도. 건물을 눌러 출발과 도착을 고르세요"
+          highlight
+            ? "캠퍼스 개요도. 선택한 경로와 현재 위치"
+            : viewOnly
+              ? "캠퍼스 개요도. 편의시설 핀을 눌러 보세요"
+              : "캠퍼스 개요도. 건물을 눌러 출발과 도착을 고르세요"
         }
       >
         <defs>
@@ -148,7 +176,14 @@ export function CampusOverviewMap({
           {overviewBuildings
             .filter((b) => b.colors.length > 1)
             .map((b) => (
-              <linearGradient key={b.id} id={`${id}-${b.id}`} x1="0" y1="0" x2="1" y2="0">
+              <linearGradient
+                key={b.id}
+                id={`${id}-${b.id}`}
+                x1="0"
+                y1="0"
+                x2="1"
+                y2="0"
+              >
                 <stop offset="0.25" stopColor={b.colors[0]} />
                 <stop offset="0.75" stopColor={b.colors[1]} />
               </linearGradient>
@@ -159,15 +194,22 @@ export function CampusOverviewMap({
 
         <g
           className={pressable}
-          aria-label={viewOnly ? undefined : "스콘스퀘어"}
+          aria-label={highlight || !viewOnly ? "스콘스퀘어" : undefined}
+          data-route-state={state("스콘스퀘어")}
           aria-pressed={viewOnly ? undefined : selected.includes("스콘스퀘어")}
           {...press("스콘스퀘어", true)}
         >
           <polygon
             points={overviewPlaza.points}
-            fill={`url(#${id}-plaza)`}
-            stroke={selected.includes("스콘스퀘어") ? "#2563EB" : "white"}
-            strokeWidth={selected.includes("스콘스퀘어") ? 2 : 1.5}
+            fill={routeFill("스콘스퀘어") ?? `url(#${id}-plaza)`}
+            stroke={
+              state("스콘스퀘어") || selected.includes("스콘스퀘어")
+                ? "#2563EB"
+                : "white"
+            }
+            strokeWidth={
+              state("스콘스퀘어") || selected.includes("스콘스퀘어") ? 2 : 1.5
+            }
             strokeLinejoin="round"
           />
         </g>
@@ -181,18 +223,22 @@ export function CampusOverviewMap({
         />
 
         {overviewBuildings.map((b) => {
-          const on = selected.includes(b.id);
+          const on = Boolean(state(b.id)) || selected.includes(b.id);
           return (
             <g
               key={b.id}
               className={pressable}
-              aria-label={viewOnly ? undefined : b.name}
+              aria-label={highlight || !viewOnly ? b.name : undefined}
+              data-route-state={state(b.id)}
               aria-pressed={viewOnly ? undefined : on}
               {...press(b.id, true)}
             >
               <polygon
                 points={b.points}
-                fill={b.colors.length > 1 ? `url(#${id}-${b.id})` : b.colors[0]}
+                fill={
+                  routeFill(b.id) ??
+                  (b.colors.length > 1 ? `url(#${id}-${b.id})` : b.colors[0])
+                }
                 stroke={on ? "#2563EB" : "white"}
                 strokeWidth={on ? 2 : 1.2}
                 strokeLinejoin="round"
@@ -201,19 +247,28 @@ export function CampusOverviewMap({
           );
         })}
 
-        {overviewLinks.map((l) => (
-          <line
-            key={l.id}
-            x1={l.from[0]}
-            y1={l.from[1]}
-            x2={l.to[0]}
-            y2={l.to[1]}
-            stroke={l.status === "확인" ? "#2563EB" : "#9AA3B2"}
-            strokeWidth={l.status === "확인" ? 2 : 1.4}
-            strokeDasharray={l.status === "확인" ? "3 2" : "2 2"}
-            strokeLinecap="round"
-          />
-        ))}
+        {overviewLinks.map((l) => {
+          const pair = overviewLinkPair(l.id);
+          const current = Boolean(pair && highlight?.currentPair === pair);
+          const on = current || Boolean(pair && highlight?.pairs.has(pair));
+          return (
+            <line
+              key={l.id}
+              data-route-state={current ? "current" : on ? "route" : undefined}
+              data-route-pair={highlight ? pair : undefined}
+              x1={l.from[0]}
+              y1={l.from[1]}
+              x2={l.to[0]}
+              y2={l.to[1]}
+              stroke={on || l.status === "확인" ? "#2563EB" : "#9AA3B2"}
+              strokeWidth={current ? 5 : on ? 3 : l.status === "확인" ? 2 : 1.4}
+              strokeDasharray={
+                on ? undefined : l.status === "확인" ? "3 2" : "2 2"
+              }
+              strokeLinecap="round"
+            />
+          );
+        })}
 
         <g className="overview-labels" textAnchor="middle">
           {overviewBuildings.map((b) => (
@@ -223,12 +278,17 @@ export function CampusOverviewMap({
                 y={b.center[1] + (b.sub ? -1 : 3)}
                 fontSize="9"
                 fontWeight={b.bold ? 700 : 400}
-                fill={b.text}
+                fill={labelFill(b.id, b.text)}
               >
                 {b.label}
               </text>
               {b.sub && (
-                <text x={b.center[0]} y={b.center[1] + 7} fontSize="6" fill="#66738A">
+                <text
+                  x={b.center[0]}
+                  y={b.center[1] + 7}
+                  fontSize="6"
+                  fill={labelFill(b.id, "#66738A")}
+                >
                   {b.sub}
                 </text>
               )}
@@ -239,14 +299,24 @@ export function CampusOverviewMap({
             y={overviewPlaza.center[1] - 18}
             fontSize="7"
             fontWeight="700"
-            fill="#2563EB"
+            fill={labelFill("스콘스퀘어", "#2563EB")}
           >
             지하주차장 P1
           </text>
-          <text x={overviewPlaza.center[0]} y={overviewPlaza.center[1] + 2} fontSize="11" fill="#3E5A45">
+          <text
+            x={overviewPlaza.center[0]}
+            y={overviewPlaza.center[1] + 2}
+            fontSize="11"
+            fill={labelFill("스콘스퀘어", "#3E5A45")}
+          >
             스콘스퀘어
           </text>
-          <text x={overviewPlaza.center[0]} y={overviewPlaza.center[1] + 11} fontSize="6" fill="#5C6880">
+          <text
+            x={overviewPlaza.center[0]}
+            y={overviewPlaza.center[1] + 11}
+            fontSize="6"
+            fill={labelFill("스콘스퀘어", "#5C6880")}
+          >
             아래가 지하주차장
           </text>
         </g>
@@ -254,13 +324,24 @@ export function CampusOverviewMap({
         {overviewMarkers.map((m) => {
           const [x, y] = m.position;
           const canStart = !viewOnly && startable.includes(m.id);
-          const on = selected.includes(m.id);
+          const current = highlight?.currentMarker === m.id;
+          const on =
+            current || highlight?.markers.has(m.id) || selected.includes(m.id);
           const glyph = (
             <>
               {on && (
-                <circle cx={x} cy={y} r={MARKER / 2 + 3} fill="none" stroke="#2563EB" strokeWidth="2" />
+                <circle
+                  cx={x}
+                  cy={y}
+                  r={MARKER / 2 + 3}
+                  fill={current ? "#BFDBFE" : "none"}
+                  stroke="#2563EB"
+                  strokeWidth={current ? 4 : 2}
+                />
               )}
-              <g transform={`translate(${x - MARKER / 2} ${y - MARKER / 2}) scale(${MARKER / 18})`}>
+              <g
+                transform={`translate(${x - MARKER / 2} ${y - MARKER / 2}) scale(${MARKER / 18})`}
+              >
                 <MarkerGlyph kind={m.kind} />
               </g>
               <text
@@ -273,7 +354,11 @@ export function CampusOverviewMap({
                 }
                 y={m.labelAt === "below" ? y + MARKER / 2 + 9 : y + 3}
                 textAnchor={
-                  m.labelAt === "left" ? "end" : m.labelAt === "right" ? "start" : "middle"
+                  m.labelAt === "left"
+                    ? "end"
+                    : m.labelAt === "right"
+                      ? "start"
+                      : "middle"
                 }
                 fontSize="8"
                 fontWeight="700"
@@ -295,58 +380,88 @@ export function CampusOverviewMap({
               {glyph}
             </g>
           ) : (
-            <g key={m.id} aria-hidden="true">
+            <g
+              key={m.id}
+              aria-hidden={highlight ? undefined : true}
+              aria-label={highlight ? m.label : undefined}
+              data-route-state={
+                highlight && on ? (current ? "current" : "route") : undefined
+              }
+            >
               {glyph}
             </g>
           );
         })}
 
-        {pins?.map((pin) => {
-          const [x, y] = pin.position;
-          const on = pin.id === selectedPin;
-          const r = on ? 11 : 9;
-          const color = pinColors[pin.kind];
-          return (
-            <g
-              key={pin.id}
-              className={`overview-pin ${on ? "on" : ""}`}
-              aria-label={`${pin.label} 편의시설 ${pin.count}곳`}
-              aria-pressed={on}
-              {...button(() => onPin?.(pin.id))}
-            >
-              {on && <circle cx={x} cy={y} r={r + 4} fill={color} opacity="0.18" />}
-              <circle cx={x} cy={y} r={r} fill={color} stroke="white" strokeWidth="1.5" />
-              <path
-                d={pinGlyphs[pin.kind]}
-                transform={`translate(${x - (on ? 6 : 5)} ${y - (on ? 6 : 5)}) scale(${on ? 1.2 : 1})`}
-                fill="none"
-                stroke="white"
-                strokeWidth="1.1"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              {pin.count > 1 && (
-                <>
-                  <circle cx={x + r - 1} cy={y - r + 1} r="5.5" fill="white" stroke={color} />
-                  <text
-                    x={x + r - 1}
-                    y={y - r + 3.4}
-                    textAnchor="middle"
-                    fontSize="7"
-                    fontWeight="700"
-                    fill={color}
-                  >
-                    {pin.count}
-                  </text>
-                </>
-              )}
-            </g>
-          );
-        })}
+        {!highlight &&
+          pins?.map((pin) => {
+            const [x, y] = pin.position;
+            const on = pin.id === selectedPin;
+            const r = on ? 11 : 9;
+            const color = pinColors[pin.kind];
+            return (
+              <g
+                key={pin.id}
+                className={`overview-pin ${on ? "on" : ""}`}
+                aria-label={`${pin.label} 편의시설 ${pin.count}곳`}
+                aria-pressed={on}
+                {...button(() => onPin?.(pin.id))}
+              >
+                {on && (
+                  <circle cx={x} cy={y} r={r + 4} fill={color} opacity="0.18" />
+                )}
+                <circle
+                  cx={x}
+                  cy={y}
+                  r={r}
+                  fill={color}
+                  stroke="white"
+                  strokeWidth="1.5"
+                />
+                <path
+                  d={pinGlyphs[pin.kind]}
+                  transform={`translate(${x - (on ? 6 : 5)} ${y - (on ? 6 : 5)}) scale(${on ? 1.2 : 1})`}
+                  fill="none"
+                  stroke="white"
+                  strokeWidth="1.1"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                {pin.count > 1 && (
+                  <>
+                    <circle
+                      cx={x + r - 1}
+                      cy={y - r + 1}
+                      r="5.5"
+                      fill="white"
+                      stroke={color}
+                    />
+                    <text
+                      x={x + r - 1}
+                      y={y - r + 3.4}
+                      textAnchor="middle"
+                      fontSize="7"
+                      fontWeight="700"
+                      fill={color}
+                    >
+                      {pin.count}
+                    </text>
+                  </>
+                )}
+              </g>
+            );
+          })}
       </svg>
       <svg className="overview-north" viewBox="0 0 7 18" aria-hidden="true">
         <path d="M0 9L3.5 0L7 9L3.5 7Z" fill="#192334" />
-        <text x="3.5" y="17" textAnchor="middle" fontSize="6.6" fontWeight="700" fill="#192334">
+        <text
+          x="3.5"
+          y="17"
+          textAnchor="middle"
+          fontSize="6.6"
+          fontWeight="700"
+          fill="#192334"
+        >
           N
         </text>
       </svg>

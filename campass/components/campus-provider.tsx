@@ -482,11 +482,6 @@ function useCampusState() {
       setSession({ ...session, feedbackSubmitted: true });
     });
   }
-  function browseBuilding(name: string) {
-    setBuilding(name);
-    setFloor("전체");
-    go("places", { building: name });
-  }
   function back() {
     if (view === "guide-map") go("guide");
     else if (["photo", "recognition", "failed", "recovery"].includes(view))
@@ -633,7 +628,6 @@ function useCampusState() {
     confirmLocation,
     sendRecognitionFeedback,
     sendFeedback,
-    browseBuilding,
     back,
     step,
     nextStep,

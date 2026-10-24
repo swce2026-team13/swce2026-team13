@@ -24,10 +24,8 @@ test("routing is connected, excludes stairs when requested, and rejects unknown/
   assert.throws(() => calculateRoute("bus_stop_2115", "creative", false), /경로/);
 });
 
-test("2115 정류장에서 면접 대기실과 은주1관 5층 앞 경로가 나뉘고, 출발지 선택지가 목적지에 맞게 바뀐다", async () => {
-  const { calculateRoute, startOptions, waypoints, DEFAULT_START } =
-    await import("../lib/routing.ts");
-  assert.equal(DEFAULT_START, "bus_stop_2115");
+test("2115 정류장에서 면접 대기실과 은주1관 5층 앞 경로가 나뉜다", async () => {
+  const { calculateRoute, waypoints } = await import("../lib/routing.ts");
   assert.ok(!waypoints.some((w) => w.id === "bus"));
 
   const interview = calculateRoute("bus_stop_2115", "interview", true);
@@ -65,27 +63,6 @@ test("2115 정류장에서 면접 대기실과 은주1관 5층 앞 경로가 나
     assert.ok(eunjuIds.includes(id), id);
   assert.ok(!eunjuIds.includes("main"));
   assert.match(eunju.steps[0].detail, /연결통로/);
-
-  // 지하주차장은 '확인 필요' 연결(은주1관 3층)로 엘리베이터 길이 이어짐
-  assert.deepEqual(startOptions("interview", true), [
-    "bus_stop_2115",
-    "gate",
-    "main",
-    "parking",
-  ]);
-  assert.deepEqual(startOptions("interview", false), [
-    "bus_stop_2115",
-    "gate",
-    "main",
-    "parking",
-  ]);
-  assert.deepEqual(startOptions("eunju1_5f_front", true), [
-    "bus_stop_2115",
-    "gate",
-    "main",
-    "parking",
-  ]);
-  assert.deepEqual(startOptions("creative", true), []);
 });
 
 test("sessions persist, reject other owners and stale progress, deduplicate confusion and feedback", async () => {

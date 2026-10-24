@@ -156,8 +156,9 @@ export function floorCode(buildingId: string, text: string) {
 }
 
 // 교수 연구실 이름에는 사람 이름이 들어 있어 이름을 빼고 돌려줌
+// '○○교 수연구실'처럼 띄어쓰기로 갈라진 경우도 잡도록 공백을 빼고 봄
 export const roomName = (name: string) =>
-  name.includes("교수") ? "교수연구실" : name;
+  name.replace(/\s/g, "").includes("교수") ? "교수연구실" : name;
 
 // 호실·장소 표는 크기가 커서 서버에서만 읽음
 function readTable(file: string) {

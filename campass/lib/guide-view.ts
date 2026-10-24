@@ -1,6 +1,41 @@
 import type { Session } from "./store";
+import type { RouteOption } from "./routing";
 
 type RouteStep = Session["route"]["steps"][number];
+export type GuideMapData = {
+  nodes: string[];
+  links: string[];
+  legs: { building: string; from: string; to: string; via?: string }[];
+  current: { node?: string; link?: string; leg?: number };
+  unverified: boolean;
+};
+
+// 경로 후보 하나로 지도 데이터를 만듦. current가 없으면 경로 전체만 보여 주는 지도(B4 미리보기)
+export function toGuideMapData(
+  option: RouteOption,
+  current?: Pick<RouteStep, "node" | "link" | "leg">,
+): GuideMapData {
+  return {
+    nodes: option.nodes,
+    links: option.links,
+    legs: option.legs,
+    current: {
+      ...(current?.node !== undefined ? { node: current.node } : {}),
+      ...(current?.link !== undefined ? { link: current.link } : {}),
+      ...(current?.leg !== undefined ? { leg: current.leg } : {}),
+    },
+    unverified: Boolean(option.unverified),
+  };
+}
+
+export function guideLegLabel(map: GuideMapData): string {
+  const index = map.current.leg;
+  const leg = index === undefined ? undefined : map.legs[index];
+  if (!leg || index === undefined) return "";
+  const floors = leg.from === leg.to ? leg.from : `${leg.from} → ${leg.to}`;
+  return `${leg.building}${floors ? ` ${floors}` : ""} · ${index + 1}/${map.legs.length}`;
+}
+
 export type GuideStepViewModel = {
   id: string;
   name: string;
@@ -11,6 +46,8 @@ export type GuideStepViewModel = {
 };
 
 export type GuideViewModel = {
+  map: GuideMapData | null;
+  legLabel: string;
   currentIndex: number;
   currentNumber: number;
   totalSteps: number;
@@ -25,6 +62,8 @@ export function toGuideViewModel(
 ): GuideViewModel {
   if (!session) {
     return {
+      map: null,
+      legLabel: "",
       currentIndex: 0,
       currentNumber: 0,
       totalSteps: 0,
@@ -38,14 +77,22 @@ export function toGuideViewModel(
   const currentIndex = session.currentStep;
   const currentStep = session.route.steps[currentIndex];
   const nextStep = session.route.steps[currentIndex + 1];
+  const option =
+    session.route.options?.find(
+      (option) => option.id === session.route.option,
+    ) ?? session.route.options?.[0];
+  const map: GuideMapData | null = option
+    ? toGuideMapData(option, currentStep)
+    : null;
 
   return {
+    map,
+    legLabel: map ? guideLegLabel(map) : "",
     currentIndex,
     currentNumber: currentIndex + 1,
     totalSteps: session.route.steps.length,
     isFirstStep: currentIndex === 0,
-    isLastStep:
-      currentIndex === session.route.steps.length - 1,
+    isLastStep: currentIndex === session.route.steps.length - 1,
     current: currentStep
       ? {
           id: currentStep.id,
