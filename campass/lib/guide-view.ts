@@ -68,3 +68,26 @@ export function toGuideViewModel(
       : null,
   };
 }
+export type GuideQuestionAnswer = {
+  title: string;
+  interpretation: string;
+  answer: string;
+  context: string;
+};
+
+export function answerGuideQuestion(
+  guide: GuideViewModel,
+): GuideQuestionAnswer | null {
+  if (!guide.current) return null;
+
+  const nextName = guide.next?.name;
+
+  return {
+    title: "여기서 어디로 가요?",
+    interpretation: "다음 이동 질문으로 이해했어요",
+    answer: nextName
+      ? `${guide.current.name}에서 ${nextName} 방향으로 이동해 주세요. ${guide.current.instruction}`
+      : `현재 목적지에 도착했어요. ${guide.current.instruction}`,
+    context: `지금 안내 중인 ${guide.currentNumber}단계를 기준으로 답했어요`,
+  };
+}

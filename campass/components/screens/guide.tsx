@@ -1,6 +1,12 @@
 "use client";
+
+import { GuideRiskNotice } from "@/components/guide-risk-notice";
+import { useState } from "react";
 import { GuideMapViewport } from "@/components/guide-map-viewport";
-import { toGuideViewModel } from "@/lib/guide-view";
+import {
+  answerGuideQuestion,
+  toGuideViewModel,
+} from "@/lib/guide-view";
 import { Sparkles } from "lucide-react";
 import {
   ArrowRightIcon,
@@ -21,11 +27,19 @@ export default function Screen() {
     advance,
     previous,
     lost,
+    start,
+    destination,
+    elevator,
     step,
     nextStep,
     hasSession,
   } = useCampus();
   const guide = toGuideViewModel(session);
+  const [showGuideAnswer, setShowGuideAnswer] = useState(false);
+
+  const guideAnswer = showGuideAnswer
+    ? answerGuideQuestion(guide)
+   : null;
   return (
     <>
       {!hasSession && (
@@ -116,24 +130,31 @@ export default function Screen() {
     </div>
   </div>
 </div>
-            <div className="guide-recovery-card">
-          <div>
-          <strong>길을 잃었나요?</strong>
-           <p>
-            주변을 촬영하면 현재 위치를 다시 확인할 수 있어요.
-           </p>
-         </div>
+            <GuideRiskNotice
+  currentWaypointId={guide.current?.id}
+  start={start}
+  destination={destination.id}
+  elevator={elevator}
+/>
 
-       <button
-          type="button"
-          className="button secondary"
-          onClick={lost}
-          disabled={busy || session.status === "completed"}
-         >
-         <CameraIcon size={18} />
-         길을 잃었어요
-       </button>
-      </div>
+<div className="guide-recovery-card">
+  <div>
+    <strong>길을 잃었나요?</strong>
+    <p>
+      주변을 촬영하면 현재 위치를 다시 확인할 수 있어요.
+    </p>
+  </div>
+
+  <button
+    type="button"
+    className="button secondary"
+    onClick={lost}
+    disabled={busy || session.status === "completed"}
+  >
+    <CameraIcon size={18} />
+    길을 잃었어요
+  </button>
+</div>
             <div className="guide-tools">
   <div className="guide-question-card">
     <span className="search-caption">
@@ -144,9 +165,12 @@ export default function Screen() {
     <form
       className="search-box compact glass-card"
       onSubmit={(e) => {
-        e.preventDefault();
-        if (query.trim()) search();
-      }}
+      e.preventDefault();
+
+      if (query.trim()) {
+       setShowGuideAnswer(true);
+     }
+    }}
     >
       <input
         aria-label="이동 중 목적지 질문"
@@ -162,6 +186,19 @@ export default function Screen() {
         <ArrowRightIcon size={18} />
       </button>
     </form>
+    {guideAnswer && (
+  <div className="guide-answer-card">
+    <strong>{query.trim() || guideAnswer.title}</strong>
+
+    <span className="guide-answer-intent">
+      {guideAnswer.interpretation}
+    </span>
+
+    <p>{guideAnswer.answer}</p>
+
+    <small>{guideAnswer.context}</small>
+  </div>
+)}
   </div>
 
   <button

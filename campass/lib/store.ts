@@ -303,9 +303,13 @@ export class Store {
         input.confused &&
         (!input.waypointId ||
           !s.visited.includes(input.waypointId) ||
-          !["방향 혼란", "사진 불일치", "표지판 부족", "기타"].includes(
-            input.reason ?? "",
-          ))
+          ![
+            "방향 혼란",
+            "사진 불일치",
+            "지도랑 달랐어요",
+           "표지판 부족",
+            "기타",
+          ].includes(input.reason ?? ""))
       )
         throw new AppError("방문한 구간과 혼란 이유를 선택해 주세요.");
       if (input.confused)
