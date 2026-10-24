@@ -279,6 +279,8 @@ export type RouteOption = {
   // 같은 조건이면 같은 값 (노드 목록 기준)
   id: string;
   name: "엘리베이터 길" | "지하통로 길" | "연결통로 길";
+  // 이름이 같은 후보가 있을 때 이 후보만 지나는 건물 (화면에 '○○ 거쳐'로 보여 줌)
+  via?: string;
   nodes: string[];
   links: string[];
   // 건물 단위 단계 (예: 본관 1층 → 5층). 스콘스퀘어는 앞 단계에 via로 붙임
@@ -312,7 +314,7 @@ export type RouteChoice = {
   statuses?: LinkStatus[];
 };
 
-function startPoint(start: string) {
+export function startPoint(start: string, list: Place[] = places) {
   if (waypointLinks[start]) return { node: start, link: waypointLinks[start] };
   if (waypointNodes[start]) return { node: waypointNodes[start] };
   if (graphNodes.includes(start)) return { node: start };
@@ -321,6 +323,11 @@ function startPoint(start: string) {
   if (building) {
     const floor = building.floors.find((f) => f.floor === "1") ?? building.floors[0];
     return { node: nodeKey(building.id, floor.floor) };
+  }
+  const place = list.find((p) => p.id === start);
+  if (place?.floor) {
+    const nodes = destinationNodes(start, list);
+    if (nodes?.length === 1) return { node: nodes[0] };
   }
 }
 
@@ -339,9 +346,10 @@ function destinationNodes(destination: string, list: Place[]) {
       : (building.floors.find((f) => f.label === place.floor)?.floor ??
         floorCode(building.id, place.floor));
   const node = nodeKey(building.id, floor);
+  if (place.category !== "building" && place.floor && !floor) return [];
   // 건물 장소는 그 건물의 아무 층이나 먼저 닿는 층
-  return graphNodes.includes(node)
-    ? [node]
+  return floor
+    ? graphNodes.includes(node) ? [node] : []
     : building.floors.map((f) => nodeKey(building.id, f.floor));
 }
 
@@ -561,6 +569,27 @@ function toOption(
   };
 }
 
+// 이름이 같은 후보는 다른 후보에 없는 경유 건물로 구분 (예: '지하통로 길 · 은주2관 거쳐')
+// 복구할 때 이름으로 같은 길을 찾으므로 name은 그대로 둠
+function markWay(options: RouteOption[]) {
+  const areaNames = (option: RouteOption) => [
+    ...new Set(
+      option.nodes
+        .map(nodeArea)
+        .filter((area) => buildingById(area) || area === PLAZA)
+        .map((area) => buildingById(area)?.name ?? area),
+    ),
+  ];
+  return options.map((option) => {
+    const others = options.filter((o) => o !== option && o.name === option.name);
+    if (!others.length) return option;
+    const way = areaNames(option).find((name) =>
+      others.every((o) => !areaNames(o).includes(name)),
+    );
+    return way ? { ...option, via: way } : option;
+  });
+}
+
 // 상태를 따로 주지 않으면 '확인' 연결로 먼저 찾고, 없으면 '확인 필요' · '추정'까지 넣어 다시 찾음
 const wideStatuses: LinkStatus[] = ["확인 필요", "추정"];
 function searchPaths(
@@ -582,8 +611,14 @@ export function calculateRoute(
   list: Place[] = places,
   choice: RouteChoice = {},
 ): Route {
-  const from = startPoint(start);
+  const from = startPoint(start, list);
   const targets = destinationNodes(destination, list);
+  if (!from && list.some((p) => p.id === start))
+    throw new AppError(
+      "이 장소의 안내 경로는 아직 등록되지 않았어요. 공식 캠퍼스 지도를 확인해 주세요.",
+      422,
+      "ROUTE_UNAVAILABLE",
+    );
   if (!from || !targets)
     throw new AppError("출발지 또는 목적지를 확인해 주세요.");
   const paths = searchPaths(from, targets, elevator, choice.statuses);
@@ -600,8 +635,8 @@ export function calculateRoute(
       "ROUTE_UNAVAILABLE",
     );
   }
-  const options = paths.map((path) =>
-    toOption(path, elevator, start, destination),
+  const options = markWay(
+    paths.map((path) => toOption(path, elevator, start, destination)),
   );
   const chosen = choice.option
     ? options.find((o) => o.id === choice.option)

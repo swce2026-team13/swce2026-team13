@@ -14,6 +14,8 @@ export default function Screen() {
   preview,
   upload,
   manualPicker,
+  recovering,
+  go,
 } = useCampus();
 const analysisSteps = getDefaultAnalysisSteps();
 
@@ -181,7 +183,10 @@ const analysisSteps = getDefaultAnalysisSteps();
             type="button"
             className="photo-side-action"
             onClick={() =>
-              setShowManualPicker((prev) => !prev)
+              // 처음 출발이면 출발지 검색 · 지도로, 길을 잃었을 때는 목록에서
+              recovering
+                ? setShowManualPicker((prev) => !prev)
+                : go("prepare", { pick: "start" })
             }
           >
             직접 고르기

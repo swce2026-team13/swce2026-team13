@@ -2,6 +2,10 @@ import type { RouteOption } from "./routing.ts";
 
 // 길찾기 준비(B4) 경로 카드에 쓰는 문구
 
+// 후보 이름. 이름이 같은 후보가 있으면 '지하통로 길 · 은주2관 거쳐'
+export const optionTitle = (option: RouteOption) =>
+  option.via ? `${option.name} · ${option.via} 거쳐` : option.name;
+
 // 고른 길 id가 목록에 있으면 그 길, 없으면 첫 후보
 export const pickOption = (options: RouteOption[], id?: string) =>
   options.find((o) => o.id === id) ?? options[0];

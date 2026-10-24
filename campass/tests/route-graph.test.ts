@@ -66,9 +66,11 @@ test("본관에서 한림관은 경로가 있고 크리에이티브센터에서 
     calculateRoute("bus_stop_2115", "interview", true).options[0].unverified,
     undefined,
   );
-  assert.ok(
+  // 유담관은 10/24에 확인된 본관 1층 ↔ 유담관 8층으로 이어짐
+  assert.equal(
     calculateRoute("bus_stop_2115", "room-yudam-541", true, allPlaces()).options[0]
       .unverified,
+    undefined,
   );
 });
 

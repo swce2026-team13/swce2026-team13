@@ -120,11 +120,14 @@ async function handle(request: NextRequest) {
     throw new AppError("엘리베이터 옵션을 확인해 주세요.");
   }
 
+  // 경로 후보 id. 없으면 첫 후보
+  const option = request.nextUrl.searchParams.get("option") || undefined;
   const route = calculateRoute(
     start,
     destination,
     elevatorValue === "true",
     allPlaces(),
+    { option },
   );
 
   const routeIds = new Set(route.steps.map((step) => step.id));

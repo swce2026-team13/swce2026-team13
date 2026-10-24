@@ -98,9 +98,11 @@ test("검색 화면은 호실 이름으로 그 호실을 고름", () => {
   );
 });
 
-test("호실 id로 경로를 요청하면 장소로 인정하고 확인 전 연결까지 써서 길을 찾음", () => {
+test("호실 id로 경로를 요청하면 장소로 인정하고 유담관 8층 연결로 길을 찾음", () => {
   const route = calculateRoute("bus_stop_2115", "room-yudam-541", true, allPlaces());
-  assert.equal(route.options[0].unverified, true);
+  // 10/24 팀 확인: 본관 1층 ↔ 유담관 8층이 확인돼 현장 확인 전 길이 아님
+  assert.equal(route.options[0].unverified, undefined);
+  assert.ok(route.options[0].nodes.includes("yudam|8"));
   assert.equal(route.options[0].nodes.at(-1), "yudam|5");
   const store = new Store(":memory:");
   const session = store.create("owner", "bus_stop_2115", "room-yudam-541", true);

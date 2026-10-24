@@ -439,7 +439,7 @@ test("HTTP photo validates uploads and unconfigured model returns unavailable", 
   assert.equal(r.status, "unavailable");
   assert.deepEqual(r.candidates, []);
 });
-test("HTTP 호실 장소는 검색되고 id로 찾을 수 있으며 확인 전 연결로 길을 찾음", async () => {
+test("HTTP 호실 장소는 검색되고 id로 찾을 수 있으며 길을 찾음", async () => {
   const found = await (await request("places?q=H04")).json();
   assert.equal(found.places[0].id, "room-yudam-541");
   const place = await (await request("places/room-yudam-541")).json();
@@ -454,7 +454,7 @@ test("HTTP 호실 장소는 검색되고 id로 찾을 수 있으며 확인 전 �
     });
     assert.ok(response.ok, path);
     const body = await response.json();
-    assert.equal((body.options ?? body.route.options)[0].unverified, true, path);
+    assert.equal((body.options ?? body.route.options)[0].unverified, undefined, path);
   }
   const intent = await (await request("intent", { query: "H04" })).json();
   assert.equal(intent.places[0].id, "room-yudam-541");

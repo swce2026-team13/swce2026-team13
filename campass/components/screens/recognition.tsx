@@ -4,6 +4,18 @@ import { CheckIcon } from "@/components/icons";
 import { Notice, Photo, Tag } from "@/components/ui";
 import { useCampus } from "@/components/campus-provider";
 import { toRecognitionViewModel } from "@/lib/recognition-view";
+
+// 고른 후보만 체크하고 나머지는 빈 동그라미
+function SelectMark({ on }: { on: boolean }) {
+  return on ? (
+    <span className="recognition-mark on" aria-hidden="true">
+      <CheckIcon size={14} />
+    </span>
+  ) : (
+    <span className="recognition-mark" aria-hidden="true" />
+  );
+}
+
 export default function Screen() {
   const {
     busy,
@@ -18,9 +30,6 @@ export default function Screen() {
     manualPicker,
   } = useCampus();
   const [showManualPicker, setShowManualPicker] = useState(false);
-  const candidateView = candidate
-  ? toRecognitionViewModel(candidate)
-  : null;
   const candidateViews =
   recognition?.candidates.map((item) => ({
     candidate: item,
@@ -33,10 +42,11 @@ const alternativeCandidates = candidateViews.slice(1);
   <>
     <section className="content recognition-page">
       <header className="recognition-header">
-        <h1>여기 계신 게 맞나요?</h1>
+        <h1>{recovering ? "지금 위치를 확인했어요" : "여기 계신 게 맞나요?"}</h1>
         <p>
-          찍은 사진을 등록된 사진과 비교해 봤어요.
-          주변을 한 번 둘러보고 출발 위치를 골라 주세요.
+          {recovering
+            ? "찍은 사진으로 서 있는 곳과 보고 있는 방향을 짐작했어요. 주변이 사진과 같은지 봐 주세요."
+            : "찍은 사진을 등록된 사진과 비교해 봤어요. 주변을 한 번 둘러보고 출발 위치를 골라 주세요."}
         </p>
       </header>
 
@@ -51,7 +61,7 @@ const alternativeCandidates = candidateViews.slice(1);
 
       <div className="recognition-status-row">
         <Tag>사진으로 위치 확인</Tag>
-        <Tag tone="green">확인했어요</Tag>
+        <Tag tone="green">{recovering ? "다시 확인했어요" : "확인했어요"}</Tag>
       </div>
 
       <p className="recognition-guide">
@@ -87,7 +97,12 @@ const alternativeCandidates = candidateViews.slice(1);
                 )}
               </div>
 
-              <CheckIcon size={22} />
+              <SelectMark
+                on={
+                  candidate?.waypointId ===
+                  primaryCandidate.candidate.waypointId
+                }
+              />
             </div>
 
             <div className="recognition-tags">
@@ -147,7 +162,9 @@ const alternativeCandidates = candidateViews.slice(1);
                       )}
                     </div>
 
-                    <CheckIcon size={21} />
+                    <SelectMark
+                      on={candidate?.waypointId === item.waypointId}
+                    />
                   </div>
 
                   <div className="recognition-confidence">
@@ -183,7 +200,12 @@ const alternativeCandidates = candidateViews.slice(1);
         <button
          type="button"
           className="text-button"
-         onClick={() => setShowManualPicker((prev) => !prev)}
+         onClick={() =>
+           // 처음 출발이면 출발지 검색 · 지도로, 길을 잃었을 때는 목록에서
+           recovering
+             ? setShowManualPicker((prev) => !prev)
+             : go("prepare", { pick: "start" })
+         }
         >
          직접 고르기
         </button>
@@ -226,7 +248,7 @@ const alternativeCandidates = candidateViews.slice(1);
           )
         }
       >
-        여기서 출발
+        {recovering ? "여기서 다시 안내" : "여기서 출발"}
       </button>
 
       <button
