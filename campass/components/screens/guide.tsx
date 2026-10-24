@@ -48,14 +48,22 @@ export default function Screen() {
               current={session.currentStep + 1}
               total={session.route.steps.length}
             />
-            <Photo
-              src={step.photo}
-              direction={
-                session.recovered && session.recoveryDirection === "backward"
-                  ? "backward"
-                  : step.direction
-              }
-            />
+            {step.photo ? (
+              <Photo
+                src={step.photo}
+                direction={
+                  session.recovered && session.recoveryDirection === "backward"
+                    ? "backward"
+                    : step.direction
+                }
+              />
+            ) : (
+              // 사진 안내 지점이 없는 구간은 사진 자리에 글로만 안내
+              <div className="photo photo-text">
+                <strong>{step.instruction}</strong>
+                <span>{step.name}</span>
+              </div>
+            )}
             <div className="card instruction">
               <h1>
                 {session.recovered && session.recoveryDirection === "backward"

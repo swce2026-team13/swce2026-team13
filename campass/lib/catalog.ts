@@ -8,12 +8,14 @@ export type Place = {
   verified: boolean;
   source: string;
   description: string;
-  // 경로 계산에 쓰는 도착 지점 id. 없으면 장소 id를 그대로 씀
-  arrival?: string;
   // 학교 캠퍼스맵 호실 번호 (호실 장소만)
   number?: string;
-  // 운영시간 첫 부분 (학교 편의시설만)
+  // 운영 시간 원문 (학교 편의시설만)
   hours?: string;
+  // 편의시설 종류
+  kind?: "cafe" | "store" | "dining" | "aed" | "etc";
+  // 위치 보충 (예: 서경스포렉스 안, 로비)
+  note?: string;
 };
 export const sources = {
   map: "https://www.skuniv.ac.kr/campus-map",
@@ -26,9 +28,9 @@ export const campus = {
   checkedAt: "2026-10-08",
   sources,
 };
-const names: [string, string, string?][] = [
+const names: [string, string][] = [
   ["hyein", "혜인관"],
-  ["bon", "본관", "main"],
+  ["bon", "본관"],
   ["yudam", "유담관"],
   ["bukak", "북악관"],
   ["munye", "문예관"],
@@ -53,7 +55,7 @@ export const places: Place[] = [
     source: sources.figma,
     description: "시연용 행사 · 실제 면접 장소는 입학 공지 확인",
   },
-  ...names.map(([id, name, arrival]): Place => ({
+  ...names.map(([id, name]): Place => ({
     id,
     name,
     building: name,
@@ -63,7 +65,6 @@ export const places: Place[] = [
     verified: true,
     source: sources.notice,
     description: "서경대학교 공식 캠퍼스맵 등재",
-    ...(arrival ? { arrival } : {}),
   })),
   ...["301", "302", "303", "304", "305", "307", "311"].map((room): Place => ({
     id: `hyein-${room}`,
@@ -120,6 +121,17 @@ export const places: Place[] = [
      source: "시연 동선(임시)",
      description: "한림관 6층 연결통로를 지나 도착하는 은주1관 5층 앞",
    }, 
+  {
+    id: "스콘스퀘어",
+    name: "스콘스퀘어",
+    building: "스콘스퀘어",
+    floor: "",
+    category: "facility",
+    aliases: ["스콘스퀘어", "광장"],
+    verified: true,
+    source: sources.map,
+    description: "은주1관 · 혜인관 사이 광장 · 아래가 지하주차장",
+  },
 ];
 // 건물 id를 캠퍼스 데이터에 맞추기 전의 id. 저장된 세션과 이전 요청을 새 id로 받음
 const renamedPlaceIds: Record<string, string> = {
@@ -128,10 +140,6 @@ const renamedPlaceIds: Record<string, string> = {
   hanlim: "hallim",
 };
 export const currentPlaceId = (id: string) => renamedPlaceIds[id] ?? id;
-export function arrivalWaypoint(placeId: string, list: Place[] = places) {
-  const place = list.find((p) => p.id === currentPlaceId(placeId));
-  return place && (place.arrival ?? place.id);
-}
 // 서버에서는 호실까지 넣은 목록을 list로 넘김
 export function searchPlaces(
   query: string,

@@ -11,7 +11,20 @@ import {
   StoreIcon,
 } from "@/components/icons";
 
-function PlaceIcon({ place }: { place: Place }) {
+// 편의시설은 종류(kind)로, 종류가 없으면 이름으로 아이콘을 고름
+export function PlaceIcon({ place, size = 20 }: { place: Place; size?: number }) {
+  switch (place.kind) {
+    case "cafe":
+      return <CoffeeIcon size={size} />;
+    case "store":
+      return <StoreIcon size={size} />;
+    case "dining":
+      return <DiningIcon size={size} />;
+    case "aed":
+      return <HeartPulse size={size} strokeWidth={1.65} />;
+    case "etc":
+      return <BuildingIcon size={size} />;
+  }
   const name = `${place.name} ${place.aliases.join(" ")}`;
   if (place.category === "classroom") return <ClassroomIcon size={20} />;
   if (place.category === "event")

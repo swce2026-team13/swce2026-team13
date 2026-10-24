@@ -76,6 +76,10 @@ export type Entrance = {
   lat: number;
   lon: number;
   local: LocalPoint;
+  // 걸어서 바로 이어지는 건물 층 (2115 정류장 · 정문)
+  connectsTo?: { building: string; floor: string };
+  connectsStatus?: LinkStatus;
+  connectsEvidence?: string[];
 };
 
 // 건물이 아닌 지점: 스콘스퀘어(광장), 지하주차장

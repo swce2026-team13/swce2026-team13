@@ -232,13 +232,18 @@ async function handle(request: NextRequest) {
           destination = textField(body.destination);
         if (typeof body.elevator !== "boolean")
           throw new AppError("엘리베이터 옵션을 확인해 주세요.");
+        // 경로 후보 id. 없으면 첫 후보
+        const option =
+          body.option === undefined ? undefined : textField(body.option, 40);
         if (parts[0] === "routes")
           return response(
-            calculateRoute(start, destination, body.elevator, allPlaces()),
+            calculateRoute(start, destination, body.elevator, allPlaces(), {
+              option,
+            }),
           );
         db.limit(`create:${owner}`, 20, 60000);
         return response(
-          db.create(owner, start, destination, body.elevator),
+          db.create(owner, start, destination, body.elevator, option),
           201,
         );
       }

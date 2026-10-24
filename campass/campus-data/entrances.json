@@ -14,6 +14,14 @@
       "local": [
         -80.57,
         25.64
+      ],
+      "connectsTo": {
+        "building": "bon",
+        "floor": "1"
+      },
+      "connectsStatus": "확인",
+      "connectsEvidence": [
+        "팀 확인 10/24: 정류장 바로 뒤가 본관 1층"
       ]
     },
     {
@@ -104,6 +112,14 @@
       "local": [
         17.68,
         -180.61
+      ],
+      "connectsTo": {
+        "building": "bon",
+        "floor": "1"
+      },
+      "connectsStatus": "추정",
+      "connectsEvidence": [
+        "기존 시연 그래프와 같게(실외 길 대략)"
       ]
     },
     {

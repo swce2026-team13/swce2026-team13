@@ -624,6 +624,27 @@ progress::-moz-progress-bar {
   object-fit: cover;
   display: block;
 }
+.photo-empty {
+  height: 242px;
+}
+.photo-text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  min-height: 160px;
+  padding: 24px 22px;
+  background: linear-gradient(160deg, #f4f8ff, #e6eefc);
+}
+.photo-text strong {
+  color: #354863;
+  font-size: 19px;
+  line-height: 1.45;
+}
+.photo-text span {
+  color: #667389;
+  font-size: 12px;
+}
 .photo-label {
   position: absolute;
   left: 12px;
@@ -3141,7 +3162,8 @@ progress::-moz-progress-bar {
 }
 
 .overview-labels,
-.overview-marker-label {
+.overview-marker-label,
+.overview-outline {
   pointer-events: none;
 }
 
@@ -3203,4 +3225,347 @@ progress::-moz-progress-bar {
   background: #c7d1de;
   box-shadow: none;
   opacity: 1;
+}
+
+/* 길찾기 준비(B4) */
+.prepare-request {
+  padding: 13px 16px 14px;
+  border-radius: 16px;
+}
+
+.prepare-request p {
+  color: #354863;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 21.5px;
+}
+
+.prepare-request small {
+  display: block;
+  margin-top: 6px;
+  color: var(--blue);
+  font-size: 12px;
+}
+
+.prepare-screen .choice small {
+  font-size: 12px;
+}
+
+.route-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.route-options > .between small {
+  color: #667389;
+  font-size: 12px;
+}
+
+.route-option-card {
+  padding: 16px;
+  border-radius: 14px;
+}
+
+/* 계단 여부 문구가 길어도 한 줄에 들어가도록 아래 줄 전체를 씀 */
+.route-option-head {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  grid-template-areas:
+    "name count meta"
+    "note note note";
+  align-items: center;
+  column-gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #dfe7f4;
+}
+
+.route-option-head strong {
+  grid-area: name;
+  color: #354863;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 23.5px;
+}
+
+.route-option-head small {
+  grid-area: note;
+  overflow: hidden;
+  color: #667389;
+  font-size: 10px;
+  line-height: 15.5px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.route-option-head > b {
+  grid-area: count;
+  color: var(--blue);
+  font-size: 26px;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+}
+
+.route-option-head > span {
+  grid-area: meta;
+  color: #667389;
+  font-size: 12px;
+}
+
+.route-legs {
+  list-style: none;
+  margin: 14px 0 6px;
+  padding: 0;
+}
+
+.route-legs li {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 0 7px 24px;
+  color: #192334;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.route-legs li:before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  margin-top: -6px;
+  border: 2px solid var(--blue);
+  border-radius: 50%;
+  background: white;
+}
+
+.route-legs li:last-child:before {
+  background: var(--blue);
+}
+
+.route-legs li:not(:last-child):after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 50%;
+  width: 2px;
+  height: 100%;
+  background: #dde6f5;
+}
+
+.route-legs small {
+  color: #667389;
+  font-size: 10px;
+}
+
+.route-steps {
+  margin: 4px 0 8px;
+  padding-left: 40px;
+  color: #667389;
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.prepare-warning {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 14px;
+  border-radius: 14px;
+  background: #fff5e5;
+}
+
+.prepare-warning b {
+  color: #a76c12;
+  font-size: 14px;
+}
+
+.prepare-warning p {
+  color: #667389;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.prepare-warning .button {
+  width: auto;
+  min-height: 34px;
+  margin-top: 6px;
+  padding: 0 13px;
+  border-radius: 10px;
+  color: var(--blue);
+  font-size: 12px;
+}
+
+/* 편의시설 위치와 운영 시간(A4) · 편의시설 정보(A4a) */
+.facility-filters button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  font-size: 12px;
+}
+
+.facility-filters i {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.facility-map {
+  overflow: hidden;
+  border: 1px solid #dfe7f4;
+  border-radius: 20px;
+  background: #e9eff8;
+}
+
+.overview-pin {
+  cursor: pointer;
+  outline: none;
+}
+
+.overview-pin:focus-visible circle:first-of-type {
+  stroke: #192334;
+}
+
+.facility-area b {
+  color: #354863;
+  font-size: 14px;
+}
+
+.facility-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  width: 100%;
+  padding: 16px;
+  border-radius: 14px;
+  text-align: left;
+}
+
+.facility-card .icon-box {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+}
+
+.facility-card-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.facility-card-title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.facility-card-title b {
+  color: #354863;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.facility-card small {
+  color: #667389;
+  font-size: 12px;
+}
+
+.facility-hours {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.facility-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 16px;
+}
+
+.facility-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.facility-detail-head h2 {
+  color: #354863;
+  font-size: 21px;
+}
+
+.facility-detail-head small {
+  color: #667389;
+  font-size: 12px;
+}
+
+.facility-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid #dfe7f4;
+}
+
+.facility-rows h3 {
+  color: #667389;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.facility-rows div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #667389;
+  font-size: 13px;
+}
+
+.facility-rows b {
+  color: #354863;
+  font-size: 13px;
+  text-align: right;
+}
+
+.route-unverified {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.route-unverified p {
+  color: #8a5a0c;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.ai-place-open {
+  width: 100%;
+  gap: 12px;
+  text-align: left;
+}
+
+.ai-place-open:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.ai-place-open > span:last-child {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
 }

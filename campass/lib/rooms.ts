@@ -4,6 +4,7 @@ import {
   loadPlaces,
   loadRooms,
 } from "./campus3d/types.ts";
+import { parseHours } from "./facility-hours.ts";
 
 // 서버 전용: rooms.tsv·places.tsv를 읽어 강의실·편의시설 장소로 바꿈. 화면 코드에서는 가져오지 말 것
 const roomUses = ["강의실", "멀티미디어강의실", "실험실습실"];
@@ -65,6 +66,14 @@ export function roomPlaces() {
   return (rooms = [...list.filter(first), ...list.filter((p) => !first(p))]);
 }
 
+function facilityKind(name: string): NonNullable<Place["kind"]> {
+  if (/카페/.test(name)) return "cafe";
+  if (/편의점|매점/.test(name)) return "store";
+  if (/식당|버거|우동/.test(name)) return "dining";
+  if (/AED/.test(name)) return "aed";
+  return "etc";
+}
+
 // 학교 편의시설. 건물이 없는 곳(산책로)은 빼고, 연락처는 넣지 않음
 let facilities: Place[] | undefined;
 export function facilityPlaces() {
@@ -75,17 +84,29 @@ export function facilityPlaces() {
     .map((p): Place => {
       const index = (counts.get(p.buildingId) ?? 0) + 1;
       counts.set(p.buildingId, index);
+      // 층 칸: '3층'은 층 이름으로, '1층 로비'의 '로비'는 위치 보충으로, '로비'처럼 층이 아니면 글자 그대로
+      const rest = p.floorLabel.match(/^(?:지하\s*)?\d+층(.*)$/)?.[1].trim() ?? "";
+      const floor = p.floor ? floorLabel(p.buildingId, p.floor) : p.floorLabel;
+      // 호수 칸이 숫자가 아니면 위치 보충 (예: 미소식당 '서경스포렉스')
+      const note = [
+        p.floor && rest,
+        p.number && !/^\d+$/.test(p.number) ? p.number : "",
+      ]
+        .filter(Boolean)
+        .join(" · ");
       return {
         id: `facility-${p.buildingId}-${index}`,
         name: p.name,
         building: p.building,
-        floor: p.floor ? floorLabel(p.buildingId, p.floor) : "",
+        floor,
         category: "facility",
         aliases: [`${p.building} ${p.name}`],
         verified: true,
         source: "학교 캠퍼스맵",
-        description: p.hours,
-        hours: p.hours.split("/")[0].trim(),
+        description: parseHours(p.hours).summary,
+        hours: p.hours,
+        kind: facilityKind(p.name),
+        ...(note ? { note } : {}),
       };
     });
   // 건물 이름순. 같은 건물 안에서는 places.tsv 순서를 유지

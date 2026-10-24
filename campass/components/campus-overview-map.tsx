@@ -55,16 +55,54 @@ function MarkerGlyph({ kind }: { kind: MarkerKind }) {
   );
 }
 
+export type PinKind = "cafe" | "store" | "dining" | "aed" | "etc" | "mixed";
+
+// 편의시설 핀. 같은 건물 시설을 하나로 묶고 개수를 보여 줌
+export type MapPin = {
+  id: string;
+  position: [number, number];
+  label: string;
+  count: number;
+  kind: PinKind;
+};
+
+export const pinColors: Record<PinKind, string> = {
+  cafe: "#8B5E3C",
+  store: "#16A34A",
+  dining: "#EA580C",
+  aed: "#DC2626",
+  etc: "#64748B",
+  mixed: "#2563EB",
+};
+
+// 핀 안의 흰 그림 (10×10)
+const pinGlyphs: Record<PinKind, string> = {
+  cafe: "M2 4H7V6.5A2 2 0 0 1 5 8.5H4A2 2 0 0 1 2 6.5Z M7 4.8H7.6A1.1 1.1 0 0 1 7.6 7H7",
+  store: "M2.2 4H7.8L7.3 8.6H2.7Z M3.6 4A1.4 1.4 0 0 1 6.4 4",
+  dining: "M3 1.5V8.5 M2 1.5V3.3A1 1 0 0 0 4 3.3V1.5 M7 1.5C6 2.5 6 4.3 7 5V8.5",
+  aed: "M5 8.3S1.6 6.2 1.6 3.9A1.7 1.7 0 0 1 5 3.1A1.7 1.7 0 0 1 8.4 3.9C8.4 6.2 5 8.3 5 8.3Z M5 3.6L4.4 5.2H5.6L5 6.6",
+  etc: "M2.8 8.6V2H7.2V8.6 M4 3.6H6 M4 5.2H6 M4 6.8H6",
+  mixed: "M2.5 5H7.5 M5 2.5V7.5",
+};
+
 export function CampusOverviewMap({
-  selected,
-  startable,
+  selected = [],
+  startable = [],
   onSelect,
+  pins,
+  selectedPin,
+  onPin,
 }: {
-  selected: string[];
+  selected?: string[];
   // 출발로 고를 수 있는 지도 표시 id
-  startable: string[];
-  onSelect: (id: string, building: boolean) => void;
+  startable?: string[];
+  onSelect?: (id: string, building: boolean) => void;
+  // 핀이 있으면 건물 · 정류장은 보기만 하고 핀만 누를 수 있음
+  pins?: MapPin[];
+  selectedPin?: string;
+  onPin?: (id: string) => void;
 }) {
+  const viewOnly = Boolean(pins);
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const [zoom, setZoom] = useState(0);
   const scale = ZOOMS[zoom];
@@ -72,16 +110,19 @@ export function CampusOverviewMap({
   const height = MAP_HEIGHT / scale;
   const viewBox = `${(MAP_WIDTH - width) / 2} ${(MAP_HEIGHT - height) / 2} ${width} ${height}`;
 
-  const press = (target: string, building: boolean) => ({
+  const button = (action: () => void) => ({
     role: "button",
     tabIndex: 0,
-    onClick: () => onSelect(target, building),
+    onClick: action,
     onKeyDown: (event: KeyboardEvent) => {
       if (event.key !== "Enter" && event.key !== " ") return;
       event.preventDefault();
-      onSelect(target, building);
+      action();
     },
   });
+  const press = (target: string, building: boolean) =>
+    viewOnly ? {} : button(() => onSelect?.(target, building));
+  const pressable = viewOnly ? undefined : "overview-building";
 
   return (
     <div className="overview-map">
@@ -89,7 +130,11 @@ export function CampusOverviewMap({
         viewBox={viewBox}
         width={MAP_WIDTH}
         height={MAP_HEIGHT}
-        aria-label="캠퍼스 개요도. 건물을 눌러 출발과 도착을 고르세요"
+        aria-label={
+          viewOnly
+            ? "캠퍼스 개요도. 편의시설 핀을 눌러 보세요"
+            : "캠퍼스 개요도. 건물을 눌러 출발과 도착을 고르세요"
+        }
       >
         <defs>
           <linearGradient id={`${id}-bg`} x1="0" y1="0" x2="0" y2="1">
@@ -112,14 +157,22 @@ export function CampusOverviewMap({
 
         <rect width={MAP_WIDTH} height={MAP_HEIGHT} fill={`url(#${id}-bg)`} />
 
+        <g
+          className={pressable}
+          aria-label={viewOnly ? undefined : "스콘스퀘어"}
+          aria-pressed={viewOnly ? undefined : selected.includes("스콘스퀘어")}
+          {...press("스콘스퀘어", true)}
+        >
+          <polygon
+            points={overviewPlaza.points}
+            fill={`url(#${id}-plaza)`}
+            stroke={selected.includes("스콘스퀘어") ? "#2563EB" : "white"}
+            strokeWidth={selected.includes("스콘스퀘어") ? 2 : 1.5}
+            strokeLinejoin="round"
+          />
+        </g>
         <polygon
-          points={overviewPlaza.points}
-          fill={`url(#${id}-plaza)`}
-          stroke="white"
-          strokeWidth="1.5"
-          strokeLinejoin="round"
-        />
-        <polygon
+          className="overview-outline"
           points={overviewPlaza.outline}
           fill="none"
           stroke="#9AA3B2"
@@ -132,9 +185,9 @@ export function CampusOverviewMap({
           return (
             <g
               key={b.id}
-              className="overview-building"
-              aria-label={b.name}
-              aria-pressed={on}
+              className={pressable}
+              aria-label={viewOnly ? undefined : b.name}
+              aria-pressed={viewOnly ? undefined : on}
               {...press(b.id, true)}
             >
               <polygon
@@ -200,7 +253,7 @@ export function CampusOverviewMap({
 
         {overviewMarkers.map((m) => {
           const [x, y] = m.position;
-          const canStart = startable.includes(m.id);
+          const canStart = !viewOnly && startable.includes(m.id);
           const on = selected.includes(m.id);
           const glyph = (
             <>
@@ -248,6 +301,48 @@ export function CampusOverviewMap({
           );
         })}
 
+        {pins?.map((pin) => {
+          const [x, y] = pin.position;
+          const on = pin.id === selectedPin;
+          const r = on ? 11 : 9;
+          const color = pinColors[pin.kind];
+          return (
+            <g
+              key={pin.id}
+              className={`overview-pin ${on ? "on" : ""}`}
+              aria-label={`${pin.label} 편의시설 ${pin.count}곳`}
+              aria-pressed={on}
+              {...button(() => onPin?.(pin.id))}
+            >
+              {on && <circle cx={x} cy={y} r={r + 4} fill={color} opacity="0.18" />}
+              <circle cx={x} cy={y} r={r} fill={color} stroke="white" strokeWidth="1.5" />
+              <path
+                d={pinGlyphs[pin.kind]}
+                transform={`translate(${x - (on ? 6 : 5)} ${y - (on ? 6 : 5)}) scale(${on ? 1.2 : 1})`}
+                fill="none"
+                stroke="white"
+                strokeWidth="1.1"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              {pin.count > 1 && (
+                <>
+                  <circle cx={x + r - 1} cy={y - r + 1} r="5.5" fill="white" stroke={color} />
+                  <text
+                    x={x + r - 1}
+                    y={y - r + 3.4}
+                    textAnchor="middle"
+                    fontSize="7"
+                    fontWeight="700"
+                    fill={color}
+                  >
+                    {pin.count}
+                  </text>
+                </>
+              )}
+            </g>
+          );
+        })}
       </svg>
       <svg className="overview-north" viewBox="0 0 7 18" aria-hidden="true">
         <path d="M0 9L3.5 0L7 9L3.5 7Z" fill="#192334" />

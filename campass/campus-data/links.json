@@ -524,13 +524,32 @@
         "floor": "B1"
       },
       "kind": "parking",
-      "status": "확인 필요",
-      "stepFree": null,
+      "status": "확인",
+      "stepFree": false,
       "evidence": [
         "캠퍼스맵 이미지(지하통로입구 · 연결층수 표기)",
-        "혜인관 지하1층 주차장 안내도"
-      ],
-      "note": "주차장 안에서 걸어서 이어지는지 확인 필요"
+        "혜인관 지하1층 주차장 안내도",
+        "팀 확인 10/24: 혜인관 지하 1층에서 반층 내려가면 지하주차장"
+      ]
+    },
+    {
+      "id": "bon-1__지하주차장-B1",
+      "from": {
+        "building": "bon",
+        "name": "본관",
+        "floor": "1"
+      },
+      "to": {
+        "building": "지하주차장",
+        "name": "지하주차장",
+        "floor": "B1"
+      },
+      "kind": "parking",
+      "status": "확인",
+      "stepFree": false,
+      "evidence": [
+        "팀 확인 10/24: 2115 정류장 뒤 본관 1층에서 지하통로로 지하주차장까지, 계단 · 언덕"
+      ]
     },
     {
       "id": "hallim-3__eunju1-3",
