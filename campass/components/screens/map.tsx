@@ -98,7 +98,7 @@ export default function Screen() {
           </ul>
         </div>
       </section>
-      <div className="actions map-pick-actions">
+      <div className="actions map-pick-actions route-start-actions">
         <p>지하 통로나 연결 통로로 갈 수 있으면 그쪽으로 안내해요</p>
         {status.message && (
           <p className="map-pick-message" role="status">

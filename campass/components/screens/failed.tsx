@@ -3,7 +3,8 @@ import { CameraIcon, CheckIcon } from "@/components/icons";
 import { Notice, Photo, Tag, Upload } from "@/components/ui";
 import { useCampus } from "@/components/campus-provider";
 export default function Screen() {
-  const { busy, preview, recognition, upload, manualPicker } = useCampus();
+  const { busy, preview, recognition, upload, manualPicker, recovering, go } =
+    useCampus();
   return (
     <section className="content stack">
       <div className="between">
@@ -51,8 +52,25 @@ export default function Screen() {
           </div>
         ))}
       </div>
-      <Upload onFile={upload} busy={busy} label="다시 촬영하기" />
-      {manualPicker}
+      <Upload onFile={upload} busy={busy} label="다시 찍기" />
+      {/* 처음 출발이면 출발지 검색 · 지도로, 길을 잃었을 때는 목록에서 */}
+      {recovering ? (
+        manualPicker
+      ) : (
+        <>
+          <p className="fine-print">
+            사진 없이도 괜찮아요. 정문, 정류장, 주차장 중에서 직접 고르면 바로
+            출발할 수 있어요.
+          </p>
+          <button
+            type="button"
+            className="text-button centered"
+            onClick={() => go("prepare", { pick: "start" })}
+          >
+            출발 위치 직접 고르기
+          </button>
+        </>
+      )}
     </section>
   );
 }

@@ -14,9 +14,9 @@ import { places } from "../lib/catalog.ts";
 import { calculateRoute } from "../lib/routing.ts";
 import { Store } from "../lib/store.ts";
 
-test("캠퍼스 데이터는 건물 13, 연결 21(삭제 제외), 입구 35", () => {
+test("캠퍼스 데이터는 건물 13, 연결 22(삭제 제외), 입구 35", () => {
   assert.equal(campusBuildings().length, 13);
-  assert.equal(campusLinks().length, 21);
+  assert.equal(campusLinks().length, 22);
   assert.ok(campusLinks().every((l) => l.status !== "삭제"));
   assert.equal(campusEntrances().length, 35);
 });

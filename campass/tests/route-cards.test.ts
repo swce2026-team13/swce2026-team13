@@ -38,9 +38,11 @@ test("2115 정류장 → 면접 대기실: 엘리베이터를 켜면 카드 1개
 test("계단 여부 문구와 접힌 카드 한 줄", () => {
   const [underground, connector] = interview(false).options;
   assert.equal(stepFreeText(underground), "계단 · 언덕이 있어요");
+  // 10/24 팀 확인: 엘리베이터 길의 연결이 모두 계단 없이 이어짐
+  assert.equal(stepFreeText(interview(true).options[0]), "계단 없는 길이에요");
   assert.equal(
-    stepFreeText(interview(true).options[0]),
-    "계단 여부를 아직 확인하지 못했어요",
+    stepFreeText(calculateRoute("bus_stop_2115", "bon", false).options[0]),
+    "계단 없는 길이에요",
   );
   assert.match(
     stepFreeText(calculateRoute("gate", "interview", true).options[0]),

@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import { MapPin } from "lucide-react";
 import { BuildingIcon, ChevronRightIcon } from "./icons";
 import { places, type Place } from "@/lib/catalog";
-import { DEFAULT_START, waypoints, type Route } from "@/lib/routing";
+import { waypoints, type Route } from "@/lib/routing";
+import { samePlace } from "@/lib/route-start";
 import type { Session } from "@/lib/store";
 import type {
   Candidate,
@@ -54,12 +55,26 @@ export async function api<T>(path: string, body?: unknown): Promise<T> {
     );
   return value;
 }
+// 복구 목록에서 빼는 중간 지점
+const recoveryHidden = [
+  "main_bus_stop_passage",
+  "main_corridor",
+  "main_elevator_front",
+  "to_hallim",
+  "hallim_to_elevator",
+  "hallim_elevator_front",
+  "hallim_6f_elevator",
+  "hallim_6f_corridor",
+  "parking-entry",
+  "elevator",
+];
+
 function useCampusState() {
   const router = useRouter();
   const view = viewForPath(usePathname());
   const params = useSearchParams();
   const selectedDestination = params.get("destination") || places[0].id;
-  const selectedStart = params.get("start") || DEFAULT_START;
+  const selectedStart = params.get("start") || "";
   const selectedElevator = params.get("elevator") !== "false";
   const selectedBuilding = params.get("building") || "혜인관";
   const selectedQuery = params.get("q") || "";
@@ -79,9 +94,16 @@ function useCampusState() {
   );
   const [searchRevision, setSearchRevision] = useState(0);
   const [destination, setDestination] = useState<Place>(places[0]),
-    [start, setStart] = useState(DEFAULT_START),
+    [start, setStart] = useState(""),
     [elevator, setElevator] = useState(true),
     [route, setRoute] = useState<Route | null>(null);
+  const [registeredPlaces, setRegisteredPlaces] = useState<Place[]>(places);
+  const [routeConditions, setRouteConditions] = useState("");
+  const routeRevision = useRef(0);
+  const conditions = JSON.stringify([start, destination.id, elevator]);
+  const currentRoute = routeConditions === conditions &&
+    start === selectedStart && destination.id === selectedDestination &&
+    elevator === selectedElevator ? route : null;
   const [session, setSession] = useState<Session | null>(null),
     [building, setBuilding] = useState("혜인관"),
     [floor, setFloor] = useState("전체");
@@ -116,8 +138,11 @@ function useCampusState() {
   }
   useEffect(() => {
     let cancelled = false;
+    const revision = ++routeRevision.current;
     Promise.resolve().then(async () => {
       if (cancelled) return;
+      setRoute(null);
+      setError("");
       // 호실은 화면 장소 목록에 없어서 서버에서 찾아옴
       const destination =
         places.find((place) => place.id === selectedDestination) ||
@@ -128,23 +153,30 @@ function useCampusState() {
           () => undefined,
         )) ||
         places[0];
-      if (cancelled) return;
+      if (cancelled || revision !== routeRevision.current) return;
       setDestination(destination);
       setStart(selectedStart);
       setElevator(selectedElevator);
       setBuilding(selectedBuilding);
       setRecovering(view === "recovery" || recoveringParam === "true");
       if (view === "prepare") {
-        setRoute(null);
+        if (!selectedStart) return;
+        if (samePlace(selectedStart, destination.id)) {
+          setError("출발지와 도착지가 같아요. 다른 장소를 선택해 주세요.");
+          return;
+        }
         try {
           const route = await api<Route>("routes", {
             start: selectedStart,
             destination: destination.id,
             elevator: selectedElevator,
           });
-          if (!cancelled) setRoute(route);
+          if (!cancelled && revision === routeRevision.current) {
+            setRoute(route);
+            setRouteConditions(JSON.stringify([selectedStart, destination.id, selectedElevator]));
+          }
         } catch (error) {
-          if (cancelled) return;
+          if (cancelled || revision !== routeRevision.current) return;
           // 엘리베이터로만 못 가는 곳은 '엘리베이터를 끄면 계단 길을 볼 수 있어요' 안내가 그대로 나감
           setError(
             error instanceof Error ? error.message : "경로를 불러오지 못했어요.",
@@ -255,6 +287,13 @@ function useCampusState() {
   }
   useEffect(() => {
     let cancelled = false;
+    api<{ places: Place[] }>("places")
+      .then((data) => {
+        if (!cancelled) setRegisteredPlaces(data.places);
+      })
+      .catch(() => {
+        if (!cancelled) setError("출발지 목록을 불러오지 못했어요. 새로고침해 주세요.");
+      });
     api<{ visionEnabled: boolean }>("catalog")
       .then(async (data) => {
         if (cancelled) return;
@@ -291,14 +330,14 @@ function useCampusState() {
     go("search", { q: value, category: category || "" });
   }
   async function choose(p: Place) {
+    routeRevision.current++;
     setDestination(p);
-    setStart(DEFAULT_START);
     setRoute(null);
-    go("prepare", { destination: p.id, start: DEFAULT_START });
+    go("prepare", { destination: p.id });
   }
   // 고른 길 id가 새 후보 목록에 있으면 그대로, 없으면 첫 후보
   const routeOption =
-    route?.options.find((o) => o.id === selectedOption) ?? route?.options[0];
+    currentRoute?.options.find((o) => o.id === selectedOption) ?? currentRoute?.options[0];
   function chooseOption(id: string) {
     const url = new URL(window.location.href);
     url.searchParams.set("option", id);
@@ -309,16 +348,20 @@ function useCampusState() {
     );
   }
   async function updateRoute(nextStart = start, nextElevator = elevator) {
+    if (view === "prepare" && nextStart === start && nextElevator === elevator) return;
+    routeRevision.current++;
     setStart(nextStart);
     setElevator(nextElevator);
     setRoute(null);
     go("prepare", {
       start: nextStart,
       elevator: String(nextElevator),
-      ...(routeOption ? { option: routeOption.id } : {}),
+      // 엘리베이터만 바꾸면 고른 길 id를 넘겨, 새 후보에 같은 길이 있을 때만 이어서 고름
+      ...(routeOption && nextStart === start ? { option: routeOption.id } : {}),
     });
   }
   async function begin() {
+    if (!start || !currentRoute || !ready || samePlace(start, destination.id)) return;
     await run(async () => {
       const s = await api<Session>("sessions", {
         start,
@@ -485,6 +528,9 @@ function useCampusState() {
       <h3>위치를 직접 선택할 수 있어요</h3>
       {waypoints
         .filter((w) => !["stairs", "interview"].includes(w.id))
+        // 길을 잃고 다시 고를 때는 연결통로 · 복도 · 엘리베이터 앞 같은 중간 지점을 빼고
+        // 건물 · 층으로 알아볼 수 있는 지점만 보여 줌
+        .filter((w) => !recovering || !recoveryHidden.includes(w.id))
         .map((w) => (
           <button
             className="choice"
@@ -519,7 +565,8 @@ function useCampusState() {
     setStart,
     elevator,
     setElevator,
-    route,
+    route: currentRoute,
+    registeredPlaces,
     setRoute,
     routeOption,
     chooseOption,

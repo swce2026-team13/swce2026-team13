@@ -1,30 +1,24 @@
 "use client";
-import { useState } from "react";
-import { CameraIcon, CheckIcon, ElevatorIcon } from "@/components/icons";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { CameraIcon, ElevatorIcon } from "@/components/icons";
+import { type RouteOption } from "@/lib/routing";
 import {
-  calculateRoute,
-  startOptions,
-  toward,
-  waypoints,
-  type RouteOption,
-} from "@/lib/routing";
-import { legRows, optionSummary, stepFreeText } from "@/lib/route-cards";
-import { places } from "@/lib/catalog";
+  legRows,
+  optionSummary,
+  optionTitle,
+  stepFreeText,
+} from "@/lib/route-cards";
+import { markerStarts } from "@/lib/map-pick";
+import {
+  placeLabel,
+  startChoices,
+  startLabel,
+  startMapIds,
+} from "@/lib/route-start";
+import { CampusOverviewMap } from "@/components/campus-overview-map";
 import { Tag } from "@/components/ui";
-import { useCampus } from "@/components/campus-provider";
-
-// 출발지 이름. 지도에서 건물을 출발로 고르면 건물 id가 옴
-const startName = (id: string) =>
-  waypoints.find((w) => w.id === id)?.name ??
-  places.find((p) => p.id === id)?.name ??
-  id;
-
-const startHints: Record<string, string> = {
-  bus_stop_2115: "본관 앞 버스정류장",
-  gate: "정문 앞",
-  main: "정류장 바로 앞 건물",
-  parking: "스콘스퀘어 아래 주차장",
-};
+import { api, useCampus } from "@/components/campus-provider";
 
 // 고른 길(또는 하나뿐인 길)의 펼친 카드
 function OptionCard({
@@ -39,7 +33,7 @@ function OptionCard({
   return (
     <div className={`card route-option-card ${selected ? "selected" : ""}`}>
       <div className="route-option-head">
-        <strong>{option.name}</strong>
+        <strong>{optionTitle(option)}</strong>
         <small>{stepFreeText(option)}</small>
         <b>{option.legs.length}단계</b>
         <span>
@@ -100,75 +94,162 @@ export default function Screen() {
     go,
     updateRoute,
     begin,
-    destinationCard,
+    registeredPlaces,
   } = useCampus();
-  // 계단 길로 갈 수 있는 출발지는 모두 보여 주고, 엘리베이터 길이 없는 곳은 고르면 엘리베이터를 끔
-  const starts = startOptions(destination.id, false);
-  const liftStarts = startOptions(destination.id, true);
-  const reachable = (id: string, lift: boolean) => {
-    try {
-      calculateRoute(id, destination.id, lift);
-      return true;
-    } catch {
-      return false;
-    }
+  const [startQuery, setStartQuery] = useState<string | null>(null);
+  // 사진 화면에서 '직접 고르기'로 오면 출발지 검색 · 지도 쪽을 보여 줌
+  const pickStart = useSearchParams().get("pick") === "start";
+  useEffect(() => {
+    if (pickStart)
+      document
+        .querySelector(".route-start-picker")
+        ?.scrollIntoView({ block: "start" });
+  }, [pickStart]);
+  const candidates = startChoices(startQuery ?? "", registeredPlaces);
+  const selectStart = (id: string) => {
+    if (busy) return;
+    setStartQuery(null);
+    void updateRoute(id);
   };
-  const stairsOnly = !reachable(start, true) && reachable(start, false);
-  const place = [
-    destination.building,
-    destination.floor,
-    destination.name !== destination.building ? destination.name : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
   const options = route?.options ?? [];
+  // 헤매는 구간 주의 카드는 고른 길에 혼란 기록이 있을 때만
+  const [risky, setRisky] = useState<{
+    key: string;
+    point?: { name: string; passages: number; confusions: number; rate: number };
+  }>({ key: "" });
+  const riskyKey = routeOption
+    ? JSON.stringify([start, destination.id, elevator, routeOption.id])
+    : "";
+  useEffect(() => {
+    if (!riskyKey) return;
+    let cancelled = false;
+    const params = new URLSearchParams({
+      start,
+      destination: destination.id,
+      elevator: String(elevator),
+      option: routeOption!.id,
+    });
+    api<{ points: { name: string; passages: number; confusions: number; rate: number }[] }>(
+      `route-insights?${params}`,
+    )
+      .then((data) => {
+        if (cancelled) return;
+        const point = data.points
+          .filter((p) => p.confusions > 0)
+          .sort((a, b) => b.rate - a.rate || b.confusions - a.confusions)[0];
+        setRisky({ key: riskyKey, point });
+      })
+      .catch(() => {
+        if (!cancelled) setRisky({ key: riskyKey });
+      });
+    return () => {
+      cancelled = true;
+    };
+    // 조건이 바뀔 때만 다시 받음
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [riskyKey]);
+  const riskyPoint = risky.key === riskyKey ? risky.point : undefined;
   return (
     <>
       <section className="content stack prepare-screen">
-        <div className="card prepare-request">
-          <p>
-            {destination.id === "interview" && "면접 보러 오셨군요. "}
-            {toward(place)} 안내할게요.
-          </p>
-          <small>다른 곳이면 아래에서 바꿀 수 있어요</small>
-        </div>
-        <div className="between">
-          <h3>목적지</h3>
-          <button className="text-button" onClick={() => go("home")}>
-            변경
-          </button>
-        </div>
-        {destinationCard}
-        <h3>지금 어디쯤 계세요?</h3>
-        {starts.map((id) => (
-          <button
-            key={id}
-            disabled={busy}
-            className={`choice ${start === id ? "selected" : ""}`}
-            onClick={() =>
-              updateRoute(id, elevator && liftStarts.includes(id))
-            }
-          >
-            <span className="radio" />
-            <span>
-              <b>{startName(id)}</b>
-              <small>
-                {[
-                  startHints[id],
-                  !liftStarts.includes(id) && "계단 길만 있어요",
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </small>
-            </span>
-          </button>
-        ))}
-        {!starts.includes(start) && (
-          <div className="choice selected">
-            <CheckIcon size={20} />
-            {startName(start)}
+        <div className="card route-endpoints" aria-label="선택한 출발과 도착">
+          <div className="route-endpoint">
+            <span className="map-pick-tag start">출발</span>
+            <strong aria-live="polite">
+              {startLabel(start, registeredPlaces)}
+            </strong>
+            <button
+              className="text-button"
+              onClick={() =>
+                document.getElementById("route-start-input")?.focus()
+              }
+            >
+              출발 변경
+            </button>
           </div>
-        )}
+          <div className="route-endpoint">
+            <span className="map-pick-tag destination">도착</span>
+            <div>
+              <strong>{placeLabel(destination)}</strong>
+              <small>{destination.description}</small>
+            </div>
+            <button
+              className="text-button"
+              disabled={busy}
+              onClick={() => go("search", { q: "", category: "" })}
+            >
+              도착 변경
+            </button>
+          </div>
+        </div>
+        <div className="route-start-picker">
+          <h3>
+            <label htmlFor="route-start-input">출발지</label>
+          </h3>
+          <div className="route-start-input">
+            <input
+              id="route-start-input"
+              type="search"
+              maxLength={200}
+              autoComplete="off"
+              placeholder="건물이나 장소를 검색해 주세요"
+              aria-describedby="route-start-hint"
+              aria-controls="route-start-results"
+              value={
+                startQuery ?? (start ? startLabel(start, registeredPlaces) : "")
+              }
+              disabled={busy}
+              onChange={(event) => {
+                setStartQuery(event.target.value);
+                if (start) void updateRoute("");
+              }}
+            />
+            {start && (
+              <button
+                className="text-button"
+                disabled={busy}
+                onClick={() => selectStart("")}
+              >
+                선택 해제
+              </button>
+            )}
+          </div>
+          <p id="route-start-hint" className="muted small">
+            지도나 검색 결과에서 출발지를 선택해 주세요.
+          </p>
+          {startQuery?.trim() && (
+            <div id="route-start-results" className="route-start-results">
+              <p role="status">
+                {candidates.length
+                  ? `검색 결과 ${candidates.length}곳`
+                  : "검색 결과가 없어요. 다른 장소명을 입력해 주세요."}
+              </p>
+              {candidates.map((item) => (
+                <button
+                  key={item.id}
+                  className="choice"
+                  disabled={busy}
+                  onClick={() => selectStart(item.id)}
+                >
+                  {item.name}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="overview-card">
+            <div className="overview-heading">
+              <b>캠퍼스 지도</b>
+              <span>출발할 곳을 눌러 주세요</span>
+            </div>
+            <CampusOverviewMap
+              selected={startMapIds(start, registeredPlaces)}
+              startable={Object.keys(markerStarts)}
+              onSelect={(id, building) =>
+                selectStart(building ? id : markerStarts[id])
+              }
+            />
+          </div>
+        </div>
         <button
           className="button secondary"
           onClick={() => {
@@ -178,7 +259,7 @@ export default function Screen() {
           }}
         >
           <CameraIcon size={24} />
-          잘 모르겠으면 사진으로 찾기
+          사진으로 위치 찾기
         </button>
         <div className="card">
           <div className="between">
@@ -191,18 +272,16 @@ export default function Screen() {
               role="switch"
               aria-checked={elevator}
               aria-label="엘리베이터로 이동"
-              disabled={busy || stairsOnly}
+              disabled={busy}
               onClick={() => updateRoute(start, !elevator)}
             >
               <span />
             </button>
           </div>
           <small className="muted">
-            {stairsOnly
-              ? "이 출발지에서는 계단 길만 있어 엘리베이터를 껐어요"
-              : elevator
-                ? "켜 두면 계단 없는 길만 보여 드려요"
-                : "끄면 계단 · 지하통로 길도 함께 보여 드려요"}
+            {elevator
+              ? "켜 두면 계단 없는 길만 보여 드려요"
+              : "끄면 계단 · 지하통로 길도 함께 보여 드려요"}
           </small>
         </div>
         {routeOption && options.length === 1 && (
@@ -228,7 +307,7 @@ export default function Screen() {
                 >
                   <span className="radio" />
                   <span>
-                    <b>{option.name}</b>
+                    <b>{optionTitle(option)}</b>
                     <small>
                       {optionSummary(option)}
                       {option.unverified && " · 현장 확인 전 길"}
@@ -239,10 +318,14 @@ export default function Screen() {
             )}
           </div>
         )}
-        {route && (
+        {route && riskyPoint && (
           <div className="prepare-warning">
             <b>헤매는 사람이 많은 구간이 있어요</b>
-            <p>이 경로에서 주의할 구간을 확인하고, 그 구간 앞에서 한 번 더 알려 드려요.</p>
+            <p>
+              {riskyPoint.name}에서 {riskyPoint.passages}명 중{" "}
+              {riskyPoint.confusions}명이 헤맸어요. 그 구간 앞에서 한 번 더
+              확인해 주세요.
+            </p>
             <button
               type="button"
               className="button secondary"
@@ -253,10 +336,11 @@ export default function Screen() {
           </div>
         )}
       </section>
-      <div className="actions">
+      <div className="actions route-start-actions">
+        {!start && <p role="status">출발지를 선택해 주세요.</p>}
         <button
           className="button primary"
-          disabled={!route || busy || !ready}
+          disabled={!start || !route || busy || !ready}
           onClick={begin}
         >
           안내 시작

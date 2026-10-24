@@ -1433,7 +1433,8 @@ progress::-moz-progress-bar {
 /* 스플래시 */
 
 .splash-screen {
-  min-height: 100dvh;
+  /* 틀(.phone) 높이를 채움. PC에서 틀보다 길어지지 않게 100dvh 대신 씀 */
+  flex: 1;
   position: relative;
 
   display: flex;
@@ -1551,7 +1552,8 @@ progress::-moz-progress-bar {
 /* 홈 */
 
 .home-screen {
-  min-height: 100dvh;
+  /* 틀(.phone) 높이를 채움. PC에서 틀보다 길어지지 않게 100dvh 대신 씀 */
+  flex: 1;
   display: flex;
   flex-direction: column;
 }
@@ -3251,6 +3253,86 @@ progress::-moz-progress-bar {
   font-size: 12px;
 }
 
+.route-endpoints,
+.route-start-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.route-endpoint {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.route-endpoint + .route-endpoint {
+  border-top: 1px solid #dce5f2;
+  padding-top: 14px;
+}
+
+.route-endpoint strong {
+  overflow-wrap: anywhere;
+}
+
+.route-endpoint .text-button {
+  white-space: nowrap;
+}
+
+.route-endpoint small {
+  display: block;
+  margin-top: 5px;
+  color: #667389;
+  font-size: 11px;
+}
+
+.route-start-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.route-start-input input {
+  width: 100%;
+  min-width: 0;
+  padding: 13px 12px;
+  border: 1px solid #c9d7eb;
+  border-radius: 12px;
+  background: #ffffff80;
+  font-size: 14px;
+}
+
+.route-start-input .text-button {
+  flex-shrink: 0;
+}
+
+.route-start-results {
+  max-height: 240px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.actions.route-start-actions {
+  position: static;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+}
+
+.route-start-actions > p {
+  color: #667389;
+  font-size: 12px;
+  text-align: center;
+}
+
 .route-options {
   display: flex;
   flex-direction: column;
@@ -3568,4 +3650,36 @@ progress::-moz-progress-bar {
   flex-direction: column;
   align-items: flex-start;
   gap: 4px;
+}
+
+/* 사진 인식 후보: 고른 후보만 체크 */
+.recognition-mark {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 1.5px solid #c7d1de;
+  border-radius: 50%;
+  background: white;
+}
+
+.recognition-mark.on {
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+/* 아이폰은 16px보다 작은 입력칸을 누르면 화면을 확대함 */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  /* 확대는 입력 글자 크기로 정해져서 예시 문구만 줄여 한 줄에 들어가게 함 */
+  .home-search input::placeholder {
+    font-size: 14px;
+  }
 }

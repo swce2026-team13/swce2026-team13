@@ -8,7 +8,7 @@
       "building": null,
       "buildingName": null,
       "floor": null,
-      "stepFree": null,
+      "stepFree": true,
       "lat": 37.61546111,
       "lon": 127.0116775,
       "local": [
@@ -21,7 +21,8 @@
       },
       "connectsStatus": "확인",
       "connectsEvidence": [
-        "팀 확인 10/24: 정류장 바로 뒤가 본관 1층"
+        "팀 확인 10/24: 정류장 바로 뒤가 본관 1층",
+        "팀 확인 10/24: 계단 없이 이어짐(엘리베이터 경로)"
       ]
     },
     {
