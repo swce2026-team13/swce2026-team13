@@ -49,7 +49,6 @@ export default function Screen() {
     <section className="content stack admin-screen">
       <div className="row">
         <Tag tone="gray">관리자 전용</Tag>
-
       </div>
       <h1>어디에서 많이 헷갈릴까요?</h1>
       <p>
@@ -148,7 +147,6 @@ export default function Screen() {
           {loading && <p role="status">통계를 불러오고 있어요.</p>}
           {loadError && <Notice>{loadError}</Notice>}
           <div className="stats-grid" aria-busy={loading}>
-
             {[
               ["지점 통과", `${insight.passages}건`, "세션·지점별 중복 제외"],
               [
