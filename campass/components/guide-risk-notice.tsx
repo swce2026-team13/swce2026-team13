@@ -14,6 +14,11 @@ type RouteInsightPoint = {
   topReason: string | null;
 };
 
+type RouteInsightResponse = {
+  points: RouteInsightPoint[];
+  dataMode: string;
+};
+
 type GuideRiskNoticeProps = {
   currentWaypointId: string | null | undefined;
   start: string;
@@ -30,6 +35,7 @@ export function GuideRiskNotice({
   const { session } = useCampus();
   const option = session?.route.option ?? "";
   const [points, setPoints] = useState<RouteInsightPoint[]>([]);
+  const [dataMode, setDataMode] = useState("");
 
   useEffect(() => {
     if (!currentWaypointId) return;
@@ -41,11 +47,17 @@ export function GuideRiskNotice({
       option,
     });
 
-    api<{ points: RouteInsightPoint[] }>(
-      `route-insights?${params}`,
-    )
-      .then((data) => setPoints(data.points))
-      .catch(() => setPoints([]));
+    api<RouteInsightResponse>(
+  `route-insights?${params}`,
+)
+  .then((data) => {
+    setPoints(data.points);
+    setDataMode(data.dataMode);
+  })
+  .catch(() => {
+    setPoints([]);
+    setDataMode("");
+  });
   }, [currentWaypointId, start, destination, elevator, option]);
 
   const currentRisk = useMemo(
@@ -57,6 +69,7 @@ export function GuideRiskNotice({
       ) ?? null,
     [points, currentWaypointId],
   );
+  const isDemo = dataMode === "demo-route-activity";
 
   if (!currentRisk) return null;
 
@@ -66,6 +79,11 @@ export function GuideRiskNotice({
         <AlertTriangle size={18} strokeWidth={1.7} />
         <strong>헤매는 사람이 많은 구간이에요</strong>
       </div>
+      {isDemo && (
+  <span className="guide-risk-demo-label">
+    시연용 예시 기록 포함
+  </span>
+)}
 
       <p>{getConfusionAdvice(currentRisk.topReason)}</p>
     </aside>
