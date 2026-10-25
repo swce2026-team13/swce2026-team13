@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle } from "lucide-react";
-import { api } from "@/components/campus-provider";
+import { api, useCampus } from "@/components/campus-provider";
 import { getConfusionAdvice } from "@/lib/confusion-advice";
 
 type RouteInsightPoint = {
@@ -27,6 +27,8 @@ export function GuideRiskNotice({
   destination,
   elevator,
 }: GuideRiskNoticeProps) {
+  const { session } = useCampus();
+  const option = session?.route.option ?? "";
   const [points, setPoints] = useState<RouteInsightPoint[]>([]);
 
   useEffect(() => {
@@ -36,6 +38,7 @@ export function GuideRiskNotice({
       start,
       destination,
       elevator: String(elevator),
+      option,
     });
 
     api<{ points: RouteInsightPoint[] }>(
@@ -43,7 +46,7 @@ export function GuideRiskNotice({
     )
       .then((data) => setPoints(data.points))
       .catch(() => setPoints([]));
-  }, [currentWaypointId, start, destination, elevator]);
+  }, [currentWaypointId, start, destination, elevator, option]);
 
   const currentRisk = useMemo(
     () =>

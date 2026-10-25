@@ -144,7 +144,13 @@ async function handle(request: NextRequest) {
   });
 }
     if (method === "GET" && parts.join("/") === "admin/insights") {
-      return response(db.insights());
+      const params = request.nextUrl.searchParams;
+      return response(db.insights({
+        period: params.get("period") ?? undefined,
+        building: params.get("building") ?? undefined,
+        reason: params.get("reason") ?? undefined,
+        demo: params.get("demo") ?? undefined,
+      }));
     }
     if (method === "GET" && parts[0] === "sessions" && parts.length === 2)
       return response(db.get(parts[1], owner));
