@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { places, searchPlaces } from "../lib/catalog.ts";
 import { classroomFloors, classroomSearch } from "../lib/classrooms.ts";
 import { calculateRoute } from "../lib/routing.ts";
-import { allPlaces, findPlace, roomPlaces } from "../lib/rooms.ts";
+import { allPlaces, facilityPlaces, findPlace, roomPlaces } from "../lib/rooms.ts";
 import { loadRooms } from "../lib/campus3d/types.ts";
 import { geminiCatalog } from "../lib/gemini.ts";
 import { Store } from "../lib/store.ts";
@@ -117,7 +117,8 @@ test("고른 호실은 id로 다시 찾아도 같은 이름", () => {
   assert.equal(findPlace("room-yudam-0000"), undefined);
 });
 
-test("Gemini에 보내는 장소 목록은 호실을 넣기 전과 같은 개수", () => {
-  assert.equal(geminiCatalog.length, places.length);
+test("장소 목록에는 편의시설 24곳을 더하고 호실은 보내지 않는다", () => {
+  assert.equal(facilityPlaces().length, 24);
+  assert.equal(geminiCatalog.length, places.length + facilityPlaces().length);
   assert.ok(geminiCatalog.every((p) => !p.id.startsWith("room-")));
 });

@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import {
   ArrowRightIcon,
   BuildingIcon,
@@ -33,6 +34,13 @@ export default function Screen() {
     search,
     choose,
   } = useCampus();
+  const [filter, setFilter] = useState<{ revision: number; value: string } | null>(null);
+  const buildings = [...new Set(results.map((place) => place.building).filter(Boolean))];
+  const field = buildings.length > 1 ? "building" : "floor";
+  const groups = [...new Set(results.map((place) => place[field]).filter(Boolean))];
+  const clarify = !classroomSelection && results.length > 1 && groups.length > 1;
+  const selected = clarify && filter?.revision === searchRevision ? filter.value : "";
+  const visibleResults = selected ? results.filter((place) => place[field] === selected) : results;
   return (
     <section className="content stack">
       <h1>어디를 찾으시나요?</h1>
@@ -131,7 +139,22 @@ export default function Screen() {
       )}
     </div>
 
-  {results.map((p) => (
+  {clarify && (
+    <div className="card stack">
+      <strong>{field === "building" ? "어느 건물에 있는 곳인가요?" : "몇 층인가요?"}</strong>
+      <div className="chips" aria-label={field === "building" ? "건물로 좁히기" : "층으로 좁히기"}>
+        <button className={!selected ? "active" : ""} aria-pressed={!selected}
+          onClick={() => setFilter(null)}>전체 보기</button>
+        {groups.map((value) => (
+          <button key={value} className={selected === value ? "active" : ""}
+            aria-pressed={selected === value}
+            onClick={() => setFilter({ revision: searchRevision, value })}>{value}</button>
+        ))}
+      </div>
+    </div>
+  )}
+
+  {visibleResults.map((p) => (
     <div className="card ai-place-card" key={p.id}>
       {/* 학교 편의시설은 카드를 누르면 편의시설 정보(A4a)로 */}
       <button
@@ -177,6 +200,7 @@ export default function Screen() {
   </button>
 </div>
       )}
+      <p className="fine-print">검색 문장은 뜻을 해석하려고 외부 AI(Gemini)에 보낼 수 있어요. 이름 · 연락처 같은 개인정보는 적지 마세요.</p>
     </section>
   );
 }

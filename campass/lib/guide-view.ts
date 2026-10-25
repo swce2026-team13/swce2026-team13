@@ -1,5 +1,8 @@
 import type { Session } from "./store";
 import type { RouteOption } from "./routing";
+import type { Place } from "./catalog";
+import type { IntentResult } from "./providers";
+import { withCopula } from "./hangul.ts";
 
 type RouteStep = Session["route"]["steps"][number];
 export type GuideMapData = {
@@ -136,5 +139,49 @@ export function answerGuideQuestion(
       ? `${guide.current.name}에서 ${nextName} 방향으로 이동해 주세요. ${guide.current.instruction}`
       : `현재 목적지에 도착했어요. ${guide.current.instruction}`,
     context: `지금 안내 중인 ${guide.currentNumber}단계를 기준으로 답했어요`,
+  };
+}
+
+export type GuideIntentAnswer = GuideQuestionAnswer & {
+  destination?: Place;
+  elevator?: boolean;
+};
+
+export function answerGuideIntent(
+  guide: GuideViewModel,
+  result: IntentResult,
+): GuideIntentAnswer | null {
+  if (!guide.current) return null;
+  if (result.intent === "next") return answerGuideQuestion(guide);
+  const context = `지금 안내 중인 ${guide.currentNumber}단계를 기준으로 답했어요`;
+  if (result.intent === "condition" && result.conditions.elevator !== undefined) {
+    return {
+      title: "이동 조건 바꾸기",
+      interpretation: "이동 조건 변경으로 이해했어요",
+      answer: result.conditions.elevator
+        ? "엘리베이터 길로 다시 찾을까요?"
+        : "계단 포함 길로 다시 찾을까요?",
+      context,
+      elevator: result.conditions.elevator,
+    };
+  }
+  const place = result.intent === "destination" ? result.places[0] : undefined;
+  if (place) {
+    const location = [place.building, place.floor].filter(Boolean).join(" ");
+    return {
+      title: place.name,
+      interpretation: "목적지 질문으로 이해했어요",
+      answer: location ? `${place.name} 위치는 ${withCopula(location)}.` : `${place.name} 위치를 찾았어요.`,
+      context,
+      destination: place,
+    };
+  }
+  return {
+    title: "등록된 장소에서 찾지 못했어요",
+    interpretation: "등록된 장소에서 찾지 못했어요",
+    answer: guide.next
+      ? `지금은 ${guide.next.name} 방향으로 이동해 주세요. ${guide.current.instruction}`
+      : `지금 안내는 마지막 단계예요. ${guide.current.instruction}`,
+    context,
   };
 }
