@@ -30,6 +30,10 @@ export default function Screen() {
     destinationCard,
   } = useCampus();
   const arrival = toArrivalViewModel(session);
+  const selectedFeedbackPoint =
+  arrival.segments.some((segment) => segment.id === feedbackPoint)
+    ? feedbackPoint
+    : arrival.segments[0]?.id ?? "";
   return (
     <>
       {!hasSession && (
@@ -92,13 +96,7 @@ export default function Screen() {
                     <div className="select-wrap">
                       <select
                           aria-label="헷갈린 구간"
-                          value={
-                          arrival.segments.some(
-                         (segment) => segment.id === feedbackPoint,
-                          )
-                        ? feedbackPoint
-                         : arrival.segments[0]?.id ?? ""
-                         }
+                          value={selectedFeedbackPoint}
                          onChange={(e) => setFeedbackPoint(e.target.value)}
 >
                         {arrival.segments.map((segment) => (
