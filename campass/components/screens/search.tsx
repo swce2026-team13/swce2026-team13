@@ -25,6 +25,9 @@ export default function Screen() {
     searchNote,
     searchIntent,
     searchStartRequested,
+    conversation,
+    resetConversation,
+    selectClarification,
     start,
     registeredPlaces,
     elevator,
@@ -43,7 +46,10 @@ export default function Screen() {
   const field = buildings.length > 1 ? "building" : "floor";
   const groups = [...new Set(results.map((place) => place[field]).filter(Boolean))];
   const clarify = !classroomSelection && results.length > 1 && groups.length > 1;
-  const selected = clarify && filter?.revision === searchRevision ? filter.value : "";
+  const saved = conversation?.pending && conversation.clarification?.field === field &&
+    conversation.candidateIds.every((id) => results.some((place) => place.id === id))
+    ? conversation.clarification.value : "";
+  const selected = clarify ? filter?.revision === searchRevision ? filter.value : saved : "";
   const visibleResults = selected ? results.filter((place) => place[field] === selected) : results;
   return (
     <section className="content stack">
@@ -66,6 +72,12 @@ export default function Screen() {
           <ArrowRightIcon />
         </button>
       </form>
+      {conversation && (
+        <button type="button" className="button secondary" onClick={() => {
+          resetConversation();
+          search("");
+        }}>새 길찾기 시작</button>
+      )}
       {searchStartRequested && (
         <Notice>출발: {startLabel(start, registeredPlaces)}{start ? " · 목적지를 골라 경로를 확인해 주세요." : " · 길찾기 화면에서 출발지를 선택해 주세요."}</Notice>
       )}
@@ -151,11 +163,11 @@ export default function Screen() {
       <strong>{field === "building" ? "어느 건물에 있는 곳인가요?" : "몇 층인가요?"}</strong>
       <div className="chips" aria-label={field === "building" ? "건물로 좁히기" : "층으로 좁히기"}>
         <button className={!selected ? "active" : ""} aria-pressed={!selected}
-          onClick={() => setFilter(null)}>전체 보기</button>
+          onClick={() => { setFilter(null); selectClarification(field, ""); }}>전체 보기</button>
         {groups.map((value) => (
           <button key={value} className={selected === value ? "active" : ""}
             aria-pressed={selected === value}
-            onClick={() => setFilter({ revision: searchRevision, value })}>{value}</button>
+            onClick={() => { setFilter({ revision: searchRevision, value }); selectClarification(field, value); }}>{value}</button>
         ))}
       </div>
     </div>

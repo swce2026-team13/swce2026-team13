@@ -14,6 +14,16 @@ import type {
 } from "@/lib/providers";
 import { Tag } from "@/components/ui";
 import { createIntentRequest } from "@/lib/intent-request";
+import {
+  clearConversation,
+  conversationLifetimeMs,
+  mergeConversation,
+  rememberedTurnPlaces,
+  restoreConversation,
+  saveConversation,
+  selectConversationPlace,
+  type ConversationContext,
+} from "@/lib/conversation-context";
 import { classroomSearch } from "@/lib/classrooms";
 import { createContext, useContext } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -67,6 +77,7 @@ function useCampusState() {
   const selectedElevator = params.get("elevator") !== "false";
   const selectedBuilding = params.get("building") || "혜인관";
   const selectedQuery = params.get("q") || "";
+  const selectedTurn = params.get("turn") || "";
   const selectedCategory = params.get("category") || "";
   // 고른 경로 후보 id. 주소에만 두고 바꿔도 경로를 다시 받지 않음
   const selectedOption = params.get("option") || "";
@@ -77,6 +88,10 @@ function useCampusState() {
   const intentRequest = useRef(createIntentRequest((query) => api<IntentResult>("intent", { query })));
   const [searchStartRequested, setSearchStartRequested] = useState(false);
   const [searchIntent, setSearchIntent] = useState<Intent>("destination");
+  const [conversationReady, setConversationReady] = useState(false);
+  const [conversation, setConversation] = useState<ConversationContext | null>(null);
+  const conversationRef = useRef<ConversationContext | null>(null);
+  const conversationPlaces = useRef(new Map<string, Place>());
   const [classroomSelection, setClassroomSelection] = useState<ReturnType<
     typeof classroomSearch
   > | null>(null);
@@ -113,6 +128,43 @@ function useCampusState() {
     [sent, setSent] = useState(false);
   const [insight, setInsight] = useState<Insight | null>(null);
   const imageRef = useRef("");
+  function rememberConversation(next: ConversationContext | null) {
+    conversationRef.current = next;
+    setConversation(next);
+    try { saveConversation(sessionStorage, next); } catch { /* 저장 공간을 사용할 수 없어도 검색은 계속해요. */ }
+  }
+  function resetConversation() {
+    conversationPlaces.current.clear();
+    conversationRef.current = null;
+    setConversation(null);
+    try { clearConversation(sessionStorage); } catch { /* 저장 공간을 사용할 수 없어도 초기화해요. */ }
+  }
+  function selectClarification(field: "building" | "floor", value: string) {
+    const current = conversationRef.current;
+    if (!current?.pending) return;
+    const candidates = current.candidateIds.map((id) => conversationPlaces.current.get(id));
+    if (value && !candidates.some((place) => place?.[field] === value)) return;
+    rememberConversation({ ...current,
+      ...(value ? { clarification: { field, value } } : { clarification: undefined }),
+      expiresAt: Date.now() + conversationLifetimeMs,
+    });
+  }
+  function continueConversation(question: string, result: IntentResult) {
+    let current = conversationRef.current;
+    if (!current && session) {
+      const place = destination.id === session.destination ? destination :
+        registeredPlaces.find((item) => item.id === session.destination);
+      if (place) {
+        conversationPlaces.current.set(place.id, place);
+        current = selectConversationPlace(null, place, undefined, elevator);
+      }
+    }
+    for (const place of result.places) conversationPlaces.current.set(place.id, place);
+    const merged = mergeConversation(question, result, current,
+      (id) => conversationPlaces.current.get(id));
+    rememberConversation(merged.context);
+    return merged.result;
+  }
   function go(next: View, values: Record<string, string> = {}) {
     setError("");
     const href = navigationHref(next, {
@@ -187,7 +239,36 @@ function useCampusState() {
     selectedBuilding,
   ]);
   useEffect(() => {
+    let cancelled = false;
+    restoreConversation(sessionStorage, async (id) => {
+      try {
+        const value = await api<{ place: Place }>(`places/${encodeURIComponent(id)}`);
+        return value.place;
+      } catch {
+        return waypoints.some((waypoint) => waypoint.id === id) ? true : undefined;
+      }
+    }).then((restored) => {
+      if (cancelled) return;
+      if (restored) {
+        conversationRef.current = restored.context;
+        setConversation(restored.context);
+        for (const place of restored.places) conversationPlaces.current.set(place.id, place);
+      }
+    }).catch(() => {
+      if (!cancelled) resetConversation();
+    }).finally(() => {
+      if (!cancelled) setConversationReady(true);
+    });
+    return () => { cancelled = true; };
+  }, []);
+  useEffect(() => {
+    if (!conversation) return;
+    const timer = setTimeout(resetConversation, Math.max(0, conversation.expiresAt - Date.now()));
+    return () => clearTimeout(timer);
+  }, [conversation]);
+  useEffect(() => {
     if (view !== "search") return;
+    if (!conversationReady) return;
     const request = intentRequest.current;
     let cancelled = false;
     Promise.resolve().then(async () => {
@@ -200,17 +281,41 @@ function useCampusState() {
       setClassroomBuilding(null);
       setSearchNote("검색 결과");
       if (!selectedQuery && !selectedCategory) return;
+      const saved = conversationRef.current;
+      if (!selectedCategory && saved) {
+        const places = rememberedTurnPlaces(saved, selectedTurn,
+          (id) => conversationPlaces.current.get(id));
+        if (places.length) {
+          setResults(places);
+          setSearchIntent("destination");
+          setSearchStartRequested(Boolean(saved.startPlaceId));
+          if (saved.startPlaceId) setStart(saved.startPlaceId);
+          if (saved.elevator !== undefined) setElevator(saved.elevator);
+          setSearchRevision((value) => value + 1);
+          return;
+        }
+      }
       try {
-        const result: Pick<IntentResult, "intent" | "conditions" | "places" | "startPlaceId" | "startRequested"> | null =
-          selectedCategory
-            ? {
-                ...(await api<{ places: Place[] }>(
-                  `places?category=${encodeURIComponent(selectedCategory)}`,
-                )),
-                intent: "destination",
-                conditions: {},
-              }
-            : await intentRequest.current.run(selectedQuery);
+        let hadPendingCandidates = false;
+        let result: Pick<IntentResult, "intent" | "conditions" | "places" | "startPlaceId" | "startRequested"> | null;
+        if (selectedCategory) {
+          result = {
+            ...(await api<{ places: Place[] }>(
+              `places?category=${encodeURIComponent(selectedCategory)}`,
+            )),
+            intent: "destination",
+            conditions: {},
+          };
+        } else {
+          const classified = await intentRequest.current.run(selectedQuery);
+          if (cancelled || !classified) return;
+          for (const place of classified.places) conversationPlaces.current.set(place.id, place);
+          hadPendingCandidates = Boolean(conversationRef.current?.pending);
+          const merged = mergeConversation(selectedQuery, classified, conversationRef.current,
+            (id) => conversationPlaces.current.get(id), Date.now(), selectedTurn);
+          rememberConversation(merged.context);
+          result = merged.result;
+        }
         if (cancelled || !result) return;
         const nextElevator = result.conditions.elevator;
         setSearchStartRequested(Boolean(result.startRequested));
@@ -232,7 +337,7 @@ function useCampusState() {
         }
         setSearchIntent(result.intent);
         if (result.intent !== "destination") return;
-        if (!selectedCategory && (result.startRequested ||
+        if (!selectedCategory && (hadPendingCandidates || result.startRequested ||
             !result.places.some((p) => p.category === "classroom") ||
             /\d{3,4}|시청각|H\d+/i.test(selectedQuery))) {
           setResults(result.places);
@@ -269,7 +374,7 @@ function useCampusState() {
       request.cancel();
     };
     // URL의 elevator 값만 바꿀 때는 의도 분류 요청을 다시 보내지 않음
-  }, [view, selectedQuery, selectedCategory]);
+  }, [view, selectedQuery, selectedTurn, selectedCategory, conversationReady]);
   function saveSession(s: Session) {
     if (s.id !== session?.id) {
       setFeedbackPoint("");
@@ -337,9 +442,22 @@ function useCampusState() {
     [],
   );
   function search(value = query, category?: string) {
-    go("search", { q: value, category: category || "" });
+    const fresh = view === "home" || (view === "search" && !value.trim());
+    if (fresh) {
+      resetConversation();
+      setStart("");
+      setElevator(true);
+      setRoute(null);
+    }
+    else if (view === "search" && conversationRef.current?.clarification)
+      rememberConversation({ ...conversationRef.current, clarification: undefined });
+    go("search", { q: value, category: category || "",
+      ...(value.trim() && !category ? { turn: crypto.randomUUID() } : {}),
+      ...(fresh ? { start: "", elevator: "true" } : {}) });
   }
   async function choose(p: Place) {
+    conversationPlaces.current.set(p.id, p);
+    rememberConversation(selectConversationPlace(conversationRef.current, p, start, elevator));
     routeRevision.current++;
     setDestination(p);
     setRoute(null);
@@ -380,6 +498,7 @@ function useCampusState() {
         ...(routeOption ? { option: routeOption.id } : {}),
       });
       saveSession(s);
+      resetConversation();
       setRecovering(false);
       setCandidate(null);
       go(s.status === "completed" ? "arrival" : "guide");
@@ -574,6 +693,10 @@ function useCampusState() {
     setSearchNote,
     searchIntent,
     searchStartRequested,
+    conversation,
+    resetConversation,
+    selectClarification,
+    continueConversation,
     classroomSelection,
     setClassroomSelection,
     classroomBuilding,

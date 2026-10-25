@@ -203,7 +203,7 @@ export default function Screen() {
 }
 
 function GuideQuestionCard({ guide }: { guide: GuideViewModel }) {
-  const { session, elevator, busy, go } = useCampus();
+  const { session, elevator, busy, go, continueConversation } = useCampus();
   const request = useRef(createIntentRequest((query) => api<IntentResult>("intent", { query })));
   useEffect(() => {
     const current = request.current;
@@ -221,7 +221,8 @@ function GuideQuestionCard({ guide }: { guide: GuideViewModel }) {
     setResult(null);
     setError("");
     try {
-      setResult(await request.current.run(question.trim()));
+      const interpreted = await request.current.run(question.trim());
+      if (interpreted) setResult(continueConversation(question.trim(), interpreted));
     } catch (error) {
       setError((error as { status?: number }).status === 429
         ? "질문이 많아 잠시 쉬고 있어요. 잠시 후 다시 물어봐 주세요."
