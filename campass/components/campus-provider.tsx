@@ -29,8 +29,13 @@ import { createContext, useContext } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { navigationHref, viewForPath, type View } from "@/lib/navigation";
 export type Insight = ReturnType<Store["insights"]>;
-export async function api<T>(path: string, body?: unknown): Promise<T> {
+export async function api<T>(
+  path: string,
+  body?: unknown,
+  signal?: AbortSignal,
+): Promise<T> {
   const response = await fetch(`/api/${path}`, {
+    signal,
     method: body === undefined ? "GET" : "POST",
     headers: {
       ...(body instanceof FormData
@@ -126,8 +131,11 @@ function useCampusState() {
     [reason, setReason] = useState("방향 혼란"),
     [comment, setComment] = useState(""),
     [sent, setSent] = useState(false);
+    const [recognitionFeedbackSent, setRecognitionFeedbackSent] =
+    useState(false);
   const [insight, setInsight] = useState<Insight | null>(null);
   const imageRef = useRef("");
+  const recognitionAbortRef = useRef<AbortController | null>(null);
   function rememberConversation(next: ConversationContext | null) {
     conversationRef.current = next;
     setConversation(next);
@@ -540,29 +548,80 @@ function useCampusState() {
     });
   }
   async function upload(file: File) {
-    if (file.size > 5 * 1024 * 1024) {
-      setError("사진은 5MB 이하로 선택해 주세요.");
+  if (file.size > 5 * 1024 * 1024) {
+    setError("사진은 5MB 이하로 선택해 주세요.");
+    return;
+  }
+
+  if (busy || recognitionAbortRef.current) return;
+
+  if (imageRef.current) {
+    URL.revokeObjectURL(imageRef.current);
+  }
+
+  imageRef.current = URL.createObjectURL(file);
+  setPreview(imageRef.current);
+
+  const controller = new AbortController();
+  recognitionAbortRef.current = controller;
+
+  setBusy(true);
+  setError("");
+  setRecognition(null);
+  setCandidate(null);
+  setRecognitionFeedbackSent(false);
+
+  try {
+    const form = new FormData();
+    form.append("image", file);
+
+    const r = await api<Recognition>(
+      "recognize",
+      form,
+      controller.signal,
+    );
+
+    if (controller.signal.aborted) return;
+
+    setRecognition(r);
+    setCandidate(r.candidates[0] ?? null);
+
+    go(
+      r.status === "matched"
+        ? recovering
+          ? "recovery"
+          : "recognition"
+        : "failed",
+      { recovering: String(recovering) },
+    );
+  } catch (error) {
+    if (
+      error instanceof DOMException &&
+      error.name === "AbortError"
+    ) {
       return;
     }
-    if (imageRef.current) URL.revokeObjectURL(imageRef.current);
-    imageRef.current = URL.createObjectURL(file);
-    setPreview(imageRef.current);
-    await run(async () => {
-      const form = new FormData();
-      form.append("image", file);
-      const r = await api<Recognition>("recognize", form);
-      setRecognition(r);
-      setCandidate(r.candidates[0] ?? null);
-      go(
-        r.status === "matched"
-          ? recovering
-            ? "recovery"
-            : "recognition"
-          : "failed",
-        { recovering: String(recovering) },
-      );
-    });
+
+    setError(
+      error instanceof Error
+        ? error.message
+        : "사진을 분석하지 못했어요. 다시 시도해 주세요.",
+    );
+  } finally {
+    if (recognitionAbortRef.current === controller) {
+      recognitionAbortRef.current = null;
+      setBusy(false);
+    }
   }
+}
+function cancelRecognition() {
+  recognitionAbortRef.current?.abort();
+  recognitionAbortRef.current = null;
+  setBusy(false);
+  setError("");
+  setRecognition(null);
+  setCandidate(null);
+}
   async function confirmLocation(id: string, confirmedCandidate?: Candidate) {
     if (recovering && session) {
       await run(async () => {
@@ -582,7 +641,7 @@ function useCampusState() {
     }
   }
   async function sendRecognitionFeedback() {
-  if (!candidate) return;
+  if (!candidate || recognitionFeedbackSent || busy) return;
 
   await run(async () => {
     await api("recognition-feedback", {
@@ -590,6 +649,8 @@ function useCampusState() {
       confidence: candidate.confidence,
       direction: candidate.direction,
     });
+
+    setRecognitionFeedbackSent(true);
   });
 }
   async function sendFeedback() {
@@ -667,9 +728,9 @@ function useCampusState() {
       <h3>위치를 직접 선택할 수 있어요</h3>
       {waypoints
         .filter((w) => !["stairs", "interview"].includes(w.id))
-        // 길을 잃고 다시 고를 때는 연결통로 · 복도 · 엘리베이터 앞 같은 중간 지점을 빼고
-        // 건물 · 층으로 알아볼 수 있는 지점만 보여 줌
-        .filter((w) => !recovering || !recoveryHidden.includes(w.id))
+        // 직접 위치 선택에서는 연결통로 · 복도 · 엘리베이터 앞 같은 중간 지점을 빼고
+        // 사용자가 실제 장소로 알아볼 수 있는 지점만 보여 줌
+        .filter((w) => !recoveryHidden.includes(w.id))
         .map((w) => (
           <button
             className="choice"
@@ -759,8 +820,10 @@ function useCampusState() {
     previous,
     lost,
     upload,
+    cancelRecognition,
     confirmLocation,
     sendRecognitionFeedback,
+    recognitionFeedbackSent,
     sendFeedback,
     back,
     step,

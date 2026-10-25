@@ -27,6 +27,7 @@ export default function Screen() {
     go,
     confirmLocation,
     sendRecognitionFeedback,
+    recognitionFeedbackSent,
     manualPicker,
   } = useCampus();
   const [showManualPicker, setShowManualPicker] = useState(false);
@@ -212,12 +213,14 @@ const alternativeCandidates = candidateViews.slice(1);
 
         <button
         type="button"
-       className="text-button"
-       disabled={!candidate || busy}
-        onClick={sendRecognitionFeedback}
-      >
-       틀렸다고 알리기
-      </button>
+        className="text-button"
+        disabled={!candidate || busy || recognitionFeedbackSent}
+      onClick={sendRecognitionFeedback}
+    >
+    {recognitionFeedbackSent
+    ? "알림 완료"
+    : "틀렸다고 알리기"}
+</button>
       </div>
 
       <div className="recognition-reassurance">

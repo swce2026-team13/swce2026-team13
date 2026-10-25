@@ -4,8 +4,7 @@ import { Circle, LoaderCircle } from "lucide-react";
 import { CheckIcon } from "@/components/icons";
 
 import { Photo } from "@/components/ui";
-import { getDefaultAnalysisSteps } from "@/lib/recognition-view";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useCampus } from "@/components/campus-provider";
 
 export default function Screen() {
@@ -13,11 +12,11 @@ export default function Screen() {
   busy,
   preview,
   upload,
+  cancelRecognition,
   manualPicker,
   recovering,
   go,
 } = useCampus();
-const analysisSteps = getDefaultAnalysisSteps();
 
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const albumInputRef = useRef<HTMLInputElement | null>(null);
@@ -25,10 +24,46 @@ const analysisSteps = getDefaultAnalysisSteps();
   const [showManualPicker, setShowManualPicker] =
     useState(false);
 
+    const [analysisSeconds, setAnalysisSeconds] = useState(0);
+
+useEffect(() => {
+  if (!busy) return;
+
+  const startedAt = Date.now();
+
+  const timer = window.setInterval(() => {
+    setAnalysisSeconds(
+      Math.floor((Date.now() - startedAt) / 1000),
+    );
+  }, 1000);
+
+  return () => window.clearInterval(timer);
+}, [busy]);
+
+const analysisSteps = [
+  {
+    id: "upload",
+    label: "사진 준비",
+    status: "done",
+  },
+  {
+    id: "compare",
+    label: "위치 분석",
+    status: "active",
+  },
+  {
+    id: "candidate",
+    label: "결과 확인",
+    status: "pending",
+  },
+] as const;
+
   function handleFile(file?: File) {
-    if (!file || busy) return;
-    upload(file);
-  }
+  if (!file || busy) return;
+
+  setAnalysisSeconds(0);
+  upload(file);
+}
 
   if (busy) {
   return (
@@ -41,11 +76,14 @@ const analysisSteps = getDefaultAnalysisSteps();
       )}
 
       <header className="photo-analyzing-header">
-        <h1>어디인지 살펴보고 있어요</h1>
-        <p>
-          보통 10초 안에 끝나요. 잠시만 기다려 주세요.
-        </p>
-      </header>
+      <h1>사진에서 현재 위치를 확인하고 있어요</h1>
+
+     <p>
+        {analysisSeconds >= 10
+          ? "평소보다 분석이 조금 오래 걸리고 있어요. 취소하고 직접 위치를 고를 수도 있어요."
+         : "사진을 서버에 보내 위치 후보를 비교하고 있어요."}
+      </p>
+    </header>
 
       <div className="photo-analysis-card">
         {analysisSteps.map((step) => (
@@ -57,11 +95,11 @@ const analysisSteps = getDefaultAnalysisSteps();
               <strong>{step.label}</strong>
 
               <p>
-                {step.id === "upload"
-                  ? "촬영한 사진을 확인했어요."
-                  : step.id === "compare"
-                    ? "등록해 둔 위치 사진과 비교해요."
-                    : "가장 가까운 위치 후보를 정리해요."}
+               {step.id === "upload"
+                 ? "선택한 사진을 분석할 준비를 마쳤어요."
+                : step.id === "compare"
+                ? "서버에서 등록된 위치 후보와 사진을 비교하고 있어요."
+               : "분석 응답이 오면 가장 가까운 위치 후보를 보여드릴게요."}
               </p>
             </div>
 
@@ -82,7 +120,7 @@ const analysisSteps = getDefaultAnalysisSteps();
                     strokeWidth={1.65}
                     className="photo-analysis-spinner"
                   />
-                  확인 중
+                  분석 중
                 </>
               )}
 
@@ -105,12 +143,20 @@ const analysisSteps = getDefaultAnalysisSteps();
       </div>
 
       <button
-        type="button"
-        className="text-button centered"
-        disabled
-      >
-        취소하고 출발 위치 직접 고르기
-      </button>
+  type="button"
+  className="text-button centered"
+  onClick={() => {
+    cancelRecognition();
+
+    if (recovering) {
+      go("guide");
+    } else {
+      go("prepare", { pick: "start" });
+    }
+  }}
+>
+  취소하고 출발 위치 직접 고르기
+</button>
     </section>
   );
 }
