@@ -1,1 +1,1 @@
-export { default } from "@/components/screens/arrival";
+export { default } from "@/features/feedback/arrival";

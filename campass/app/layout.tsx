@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import "@fontsource-variable/noto-sans-kr";
-import "./globals.css";
+import "../styles/globals.css";
 import { Suspense } from "react";
-import { CampusProvider } from "@/components/campus-provider";
+import { CampusProvider } from "@/features/navigation/campus-provider";
 import { AppShell } from "@/components/app-shell";
 export const metadata: Metadata = {
   title: "캠퍼스 길찾기 · 서경대학교",

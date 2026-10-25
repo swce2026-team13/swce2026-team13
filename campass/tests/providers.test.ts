@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
-import { recognizePhoto, interpretIntent } from "../lib/providers.ts";
+import { recognizePhoto, interpretIntent } from "../server/integrations/providers.ts";
 
 async function fixture(value: unknown, run: (url: string) => Promise<void>) {
   const server = createServer((req, res) => {

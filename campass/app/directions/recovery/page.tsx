@@ -1,1 +1,1 @@
-export { default } from "@/components/screens/recovery";
+export { default } from "@/features/feedback/recovery";

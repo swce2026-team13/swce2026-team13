@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
-import { navigationHref } from "../lib/navigation.ts";
+import { navigationHref } from "../shared/utils/navigation.ts";
 
 test("새 목적지 이동에서 이전 세션의 위치 복구 모드 해제", () => {
   for (const next of ["prepare", "guide", "search"] as const) {

@@ -1,7 +1,7 @@
 "use client";
 import { ArrowLeft, Building2, CircleHelp, Map, X } from "lucide-react";
-import { useCampus } from "./campus-provider";
-import { titles, viewForPath } from "@/lib/navigation";
+import { useCampus } from "../features/navigation/campus-provider";
+import { titles, viewForPath } from "@/shared/utils/navigation";
 import { usePathname } from "next/navigation";
 export function AppShell({ children }: { children: React.ReactNode }) {
   const view = viewForPath(usePathname());
