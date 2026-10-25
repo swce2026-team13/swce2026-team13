@@ -41,6 +41,8 @@ before(async () => {
         APP_ORIGIN: origin,
         VISION_API_URL: "",
         INTENT_API_URL: "",
+        GEMINI_API_KEY: "",
+        GEMINI_MODEL: "",
       },
       stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true,
@@ -476,4 +478,27 @@ test("HTTP 경로 응답에 후보 목록이 있고 후보 id로 고를 수 있�
     await request("sessions", { ...body, option: route.options[1].id })
   ).json();
   assert.equal(session.route.option, route.options[1].id);
+});
+
+
+test("복합 질문의 출발·도착·조건으로 실제 경로와 세션을 만들어요", async () => {
+  const response = await request("intent", { query: "한림관 6층에서 은주1관 5층까지 계단 없이" });
+  assert.equal(response.status, 200);
+  const intent = await response.json();
+  assert.equal(intent.startPlaceId, "hallim|6");
+  assert.equal(intent.places[0].id, "eunju1|5");
+  assert.equal(intent.conditions.elevator, true);
+  assert.equal((await request("places/eunju1%7C5")).status, 200);
+  assert.equal((await request("places/eunju1%7C99")).status, 404);
+  const body = { start: intent.startPlaceId, destination: intent.places[0].id, elevator: intent.conditions.elevator };
+  const routeResponse = await request("routes", body);
+  assert.equal(routeResponse.status, 200);
+  const route = await routeResponse.json();
+  assert.equal(route.options[0].nodes[0], "hallim|6");
+  assert.equal(route.options[0].nodes.at(-1), "eunju1|5");
+  const sessionResponse = await request("sessions", body);
+  assert.equal(sessionResponse.status, 201);
+  const session = await sessionResponse.json();
+  assert.equal(session.destination, "eunju1|5");
+  assert.deepEqual(session.route.options[0].nodes, route.options[0].nodes);
 });

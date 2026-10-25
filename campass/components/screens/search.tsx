@@ -7,6 +7,7 @@ import {
   MessageIcon,
   SearchIcon,
 } from "@/components/icons";
+import { startLabel } from "@/lib/route-start";
 import { places } from "@/lib/catalog";
 import { Notice } from "@/components/ui";
 import { ClassroomPicker } from "@/components/classroom-picker";
@@ -23,6 +24,9 @@ export default function Screen() {
     setResults,
     searchNote,
     searchIntent,
+    searchStartRequested,
+    start,
+    registeredPlaces,
     elevator,
     classroomSelection,
     setClassroomSelection,
@@ -62,6 +66,9 @@ export default function Screen() {
           <ArrowRightIcon />
         </button>
       </form>
+      {searchStartRequested && (
+        <Notice>출발: {startLabel(start, registeredPlaces)}{start ? " · 목적지를 골라 경로를 확인해 주세요." : " · 길찾기 화면에서 출발지를 선택해 주세요."}</Notice>
+      )}
       {searchIntent !== "destination" && <p>{searchNote}</p>}
       {searchIntent !== "destination" ? (
         <Notice>

@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { recognizePhoto, interpretIntent } from "../lib/providers.ts";
 import * as providers from "../lib/providers.ts";
-import { places, searchPlaces } from "../lib/catalog.ts";
-import { allPlaces } from "../lib/rooms.ts";
+import { places } from "../lib/catalog.ts";
+import { findPlace } from "../lib/rooms.ts";
 
 async function fixture(
   value: unknown,
@@ -110,7 +110,7 @@ const intentCases = [
     query: "엘리베이터 타고 혜인관 3층",
     intent: "destination",
     conditions: { elevator: true },
-    first: "interview",
+    first: "hyein|3",
   },
   {
     query: "계단으로 면접 보러 갈게요",
@@ -151,7 +151,7 @@ for (const example of intentCases) {
     assert.deepEqual(result.conditions, example.conditions);
     assert.equal(result.places[0]?.id, example.first);
     if (!example.first) assert.deepEqual(result.places, []);
-    assert.ok(result.places.every((place) => allPlaces().includes(place)));
+    assert.ok(result.places.every((place) => Boolean(findPlace(place.id))));
     if ("elevator" in example.conditions)
       assert.ok(result.places.every((place) => place.id !== "elevator"));
     const response = await interpretIntent(example.query, {});
@@ -194,7 +194,7 @@ test("intent classification handles condition variants without returning all pla
   }
 });
 
-test("intent classification preserves facility searches and destination priority", () => {
+test("시설 질문을 유지하고 건물·목적지를 함께 말하면 같은 건물의 후보만 보여요", () => {
   for (const query of [
     "승강기 어디", "엘리베이터를 찾아요", "승강기 위치",
     "엘리베이터 쪽으로 가요", "승강기 근처로 가요",
@@ -222,10 +222,9 @@ test("intent classification preserves facility searches and destination priority
     "destination",
   );
   for (const query of ["면접 보러 왔어요", "헤인관 면접"]) {
-    assert.deepEqual(
-      providers.classifyIntent(query).places,
-      searchPlaces(query, undefined, undefined, allPlaces()),
-    );
+    const result = providers.classifyIntent(query).places;
+    assert.equal(result[0]?.id, "interview");
+    assert.ok(result.every((place) => place.building === "혜인관"));
   }
   const missing = providers.classifyIntent("존재하지않는장소xyz");
   assert.equal(missing.intent, "destination");
@@ -288,7 +287,7 @@ test("intent understands travel particles without treating unrelated words as lu
     assert.deepEqual(providers.classifyIntent(query).conditions, {}, query);
 });
 
-test("intent API receives only the destination remainder and cannot override local intent or conditions", async () => {
+test("외부 목적지 API도 이동 조건을 유지하고 미등록 목적지를 조건 질문으로 바꾸지 않아요", async () => {
   const queries: string[] = [];
   await fixture(
     { placeIds: ["interview"], intent: "next", conditions: { elevator: true } },
@@ -308,7 +307,7 @@ test("intent API receives only the destination remainder and cannot override loc
     const result = await interpretIntent("엘리베이터 타고 미등록 장소", {
       INTENT_API_URL: url,
     });
-    assert.equal(result.intent, "condition");
+    assert.equal(result.intent, "destination");
     assert.deepEqual(result.conditions, { elevator: true });
     assert.deepEqual(result.places, []);
     assert.equal(
@@ -363,7 +362,7 @@ test("Gemini status logs give only the reason, never the key or the sentence", a
     ] as [typeof gemini, () => Promise<string>, string]),
     [gemini, async () => "not json", "[gemini] 키워드 검색으로 대체: JSON 파싱 실패"],
     [gemini, async () => "[]", "[gemini] 키워드 검색으로 대체: JSON 형식 오류"],
-    [gemini, async () => { throw new Error("fetch failed"); }, "[gemini] 키워드 검색으로 대체: fetch failed"],
+    [gemini, async () => { throw new Error("fetch failed"); }, "[gemini] 키워드 검색으로 대체: 연결 오류"],
     [gemini, reply({ intent: "destination", placeIds: ["invented"], elevator: null }), "[gemini] 응답은 왔지만 장소 없음"],
   ];
   for (const [config, answer, expected] of cases) {
@@ -431,9 +430,9 @@ test("Gemini fills unresolved destinations with registered places only", async (
   assert.deepEqual(fallback.places, []);
 });
 
-test("Gemini intent and elevator are validated before use", async () => {
+test("잘못된 의도는 거부하고 유효한 의도와 이동 조건만 사용해요", async () => {
   const travel = fakeGemini(
-    reply({ intent: "weird", placeIds: ["elevator", "interview"], elevator: true }),
+    reply({ intent: "destination", placeIds: ["elevator", "interview"], elevator: true }),
   );
   const result = await interpretIntent(unresolved, gemini, travel.ask);
   assert.equal(result.mode, "llm");

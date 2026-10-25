@@ -3,7 +3,7 @@ export type Place = {
   name: string;
   building: string;
   floor: string;
-  category: "building" | "classroom" | "facility" | "event";
+  category: "building" | "classroom" | "facility" | "event" | "floor";
   aliases: string[];
   verified: boolean;
   source: string;

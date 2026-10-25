@@ -1,7 +1,9 @@
 import { AppError, waypoints } from "./routing.ts";
-import { places, searchPlaces, type Place } from "./catalog.ts";
-import { allPlaces, facilityPlaces } from "./rooms.ts";
-import { askGemini, type AskGemini, type GeminiConfig } from "./gemini.ts";
+import { places, type Place } from "./catalog.ts";
+import { findPlace } from "./rooms.ts";
+import { askGemini, type AskGemini, type GeminiConfig, type GeminiIntentResponse } from "./gemini.ts";
+import { graphNodes } from "./campus3d/route.ts";
+import { hasDestinationRequest, resolveIntentPlaces, shouldComplementIntent, splitJourney } from "./intent-analysis.ts";
 export type Candidate = {
   waypointId: string;
   confidence: number;
@@ -15,6 +17,8 @@ export type Recognition = {
 export type Intent = "destination" | "condition" | "next";
 export type IntentResult = {
   intent: Intent;
+  startPlaceId?: string;
+  startRequested?: boolean;
   conditions: { elevator?: boolean };
   places: Place[];
   mode: "keyword" | "api" | "llm";
@@ -60,22 +64,21 @@ function extractConditions(query: string) {
 
 export function classifyIntent(query: string, matchedPlaces?: Place[]) {
   const { conditions, searchQuery } = extractConditions(query);
-  // searchPlaces('')는 전체 장소를 돌려주므로 조건만 말한 경우엔 빈 결과로 둠
-  // 엘리베이터 조건이 있으면 엘리베이터 시설은 목적지에서 뺌
-  const candidates = (
-    matchedPlaces ??
-    (searchQuery
-      ? searchPlaces(searchQuery, undefined, undefined, allPlaces())
-      : [])
-  ).filter((p) => conditions.elevator === undefined || p.id !== "elevator");
-  const intent: Intent = candidates.length
+  const journey = splitJourney(searchQuery);
+  const local = searchQuery ? resolveIntentPlaces(journey?.destination ?? searchQuery) : { places: [], exact: false };
+  const candidates = ((journey && local.exact ? local.places : matchedPlaces) ?? local.places)
+    .filter((p) => conditions.elevator === undefined || p.id !== "elevator");
+  const starts = journey ? resolveIntentPlaces(journey.start).places : [];
+  const intent: Intent = candidates.length || journey
     ? "destination"
-    : conditions.elevator !== undefined
+    : conditions.elevator !== undefined && !hasDestinationRequest(searchQuery)
       ? "condition"
       : /여기서|다음에|이제\s*어디|어느\s*쪽|어디로\s*가야/.test(searchQuery)
-        ? "next"
-        : "destination";
-  return { intent, conditions, places: candidates };
+        ? "next" : "destination";
+  return {
+    intent, conditions, places: candidates,
+    ...(journey ? { startRequested: true, ...(starts.length === 1 ? { startPlaceId: starts[0].id } : {}) } : {}),
+  };
 }
 type Config = {
   VISION_API_URL?: string;
@@ -219,7 +222,7 @@ export async function recognizePhoto(
       : "등록 사진과 비교할 단서가 부족해요. 다시 촬영하거나 직접 선택해 주세요.",
   };
 }
-// 규칙이 못 찾은 경우만 Gemini로 보완. 규칙의 조건과 등록 장소가 우선
+// 문장 전체를 보완하되 명확한 출발지·목적지·이동 조건은 유지해요.
 async function complementWithGemini(
   query: string,
   keyword: IntentResult,
@@ -257,50 +260,53 @@ async function complementWithGemini(
             : typeof status === "number"
               ? `HTTP ${status}`
               : e instanceof Error
-                ? e.message.slice(0, 200)
+                ? "연결 오류"
                 : "알 수 없는 오류",
     );
     return keyword;
   } finally {
     clearTimeout(timer);
   }
+  const ids = "destinationPlaceIds" in raw ? raw.destinationPlaceIds : raw.placeIds;
+  if (!Array.isArray(ids) || !ids.every((id) => typeof id === "string") ||
+      !["destination", "condition", "next"].includes(String(raw.intent)) ||
+      (raw.elevator !== null && typeof raw.elevator !== "boolean") ||
+      (raw.startPlaceId !== undefined && raw.startPlaceId !== null && typeof raw.startPlaceId !== "string"))
+    return keyword;
+  const parsed: GeminiIntentResponse = {
+    intent: raw.intent as GeminiIntentResponse["intent"],
+    startPlaceId: typeof raw.startPlaceId === "string" ? raw.startPlaceId : null,
+    destinationPlaceIds: ids,
+    elevator: raw.elevator as boolean | null,
+  };
   const conditions = {
-    ...(typeof raw.elevator === "boolean" ? { elevator: raw.elevator } : {}),
+    ...(typeof parsed.elevator === "boolean" ? { elevator: parsed.elevator } : {}),
     ...keyword.conditions,
   };
-  const ids = Array.isArray(raw.placeIds) ? raw.placeIds : [];
-  const catalog = [...places, ...facilityPlaces()];
-  const matched = [...new Set(ids)]
-    .map((id) => catalog.find((p) => p.id === id))
-    .filter(
-      (p): p is Place =>
-        !!p && (conditions.elevator === undefined || p.id !== "elevator"),
-    )
+  const matched = [...new Set(parsed.destinationPlaceIds)]
+    .map((id) => findPlace(id))
+    .filter((p): p is Place => !!p && (conditions.elevator === undefined || p.id !== "elevator"))
     .slice(0, 5);
-  const intent = (["destination", "condition", "next"] as const).find(
-    (value) => value === raw.intent,
-  );
-  const derived: Intent = matched.length
-    ? "destination"
-    : conditions.elevator !== undefined
-      ? "condition"
-      : keyword.intent;
-  const result: Intent =
-    intent === "condition" && conditions.elevator === undefined
-      ? derived
-      : (intent ?? derived);
-  if (
-    !matched.length &&
-    conditions.elevator === undefined &&
-    result === keyword.intent
-  ) {
+  const { searchQuery } = extractConditions(query);
+  const journey = splitJourney(searchQuery);
+  const local = resolveIntentPlaces(journey?.destination ?? searchQuery);
+  const destination = local.exact && !/말고|아니|근처|가까운|중에서/.test(query) ? keyword.places : matched;
+  const rawStart = parsed.startPlaceId ?? undefined;
+  const validStart = rawStart && (findPlace(rawStart) || graphNodes.includes(rawStart) || waypoints.some((w) => w.id === rawStart))
+    ? rawStart : undefined;
+  if (rawStart && !validStart) return keyword;
+  const startPlaceId = keyword.startPlaceId ?? validStart;
+  if (!destination.length && conditions.elevator === undefined && raw.intent === keyword.intent && !startPlaceId) {
     console.info("[gemini] 응답은 왔지만 장소 없음");
     return keyword;
   }
+  if (!destination.length && keyword.intent === "destination" && raw.intent !== "next") return keyword;
   return {
-    intent: result,
+    intent: destination.length ? "destination" : raw.intent as Intent,
     conditions,
-    places: matched,
+    places: destination,
+    ...(startPlaceId ? { startPlaceId } : {}),
+    ...(keyword.startRequested || startPlaceId ? { startRequested: true } : {}),
     mode: "llm",
     message: "질문 뜻을 해석해 찾았어요. 맞는지 확인해 주세요.",
   };
@@ -319,11 +325,7 @@ export async function interpretIntent(
       mode: "keyword",
       message: "등록된 장소명과 검색어로 찾았어요.",
     };
-    const unresolved =
-      keyword.intent === "destination" &&
-      !keyword.places.length &&
-      keyword.conditions.elevator === undefined;
-    if (!unresolved || !searchQuery) return keyword;
+    if (!shouldComplementIntent(query, searchQuery, keyword)) return keyword;
     if (!config.GEMINI_API_KEY || !config.GEMINI_MODEL) {
       console.warn(
         `[gemini] 건너뜀: ${config.GEMINI_API_KEY ? "GEMINI_MODEL" : "GEMINI_API_KEY"} 없음`,
@@ -337,7 +339,7 @@ export async function interpretIntent(
       config.INTENT_API_URL,
       config.INTENT_API_KEY,
       JSON.stringify({
-        query: searchQuery,
+        query: splitJourney(searchQuery)?.destination ?? searchQuery,
         campusId: "seokyeong",
         places: places.map((p) => ({
           id: p.id,
