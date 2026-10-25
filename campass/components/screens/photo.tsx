@@ -125,7 +125,7 @@ const analysisSteps = getDefaultAnalysisSteps();
           <span className="photo-frame-corner br" />
 
           <span className="photo-camera-placeholder">
-            카메라 화면
+            촬영 가이드
           </span>
 
           <strong className="photo-camera-guide-text">
@@ -145,15 +145,14 @@ const analysisSteps = getDefaultAnalysisSteps();
         </div>
 
         <div className="photo-info-card">
-          <strong>사진으로 찾을 수 있는 곳 · 임시</strong>
-          <p>
-            길안내 경로에 등록한 지점만 찾을 수 있어요.
-          </p>
-          <p>
-            본관 1층 · 한림관 3·6층 · 은주1관 5층 ·
-            스콘스퀘어 · 혜인관 1층
-          </p>
-        </div>
+        <strong>사진으로 찾을 수 있는 곳 · 임시</strong>
+        <p>
+          길안내 경로에 등록된 일부 지점만 사진으로 찾을 수 있어요.
+       </p>
+       <p>
+          본관 1층 · 한림관 3·6층 · 은주1관 5층
+       </p>
+      </div>
 
         <div className="photo-action-row">
           <button

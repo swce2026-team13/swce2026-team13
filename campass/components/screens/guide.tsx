@@ -186,7 +186,7 @@ export default function Screen() {
       }
     >
       {session.status === "completed"
-        ? "도착 안내 보기"
+        ? "목적지에 도착했어요"
         : "다음 지점에 도착했어요"}
       <CheckIcon size={18} />
     </button>

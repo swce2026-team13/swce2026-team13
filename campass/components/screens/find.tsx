@@ -20,7 +20,7 @@ export default function Screen({
   facilities: Place[];
 }) {
   const params = useSearchParams();
-  const { busy, choose } = useCampus();
+  const { busy, choose, go } = useCampus();
   const tab = params.get("tab") === "facility" ? "facility" : "classroom";
   const building =
     buildings.find((b) => b.name === params.get("building"))?.name ?? "혜인관";
@@ -87,6 +87,13 @@ export default function Screen({
           <p className="find-step" role="status">
             {building} · 층을 골라 주세요
           </p>
+          <button
+          type="button"
+           className="button secondary"
+         onClick={() => go("places", { building })}
+        >
+  {building} 층별 주요 장소 보기
+</button>
           {floors.length === 0 ? (
             <Notice>
               <b>층별 강의실 정보를 준비하고 있어요</b>
