@@ -121,6 +121,7 @@ export default function Screen() {
   const [risky, setRisky] = useState<{
     key: string;
     point?: { name: string; passages: number; confusions: number; rate: number };
+    dataMode?: string;
   }>({ key: "" });
   const riskyKey = routeOption
     ? JSON.stringify([start, destination.id, elevator, routeOption.id])
@@ -134,15 +135,27 @@ export default function Screen() {
       elevator: String(elevator),
       option: routeOption!.id,
     });
-    api<{ points: { name: string; passages: number; confusions: number; rate: number }[] }>(
-      `route-insights?${params}`,
-    )
+    api<{
+  points: {
+    name: string;
+    passages: number;
+    confusions: number;
+    rate: number;
+  }[];
+  dataMode: string;
+}>(
+  `route-insights?${params}`,
+)
       .then((data) => {
         if (cancelled) return;
         const point = data.points
           .filter((p) => p.confusions > 0)
           .sort((a, b) => b.rate - a.rate || b.confusions - a.confusions)[0];
-        setRisky({ key: riskyKey, point });
+        setRisky({
+         key: riskyKey,
+         point,
+         dataMode: data.dataMode,
+        });
       })
       .catch(() => {
         if (!cancelled) setRisky({ key: riskyKey });
@@ -154,6 +167,9 @@ export default function Screen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [riskyKey]);
   const riskyPoint = risky.key === riskyKey ? risky.point : undefined;
+  const isDemoRisk =
+  risky.key === riskyKey &&
+  risky.dataMode === "demo-route-activity";
   return (
     <>
       <section className="content stack prepare-screen">
@@ -346,6 +362,9 @@ export default function Screen() {
         {route && riskyPoint && (
           <div className="prepare-warning">
             <b>헤매는 사람이 많은 구간이 있어요</b>
+            {isDemoRisk && (
+             <small>시연용 예시 기록 포함</small>
+            )}
             <p>
               {riskyPoint.name}에서 {riskyPoint.passages}명 중{" "}
               {riskyPoint.confusions}명이 헤맸어요. 그 구간 앞에서 한 번 더
