@@ -13,7 +13,8 @@
     "lint": "eslint",
     "test": "node --test tests/*.test.ts",
     "test:api": "node --test tests/api.test.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "eval:intent": "node --env-file-if-exists=.env.local scripts/eval-intent.ts"
   },
   "dependencies": {
     "@fontsource-variable/noto-sans-kr": "^5.3.0",

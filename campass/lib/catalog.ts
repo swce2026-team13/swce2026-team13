@@ -103,7 +103,7 @@ export const places: Place[] = [
     building: "혜인관",
     floor: "지하 1층",
     category: "classroom",
-    aliases: [`시청각실${n}`],
+    aliases: [`시청각실${n}`, "시청각실"],
     verified: true,
     source: sources.notice,
     description: "2026 신입생 OT 공지에 지하 1층으로 명시",
@@ -185,7 +185,8 @@ export function searchPlaces(
       const score = full.includes(q)
         ? 100
         : terms.reduce(
-            (n, a) => n + (a.length >= 2 && q.includes(a) ? a.length : 0),
+            (n, a) => n + ((a.length >= 2 ||
+              (a === "밥" && /(?:^|\s)밥(?:[을은이도])?(?=$|[\s.,!?])/.test(query))) && q.includes(a) ? a.length : 0),
             0,
           );
       return { p, score };

@@ -4,7 +4,8 @@ import { GuideRiskNotice } from "@/components/guide-risk-notice";
 import { useState } from "react";
 import { GuideMapViewport } from "@/components/guide-map-viewport";
 import {
-  answerGuideQuestion,
+  answerGuideIntent,
+  type GuideViewModel,
   toGuideViewModel,
 } from "@/lib/guide-view";
 import { Sparkles } from "lucide-react";
@@ -15,11 +16,10 @@ import {
   MapIcon,
 } from "@/components/icons";
 import { Notice } from "@/components/ui";
-import { useCampus } from "@/components/campus-provider";
+import { api, useCampus } from "@/components/campus-provider";
+import type { IntentResult } from "@/lib/providers";
 export default function Screen() {
   const {
-    query,
-    setQuery,
     session,
     busy,
     go,
@@ -33,11 +33,6 @@ export default function Screen() {
     hasSession,
   } = useCampus();
   const guide = toGuideViewModel(session);
-  const [showGuideAnswer, setShowGuideAnswer] = useState(false);
-
-  const guideAnswer = showGuideAnswer
-    ? answerGuideQuestion(guide)
-   : null;
   return (
     <>
       {!hasSession && (
@@ -155,50 +150,7 @@ export default function Screen() {
   </button>
 </div>
             <div className="guide-tools">
-  <div className="guide-question-card">
-    <span className="search-caption">
-      <Sparkles size={16} strokeWidth={1.65} />
-      이동 중 다른 장소가 궁금한가요?
-    </span>
-
-    <form
-      className="search-box compact glass-card"
-      onSubmit={(e) => {
-      e.preventDefault();
-
-      if (query.trim()) {
-       setShowGuideAnswer(true);
-     }
-    }}
-    >
-      <input
-        aria-label="이동 중 목적지 질문"
-        placeholder="여기서 어디로 가요?"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-      />
-
-      <button
-        aria-label="장소 질문 검색"
-        disabled={busy || !query.trim()}
-      >
-        <ArrowRightIcon size={18} />
-      </button>
-    </form>
-    {guideAnswer && (
-  <div className="guide-answer-card">
-    <strong>{query.trim() || guideAnswer.title}</strong>
-
-    <span className="guide-answer-intent">
-      {guideAnswer.interpretation}
-    </span>
-
-    <p>{guideAnswer.answer}</p>
-
-    <small>{guideAnswer.context}</small>
-  </div>
-)}
-  </div>
+  <GuideQuestionCard key={`${session.id}-${session.currentStep}`} guide={guide} />
 
   <button
     type="button"
@@ -246,5 +198,78 @@ export default function Screen() {
         </>
       )}
     </>
+  );
+}
+
+function GuideQuestionCard({ guide }: { guide: GuideViewModel }) {
+  const { session, elevator, busy, go } = useCampus();
+  const [question, setQuestion] = useState("");
+  const [result, setResult] = useState<IntentResult | null>(null);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState("");
+  const answer = result ? answerGuideIntent(guide, result) : null;
+
+  async function ask() {
+    if (pending || busy || !question.trim()) return;
+    setPending(true);
+    setResult(null);
+    setError("");
+    try {
+      setResult(await api<IntentResult>("intent", { query: question.trim() }));
+    } catch (error) {
+      setError((error as { status?: number }).status === 429
+        ? "질문이 많아 잠시 쉬고 있어요. 잠시 후 다시 물어봐 주세요."
+        : "질문을 해석하지 못했어요. 잠시 후 다시 물어봐 주세요.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <div className="guide-question-card">
+      <span className="search-caption">
+        <Sparkles size={16} strokeWidth={1.65} />
+        이동 중 다른 장소가 궁금한가요?
+      </span>
+      <form className="search-box compact glass-card" onSubmit={(event) => {
+        event.preventDefault();
+        void ask();
+      }}>
+        <input aria-label="이동 중 목적지 질문" placeholder="여기서 어디로 가요?"
+          value={question} disabled={pending} maxLength={200}
+          onChange={(event) => { setQuestion(event.target.value); setResult(null); setError(""); }} />
+        <button aria-label="장소 질문 검색" disabled={busy || pending || !question.trim()}>
+          <ArrowRightIcon size={18} />
+        </button>
+      </form>
+      {pending && <p role="status">질문을 확인하고 있어요.</p>}
+      {error && <p role="alert">{error}</p>}
+      {answer && (
+        <div className="guide-answer-card" aria-live="polite">
+          <strong>{question.trim() || answer.title}</strong>
+          <span className="guide-answer-intent">{answer.interpretation}</span>
+          <p>{answer.answer}</p>
+          <small>{answer.context}</small>
+          <div className="stack" style={{ gap: 8, marginTop: 12 }}>
+          {answer.destination && (
+            <button className="button primary" disabled={busy} onClick={() => go("prepare", {
+              start: guide.current!.id,
+              destination: answer.destination!.id,
+              building: answer.destination!.building,
+              elevator: String(elevator),
+            })}>여기로 목적지 바꾸기</button>
+          )}
+          {answer.elevator !== undefined && session && (
+            <button className="button primary" disabled={busy} onClick={() => go("prepare", {
+              start: guide.current!.id,
+              destination: session.destination,
+              elevator: String(answer.elevator),
+            })}>이 조건으로 다시 찾기</button>
+          )}
+          <button className="button secondary" onClick={() => setResult(null)}>지금 안내 계속하기</button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

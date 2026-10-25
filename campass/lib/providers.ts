@@ -1,6 +1,6 @@
 import { AppError, waypoints } from "./routing.ts";
 import { places, searchPlaces, type Place } from "./catalog.ts";
-import { allPlaces } from "./rooms.ts";
+import { allPlaces, facilityPlaces } from "./rooms.ts";
 import { askGemini, type AskGemini, type GeminiConfig } from "./gemini.ts";
 export type Candidate = {
   waypointId: string;
@@ -39,7 +39,7 @@ const travelConditions = new RegExp(
 function extractConditions(query: string) {
   const conditions: IntentResult["conditions"] = {};
   // 시설 위치 질문은 검색어로 남기고, 이동 조건은 문장에 나온 순서대로 적용한다.
-  const facility = /어디|찾|위치|(?:엘리베이터|승강기)\s*(?:앞|쪽|근처)/.test(
+  const facility = /(?:엘리베이터|승강기)\s*(?:앞|쪽|근처|(?:으?로\s*)?(?:어디|위치|찾))/.test(
     query,
   );
   const searchQuery = query
@@ -269,8 +269,9 @@ async function complementWithGemini(
     ...keyword.conditions,
   };
   const ids = Array.isArray(raw.placeIds) ? raw.placeIds : [];
+  const catalog = [...places, ...facilityPlaces()];
   const matched = [...new Set(ids)]
-    .map((id) => places.find((p) => p.id === id))
+    .map((id) => catalog.find((p) => p.id === id))
     .filter(
       (p): p is Place =>
         !!p && (conditions.elevator === undefined || p.id !== "elevator"),
