@@ -75,6 +75,13 @@ function facilityKind(name: string): NonNullable<Place["kind"]> {
 }
 
 // 학교 편의시설. 건물이 없는 곳(산책로)은 빼고, 연락처는 넣지 않음
+const facilityAliases: Record<NonNullable<Place["kind"]>, string[]> = {
+  cafe: ["카페", "커피"],
+  store: ["편의점", "매점", "음료"],
+  dining: ["식당", "밥", "학식", "점심"],
+  aed: ["AED", "제세동기", "심장"],
+  etc: [],
+};
 let facilities: Place[] | undefined;
 export function facilityPlaces() {
   if (facilities) return facilities;
@@ -100,7 +107,7 @@ export function facilityPlaces() {
         building: p.building,
         floor,
         category: "facility",
-        aliases: [`${p.building} ${p.name}`],
+        aliases: [`${p.building} ${p.name}`, ...facilityAliases[facilityKind(p.name)]],
         verified: true,
         source: "학교 캠퍼스맵",
         description: parseHours(p.hours).summary,

@@ -82,6 +82,7 @@ export default function Screen() {
       <button className="button primary" onClick={() => go("home")}>
         목적지 찾아보기
       </button>
+      <p className="fine-print">검색 문장은 뜻을 해석하려고 외부 AI(Gemini)에 보낼 수 있어요. 이름 · 연락처 같은 개인정보는 적지 마세요.</p>
     </section>
   );
 }
