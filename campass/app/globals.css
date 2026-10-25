@@ -4017,3 +4017,42 @@ progress::-moz-progress-bar {
   line-height: 1.55;
   color: #6f5a24;
 }
+
+.admin-screen .tag.red {
+  color: #a82235;
+  background: #ffe5e9;
+}
+.confusion-highlight .tag.red {
+  color: #a82235;
+  background: #ffe5e9;
+}
+.admin-filters .chips,
+.insight-reasons,
+.insight-point-heading {
+  flex-wrap: wrap;
+}
+.insight-point-heading b {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.insight-point-heading .rank {
+  flex-shrink: 0;
+}
+.admin-filters select {
+  width: 100%;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: white;
+  color: var(--text);
+}
+.admin-demo input {
+  width: auto;
+}
+@media (pointer: coarse) {
+  .admin-login-field input {
+    font-size: 16px;
+  }
+}

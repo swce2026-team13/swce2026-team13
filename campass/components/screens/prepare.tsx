@@ -354,7 +354,7 @@ export default function Screen() {
             <button
               type="button"
               className="button secondary"
-              onClick={() => go("confusion")}
+              onClick={() => go("confusion", { option: routeOption?.id ?? "" })}
             >
               자세히 보기
             </button>

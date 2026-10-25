@@ -1,6 +1,8 @@
 "use client";
 
-import { getConfusionAdvice } from "@/lib/confusion-advice";
+import { confusionLevel, levelTones, getConfusionAdvice } from "@/lib/confusion-advice";
+import { Tag } from "@/components/ui";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AlertTriangle, Lightbulb, MapPin } from "lucide-react";
 import { BackIcon } from "@/components/icons";
@@ -8,6 +10,7 @@ import { api, useCampus } from "@/components/campus-provider";
 
 export default function Screen() {
   const { go, start, destination, elevator } = useCampus();
+  const option = useSearchParams().get("option") || "";
 
 const [points, setPoints] = useState<
   {
@@ -24,12 +27,13 @@ useEffect(() => {
     start,
     destination: destination.id,
     elevator: String(elevator),
+    option,
   });
 
   api<{ points: typeof points }>(`route-insights?${params}`)
     .then((data) => setPoints(data.points))
     .catch(() => setPoints([]));
-}, [start, destination.id, elevator]);
+}, [start, destination.id, elevator, option]);
 const riskyPoint = points
   .filter((point) => point.confusions > 0)
   .sort((a, b) => b.rate - a.rate || b.confusions - a.confusions)[0];
@@ -40,7 +44,7 @@ const riskyPoint = points
       <button
         type="button"
         className="confusion-back"
-        onClick={() => go("prepare")}
+        onClick={() => go("prepare", { option })}
       >
         <BackIcon size={18} />
         돌아가기
@@ -63,6 +67,11 @@ const riskyPoint = points
          <span className="confusion-badge">
             {riskyPoint ? `혼란율 ${riskyPoint.rate}%` : "기록 없음"}
         </span>
+        {riskyPoint && (
+          <Tag tone={levelTones[confusionLevel(riskyPoint.passages, riskyPoint.confusions)]}>
+            {confusionLevel(riskyPoint.passages, riskyPoint.confusions)}
+          </Tag>
+        )}
         </div>
 
         <h2>

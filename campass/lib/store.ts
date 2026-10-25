@@ -2,13 +2,16 @@ import { DatabaseSync } from "node:sqlite";
 import { randomBytes, randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-import { AppError, calculateRoute, waypoints, type Route } from "./routing.ts";
+import { AppError, calculateRoute, startPoint, waypoints, type Route } from "./routing.ts";
 import { currentPlaceId } from "./catalog.ts";
 import { allPlaces } from "./rooms.ts";
-import { nodeLabel } from "./campus3d/route.ts";
+import { graphEdges, nodeArea, nodeLabel } from "./campus3d/route.ts";
+import { campusBuildings } from "./campus3d/types.ts";
+import { confusionLevel, confusionLevels, confusionReasons } from "./confusion-advice.ts";
 export const ADMIN_SESSION_SECONDS = 8 * 60 * 60;
 export type Session = {
   id: string;
+  demo?: boolean;
   destination: string;
   route: Route;
   currentStep: number;
@@ -344,48 +347,76 @@ export class Store {
 
     return { saved: true };
   }
-  insights() {
-    const rows = this.db
-      .prepare(
-        `SELECT p.waypoint_id AS id,COUNT(*) AS passages,COUNT(c.session_id) AS confusions FROM passages p LEFT JOIN confusions c ON c.session_id=p.session_id AND c.waypoint_id=p.waypoint_id GROUP BY p.waypoint_id`,
-      )
-      .all() as { id: string; passages: number; confusions: number }[];
-    const points = rows
-  .map((r) => {
-    const topReason = this.db
-      .prepare(
-        `SELECT reason, COUNT(*) AS count
-         FROM confusions
-         WHERE waypoint_id=?
-         GROUP BY reason
-         ORDER BY count DESC
-         LIMIT 1`,
-      )
-      .get(r.id) as { reason: string; count: number } | undefined;
-
-    return {
-      ...r,
-      // 사진 안내 지점이 아니면 그래프 노드 이름으로 (예: bon|5 → 본관 5층)
-      name: waypoints.find((w) => w.id === r.id)?.name ?? nodeLabel(r.id),
-      rate: Math.round((r.confusions / r.passages) * 1000) / 10,
-      topReason: topReason?.reason ?? null,
-    };
-  })
-      .sort((a, b) => b.rate - a.rate || b.confusions - a.confusions);
-    const passages = points.reduce((n, p) => n + p.passages, 0),
-      confusions = points.reduce((n, p) => n + p.confusions, 0);
-    const feedbacks = (
-      this.db.prepare("SELECT COUNT(*) AS count FROM feedback").get() as {
-        count: number;
+  insights(filters: { period?: string; building?: string; reason?: string; demo?: string } = {}) {
+    const { period = "all", building, reason, demo = "include" } = filters;
+    if (!["all", "7d", "today"].includes(period) ||
+        !["include", "exclude"].includes(demo) ||
+        (building !== undefined && !campusBuildings().some((b) => b.id === building)) ||
+        (reason !== undefined && !confusionReasons.some((r) => r === reason)))
+      throw new AppError("통계 필터를 확인해 주세요.");
+    // 오늘은 한국 시간 자정, 최근 7일은 오늘을 포함한 일곱 날짜로 집계해요.
+    const now = new Date();
+    const day = new Date(now.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const midnight = Date.parse(`${day}T00:00:00+09:00`);
+    const since = period === "all" ? null : new Date(
+      midnight - (period === "7d" ? 6 * 24 * 60 * 60 * 1000 : 0),
+    ).toISOString();
+    const rows = this.db.prepare(`
+      SELECT p.session_id, p.waypoint_id AS id, c.reason, f.data AS feedback,
+        (s.id GLOB 'demo-*' AND s.owner='demo' AND json_extract(s.data,'$.demo')=1) AS demo
+      FROM passages p JOIN sessions s ON s.id=p.session_id
+      LEFT JOIN confusions c ON c.session_id=p.session_id AND c.waypoint_id=p.waypoint_id
+      LEFT JOIN feedback f ON f.session_id=p.session_id
+      WHERE (? IS NULL OR julianday(p.created_at)>=julianday(?))
+    `).all(since, since) as {
+      session_id: string; id: string; reason: string | null; feedback: string | null; demo: number;
+    }[];
+    const areas = new Map<string, string>();
+    const filtered = rows.filter((row) => {
+      if (!building) return true;
+      if (!areas.has(row.id)) {
+        const point = startPoint(row.id);
+        const link = point?.link ? graphEdges.find((edge) => edge.id === point.link) : undefined;
+        areas.set(row.id, nodeArea(link?.a ?? point?.node ?? row.id));
       }
-    ).count;
+      return areas.get(row.id) === building;
+    });
+    // 예시를 뺀 상태에서도 다시 포함할 수 있게, 같은 범위의 예시 세션 수를 알려줘요.
+    const demoSessions = new Set(filtered.filter((r) => r.demo).map((r) => r.session_id)).size;
+    const groups = new Map<string, { passages: number; confusions: number; reasons: Map<string, number> }>();
+    const feedbackSessions = new Set<string>();
+    for (const row of filtered) {
+      if (demo === "exclude" && row.demo) continue;
+      const group = groups.get(row.id) ?? { passages: 0, confusions: 0, reasons: new Map<string, number>() };
+      group.passages++;
+      if (row.reason && (!reason || row.reason === reason)) {
+        group.confusions++;
+        group.reasons.set(row.reason, (group.reasons.get(row.reason) ?? 0) + 1);
+      }
+      groups.set(row.id, group);
+      if (row.feedback && (!reason || JSON.parse(row.feedback).reason === reason))
+        feedbackSessions.add(row.session_id);
+    }
+    const points = [...groups].map(([id, group]) => {
+      const reasons = [...group.reasons].map(([reason, count]) => ({ reason, count }))
+        .sort((a, b) => b.count - a.count || a.reason.localeCompare(b.reason, "ko"));
+      return {
+        id, passages: group.passages, confusions: group.confusions,
+        // 사진 안내 지점이 아니면 그래프 노드 이름으로 보완해요.
+        name: waypoints.find((w) => w.id === id)?.name ?? nodeLabel(id),
+        rate: Math.round(group.confusions / group.passages * 1000) / 10,
+        level: confusionLevel(group.passages, group.confusions),
+        reasons, topReason: reasons[0]?.reason ?? null,
+      };
+    }).sort((a, b) => confusionLevels.indexOf(a.level) - confusionLevels.indexOf(b.level) ||
+      b.confusions / b.passages - a.confusions / a.passages || b.confusions - a.confusions);
+    const passages = points.reduce((n, p) => n + p.passages, 0);
+    const confusions = points.reduce((n, p) => n + p.confusions, 0);
     return {
-      passages,
-      confusions,
-      rate: passages ? Math.round((confusions / passages) * 1000) / 10 : 0,
-      feedbacks,
-      points,
-      scope: "all-time",
+      passages, confusions,
+      rate: passages ? Math.round(confusions / passages * 1000) / 10 : 0,
+      feedbacks: feedbackSessions.size, points, demoSessions,
+      scope: period === "all" ? "all-time" : period,
       dataMode: "demo-route-activity",
     };
   }

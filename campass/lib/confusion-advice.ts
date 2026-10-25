@@ -1,3 +1,33 @@
+export const MIN_PASSAGES = 5;
+export const IMPROVEMENT_RATE = 30;
+export const CAUTION_RATE = 15;
+
+export const confusionLevels = ["개선 필요", "주의", "양호", "기록 부족"] as const;
+export type ConfusionLevel = (typeof confusionLevels)[number];
+
+export function confusionLevel(passages: number, confusions: number): ConfusionLevel {
+  if (passages < MIN_PASSAGES) return "기록 부족";
+  const rate = confusions / passages * 100;
+  if (rate >= IMPROVEMENT_RATE) return "개선 필요";
+  if (rate >= CAUTION_RATE) return "주의";
+  return "양호";
+}
+
+export const levelTones: Record<ConfusionLevel, string> = {
+  "개선 필요": "red", "주의": "amber", "양호": "green", "기록 부족": "gray",
+};
+
+export const improvementAdvice = {
+  "방향 혼란": "갈림길에 방향 표지를 더하거나 안내 문구를 더 구체적으로 바꿔 보세요.",
+  "지도랑 달랐어요": "연결 통로 · 층 정보를 현장에서 다시 확인해 지도 자료를 고쳐 주세요.",
+  "표지판 부족": "건물 · 층 표지를 더 잘 보이는 곳에 두도록 건의해 보세요.",
+  "사진 불일치": "이 지점의 안내 사진을 다시 찍어 바꿔 주세요.",
+  "위치 재확인": "현재 위치를 알 수 있는 표지(건물 · 층 · 방향)를 보강해 보세요.",
+  "기타": "피드백 의견을 확인해 원인을 살펴보세요.",
+};
+export type ConfusionReason = keyof typeof improvementAdvice;
+export const confusionReasons = Object.keys(improvementAdvice) as ConfusionReason[];
+
 export function getConfusionAdvice(
   reason: string | null | undefined,
 ) {

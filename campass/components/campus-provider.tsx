@@ -5,7 +5,7 @@ import { BuildingIcon, ChevronRightIcon } from "./icons";
 import { places, type Place } from "@/lib/catalog";
 import { waypoints, type Route } from "@/lib/routing";
 import { samePlace } from "@/lib/route-start";
-import type { Session } from "@/lib/store";
+import type { Session, Store } from "@/lib/store";
 import type {
   Candidate,
   Recognition,
@@ -17,19 +17,7 @@ import { classroomSearch } from "@/lib/classrooms";
 import { createContext, useContext } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { navigationHref, viewForPath, type View } from "@/lib/navigation";
-export type Insight = {
-  passages: number;
-  confusions: number;
-  rate: number;
-  feedbacks: number;
-  points: {
-    id: string;
-    name: string;
-    passages: number;
-    confusions: number;
-    rate: number;
-  }[];
-};
+export type Insight = ReturnType<Store["insights"]>;
 export async function api<T>(path: string, body?: unknown): Promise<T> {
   const response = await fetch(`/api/${path}`, {
     method: body === undefined ? "GET" : "POST",
