@@ -275,6 +275,7 @@ export function startPoint(start: string, list: Place[] = places) {
 
 function destinationNodes(destination: string, list: Place[]) {
   const id = currentPlaceId(destination);
+  if (id.includes("|") && graphNodes.includes(id)) return [id];
   if (id === PLAZA) return [PLAZA];
   if (id === "parking") return [PARKING];
   if (id === "eunju1_5f_front") return ["eunju1|5"];

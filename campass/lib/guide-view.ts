@@ -165,6 +165,14 @@ export function answerGuideIntent(
       elevator: result.conditions.elevator,
     };
   }
+  if (result.intent === "destination" && result.places.length > 1) {
+    return {
+      title: "목적지를 골라 주세요",
+      interpretation: "목적지 후보가 여러 곳이에요",
+      answer: "건물과 층을 확인하고 원하는 장소를 골라 주세요.",
+      context,
+    };
+  }
   const place = result.intent === "destination" ? result.places[0] : undefined;
   if (place) {
     const location = [place.building, place.floor].filter(Boolean).join(" ");

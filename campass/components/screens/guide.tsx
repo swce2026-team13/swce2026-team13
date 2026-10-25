@@ -1,7 +1,8 @@
 "use client";
 
 import { GuideRiskNotice } from "@/components/guide-risk-notice";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createIntentRequest } from "@/lib/intent-request";
 import { GuideMapViewport } from "@/components/guide-map-viewport";
 import {
   answerGuideIntent,
@@ -203,6 +204,11 @@ export default function Screen() {
 
 function GuideQuestionCard({ guide }: { guide: GuideViewModel }) {
   const { session, elevator, busy, go } = useCampus();
+  const request = useRef(createIntentRequest((query) => api<IntentResult>("intent", { query })));
+  useEffect(() => {
+    const current = request.current;
+    return () => current.cancel();
+  }, []);
   const [question, setQuestion] = useState("");
   const [result, setResult] = useState<IntentResult | null>(null);
   const [pending, setPending] = useState(false);
@@ -215,7 +221,7 @@ function GuideQuestionCard({ guide }: { guide: GuideViewModel }) {
     setResult(null);
     setError("");
     try {
-      setResult(await api<IntentResult>("intent", { query: question.trim() }));
+      setResult(await request.current.run(question.trim()));
     } catch (error) {
       setError((error as { status?: number }).status === 429
         ? "질문이 많아 잠시 쉬고 있어요. 잠시 후 다시 물어봐 주세요."
@@ -251,12 +257,20 @@ function GuideQuestionCard({ guide }: { guide: GuideViewModel }) {
           <p>{answer.answer}</p>
           <small>{answer.context}</small>
           <div className="stack" style={{ gap: 8, marginTop: 12 }}>
+          {result?.intent === "destination" && result.places.length > 1 && result.places.map((place) => (
+            <button key={place.id} className="button secondary" disabled={busy} onClick={() => go("prepare", {
+              start: result.startRequested ? result.startPlaceId ?? "" : guide.current!.id,
+              destination: place.id,
+              building: place.building,
+              elevator: String(result.conditions.elevator ?? elevator),
+            })}>{place.building} {place.floor} · {place.name}</button>
+          ))}
           {answer.destination && (
             <button className="button primary" disabled={busy} onClick={() => go("prepare", {
-              start: guide.current!.id,
+              start: result?.startRequested ? result.startPlaceId ?? "" : guide.current!.id,
               destination: answer.destination!.id,
               building: answer.destination!.building,
-              elevator: String(elevator),
+              elevator: String(result?.conditions.elevator ?? elevator),
             })}>여기로 목적지 바꾸기</button>
           )}
           {answer.elevator !== undefined && session && (

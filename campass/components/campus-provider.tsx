@@ -13,6 +13,7 @@ import type {
   IntentResult,
 } from "@/lib/providers";
 import { Tag } from "@/components/ui";
+import { createIntentRequest } from "@/lib/intent-request";
 import { classroomSearch } from "@/lib/classrooms";
 import { createContext, useContext } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -73,6 +74,8 @@ function useCampusState() {
   const [query, setQuery] = useState(""),
     [results, setResults] = useState<Place[]>([]),
     [searchNote, setSearchNote] = useState("");
+  const intentRequest = useRef(createIntentRequest((query) => api<IntentResult>("intent", { query })));
+  const [searchStartRequested, setSearchStartRequested] = useState(false);
   const [searchIntent, setSearchIntent] = useState<Intent>("destination");
   const [classroomSelection, setClassroomSelection] = useState<ReturnType<
     typeof classroomSearch
@@ -185,18 +188,20 @@ function useCampusState() {
   ]);
   useEffect(() => {
     if (view !== "search") return;
+    const request = intentRequest.current;
     let cancelled = false;
     Promise.resolve().then(async () => {
       if (cancelled) return;
       setQuery(selectedQuery);
       setResults([]);
       setSearchIntent("destination");
+      setSearchStartRequested(false);
       setClassroomSelection(null);
       setClassroomBuilding(null);
       setSearchNote("검색 결과");
       if (!selectedQuery && !selectedCategory) return;
       try {
-        const result: Pick<IntentResult, "intent" | "conditions" | "places"> =
+        const result: Pick<IntentResult, "intent" | "conditions" | "places" | "startPlaceId" | "startRequested"> | null =
           selectedCategory
             ? {
                 ...(await api<{ places: Place[] }>(
@@ -205,13 +210,20 @@ function useCampusState() {
                 intent: "destination",
                 conditions: {},
               }
-            : await api<IntentResult>("intent", { query: selectedQuery });
-        if (cancelled) return;
+            : await intentRequest.current.run(selectedQuery);
+        if (cancelled || !result) return;
         const nextElevator = result.conditions.elevator;
-        if (typeof nextElevator === "boolean") {
-          setElevator(nextElevator);
+        setSearchStartRequested(Boolean(result.startRequested));
+        if (typeof nextElevator === "boolean" || result.startRequested) {
           const url = new URL(window.location.href);
-          url.searchParams.set("elevator", String(nextElevator));
+          if (typeof nextElevator === "boolean") {
+            setElevator(nextElevator);
+            url.searchParams.set("elevator", String(nextElevator));
+          }
+          if (result.startRequested) {
+            setStart(result.startPlaceId ?? "");
+            url.searchParams.set("start", result.startPlaceId ?? "");
+          }
           window.history.replaceState(
             null,
             "",
@@ -220,6 +232,15 @@ function useCampusState() {
         }
         setSearchIntent(result.intent);
         if (result.intent !== "destination") return;
+        if (!selectedCategory && (result.startRequested ||
+            !result.places.some((p) => p.category === "classroom") ||
+            /\d{3,4}|시청각|H\d+/i.test(selectedQuery))) {
+          setResults(result.places);
+          setClassroomSelection(null);
+          setClassroomBuilding(null);
+          setSearchRevision((value) => value + 1);
+          return;
+        }
         const selection = classroomSearch(
           selectedQuery,
           result.places,
@@ -245,6 +266,7 @@ function useCampusState() {
     });
     return () => {
       cancelled = true;
+      request.cancel();
     };
     // URL의 elevator 값만 바꿀 때는 의도 분류 요청을 다시 보내지 않음
   }, [view, selectedQuery, selectedCategory]);
@@ -551,6 +573,7 @@ function useCampusState() {
     searchNote,
     setSearchNote,
     searchIntent,
+    searchStartRequested,
     classroomSelection,
     setClassroomSelection,
     classroomBuilding,

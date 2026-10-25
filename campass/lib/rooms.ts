@@ -128,4 +128,13 @@ export const allPlaces = () =>
   (all ??= [...places, ...roomPlaces(), ...facilityPlaces()]);
 
 export const findPlace = (id: string) =>
-  allPlaces().find((p) => p.id === currentPlaceId(id));
+  allPlaces().find((p) => p.id === currentPlaceId(id)) ?? floorPlaces().find((p) => p.id === id);
+
+// 등록된 그래프 층을 목적지로 표시해요. 강의실이나 시설을 새로 만들지 않아요.
+export function floorPlaces(): Place[] {
+  return campusBuildings().flatMap((b) => b.floors.map((f) => ({
+    id: `${b.id}|${f.floor}`, name: `${b.name} ${f.label}`, building: b.name,
+    floor: f.label, category: "floor" as const, aliases: [], verified: true,
+    source: "학교 캠퍼스맵", description: "등록된 건물의 층이에요.",
+  })));
+}
