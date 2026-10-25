@@ -29,11 +29,11 @@ export function toRecognitionViewModel(
     title: waypoint?.name ?? "위치 후보",
     subtitle: waypoint?.detail,
     directionLabel:
-      candidate.direction === "forward"
-        ? "진행 방향"
-        : candidate.direction === "backward"
-          ? "반대 방향"
-          : "방향 확인 필요",
+    candidate.direction === "forward"
+    ? "진행 방향"
+    : candidate.direction === "backward"
+      ? "반대 방향"
+      : "방향을 확인하지 못했어요",
     confidencePercent: Math.round(
       candidate.confidence * 100,
     ),
