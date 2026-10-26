@@ -17,9 +17,49 @@ type GuideMapViewportProps = {
   map?: GuideMapData;
 };
 
+function supportsWebGL() {
+  if (typeof window === "undefined") return true;
+
+  try {
+    const canvas = document.createElement("canvas");
+
+    return Boolean(
+      window.WebGLRenderingContext &&
+        (canvas.getContext("webgl") ||
+          canvas.getContext("experimental-webgl")),
+    );
+  } catch {
+    return false;
+  }
+}
+
 function RouteMap({ map }: { map: GuideMapData }) {
-  // 3D 컴포넌트가 생기면 map을 그대로 넘겨 이 자리에서 그린다.
-  return <CampusOverviewMap highlight={overviewRouteHighlight(map)} />;
+  const [webglSupported] = useState(() => supportsWebGL());
+    const highlight = overviewRouteHighlight(map);
+
+  if (!highlight) {
+    return (
+      <div className="guide-map-viewport-placeholder">
+        <strong>표시할 수 있는 경로가 없어요</strong>
+        <p>다른 경로를 선택하거나 이전 단계로 돌아가 다시 시도해 주세요.</p>
+      </div>
+    );
+  }
+
+  if (!webglSupported) {
+    return (
+      <>
+        <div className="guide-map-viewport-placeholder">
+          <strong>이 기기에서는 3D 지도를 사용할 수 없어요</strong>
+          <p>대신 2D 캠퍼스 지도로 경로를 보여드릴게요.</p>
+        </div>
+
+        <CampusOverviewMap highlight={highlight} />
+      </>
+    );
+  }
+
+  return <CampusOverviewMap highlight={highlight} />;
 }
 
 export function GuideMapViewport({
