@@ -4,6 +4,9 @@ import { findPlace } from "./rooms.ts";
 import { askGemini, type AskGemini, type GeminiConfig, type GeminiIntentResponse } from "./gemini.ts";
 import { graphNodes } from "./campus3d/route.ts";
 import { hasDestinationRequest, resolveIntentPlaces, shouldComplementIntent, splitJourney } from "./intent-analysis.ts";
+const geminiTimeoutMs = 3000;
+const geminiCandidateLimit = 5;
+const retrySearchMessage = "질문을 이해하지 못했어요. 장소 이름으로 다시 검색해 주세요.";
 export type Candidate = {
   waypointId: string;
   confidence: number;
@@ -263,22 +266,31 @@ async function complementWithGemini(
                 ? "연결 오류"
                 : "알 수 없는 오류",
     );
-    return keyword;
+    return keyword.places.length ? keyword : { ...keyword, message: retrySearchMessage };
   } finally {
     clearTimeout(timer);
   }
   const ids = "destinationPlaceIds" in raw ? raw.destinationPlaceIds : raw.placeIds;
-  if (!Array.isArray(ids) || !ids.every((id) => typeof id === "string") ||
+  if (!Array.isArray(ids) || ids.length > geminiCandidateLimit ||
+      !ids.every((id) => typeof id === "string") ||
+      ("destinationPlaceIds" in raw && "placeIds" in raw &&
+        JSON.stringify(raw.destinationPlaceIds) !== JSON.stringify(raw.placeIds)) ||
       !["destination", "condition", "next"].includes(String(raw.intent)) ||
-      (raw.elevator !== null && typeof raw.elevator !== "boolean") ||
+      (raw.elevator !== undefined && raw.elevator !== null && typeof raw.elevator !== "boolean") ||
       (raw.startPlaceId !== undefined && raw.startPlaceId !== null && typeof raw.startPlaceId !== "string"))
-    return keyword;
+  {
+    console.warn("[gemini] 키워드 검색으로 대체: 응답 검증 실패");
+    return keyword.places.length ? keyword : { ...keyword, message: retrySearchMessage };
+  }
   const parsed: GeminiIntentResponse = {
     intent: raw.intent as GeminiIntentResponse["intent"],
     startPlaceId: typeof raw.startPlaceId === "string" ? raw.startPlaceId : null,
     destinationPlaceIds: ids,
-    elevator: raw.elevator as boolean | null,
+    elevator: typeof raw.elevator === "boolean" ? raw.elevator : null,
   };
+  const { searchQuery } = extractConditions(query);
+  if (parsed.intent === "next" && !/다음|이제|어디로\s*가야/.test(searchQuery))
+    return keyword;
   const conditions = {
     ...(typeof parsed.elevator === "boolean" ? { elevator: parsed.elevator } : {}),
     ...keyword.conditions,
@@ -286,11 +298,15 @@ async function complementWithGemini(
   const matched = [...new Set(parsed.destinationPlaceIds)]
     .map((id) => findPlace(id))
     .filter((p): p is Place => !!p && (conditions.elevator === undefined || p.id !== "elevator"))
-    .slice(0, 5);
-  const { searchQuery } = extractConditions(query);
+    .slice(0, geminiCandidateLimit);
   const journey = splitJourney(searchQuery);
   const local = resolveIntentPlaces(journey?.destination ?? searchQuery);
   const destination = local.exact && !/말고|아니|근처|가까운|중에서/.test(query) ? keyword.places : matched;
+  if (keyword.places.length && destination.some((place) =>
+    !keyword.places.some((known) => known.id === place.id))) {
+    console.warn("[gemini] 키워드 검색으로 대체: 장소 후보 충돌");
+    return keyword;
+  }
   const rawStart = parsed.startPlaceId ?? undefined;
   const validStart = rawStart && (findPlace(rawStart) || graphNodes.includes(rawStart) || waypoints.some((w) => w.id === rawStart))
     ? rawStart : undefined;
@@ -316,7 +332,7 @@ export async function interpretIntent(
   query: string,
   config: Config = environment(),
   ask: AskGemini = askGemini,
-  timeoutMs = 3000,
+  timeoutMs = geminiTimeoutMs,
 ): Promise<IntentResult> {
   const { searchQuery } = extractConditions(query);
   if (!config.INTENT_API_URL || !searchQuery) {
@@ -325,6 +341,13 @@ export async function interpretIntent(
       mode: "keyword",
       message: "등록된 장소명과 검색어로 찾았어요.",
     };
+    if (!keyword.places.length && keyword.intent === "destination")
+      keyword.message = "등록된 장소를 찾지 못했어요. 장소 이름으로 다시 검색해 주세요.";
+    if (!keyword.places.length && (
+      /^(?:오늘\s*)?(?:날씨|기온|미세먼지|환율|뉴스|주식)/.test(searchQuery) ||
+      /[가-힣]{2,}역(?:으로|까지|에서|가는|가고|$|\s)/.test(searchQuery)
+    ))
+      return keyword;
     if (!shouldComplementIntent(query, searchQuery, keyword)) return keyword;
     if (!config.GEMINI_API_KEY || !config.GEMINI_MODEL) {
       console.warn(

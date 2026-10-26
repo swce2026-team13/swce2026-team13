@@ -137,7 +137,9 @@ export default function Screen() {
         </h3>
         <p className="muted">
           {query.trim()
-            ? "건물명, 강의실, 행사 이름을 조금 더 자세히 말해 주세요."
+            ? searchNote === "검색 결과"
+              ? "건물명, 강의실, 행사 이름을 조금 더 자세히 말해 주세요."
+              : searchNote
             : "건물명, 강의실, 행사 이름으로 찾을 수 있어요. 출발지는 그대로 둘게요."}
         </p>
       </>
