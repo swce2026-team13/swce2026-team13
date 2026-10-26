@@ -6,11 +6,16 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { createServer } from "node:net";
+import { DatabaseSync } from "node:sqlite";
 let server,
   origin,
   cookie,
   output = "";
-const admin = randomUUID() + randomUUID();
+const admin = { id: "test-admin", password: randomUUID() + randomUUID() };
+const databasePath = join(
+  mkdtempSync(join(tmpdir(), "campass-api-")),
+  "test.sqlite",
+);
 before(async () => {
   const socket = createServer();
   await new Promise((resolve) => socket.listen(0, "127.0.0.1", resolve));
@@ -30,11 +35,9 @@ before(async () => {
     {
       env: {
         ...process.env,
-        DATABASE_PATH: join(
-          mkdtempSync(join(tmpdir(), "campass-api-")),
-          "test.sqlite",
-        ),
-        ADMIN_TOKEN: admin,
+        DATABASE_PATH: databasePath,
+        ADMIN_ID: admin.id,
+        ADMIN_PASSWORD: admin.password,
         APP_ORIGIN: origin,
         VISION_API_URL: "",
         INTENT_API_URL: "",
@@ -110,8 +113,48 @@ test("HTTP catalog and intent expose sources and honest keyword mode", async () 
     await request("intent", { query: "헤인관 면접" })
   ).json();
   assert.equal(intent.mode, "keyword");
+  assert.equal(intent.intent, "destination");
+  assert.deepEqual(intent.conditions, {});
   assert.equal(intent.places[0].id, "interview");
   assert.equal((await request("intent", { query: { bad: true } })).status, 400);
+});
+test("HTTP intent exposes destination, condition and next responses with travel conditions", async () => {
+  for (const [query, expectedIntent, conditions, firstPlace] of [
+    ["엘리베이터로 가고 싶어요", "condition", { elevator: true }, undefined],
+    ["엘리베이터로 갈래요", "condition", { elevator: true }, undefined],
+    ["엘리베이터 어디 있어요", "destination", {}, "elevator"],
+    [
+      "엘리베이터 타고 혜인관 5층",
+      "destination",
+      { elevator: true },
+      "interview",
+    ],
+    [
+      "계단으로 면접 보러 갈게요",
+      "destination",
+      { elevator: false },
+      "interview",
+    ],
+    [
+      "휠체어라서 엘리베이터 필요해요",
+      "condition",
+      { elevator: true },
+      undefined,
+    ],
+    ["계단 이용", "condition", { elevator: false }, undefined],
+    ["여기서 어디로 가요", "next", {}, undefined],
+    ["존재하지않는장소xyz", "destination", {}, undefined],
+  ]) {
+    const response = await request("intent", { query });
+    assert.equal(response.status, 200, query);
+    const result = await response.json();
+    assert.equal(result.intent, expectedIntent, query);
+    assert.deepEqual(result.conditions, conditions, query);
+    assert.equal(result.places[0]?.id, firstPlace, query);
+    if (!firstPlace) assert.deepEqual(result.places, [], query);
+    assert.equal(result.mode, "keyword");
+    assert.equal(typeof result.message, "string");
+  }
 });
 test("HTTP enforces origin, route availability, and typed inputs", async () => {
   assert.equal(
@@ -206,15 +249,175 @@ test("HTTP complete journey rejects IDOR/stale requests and persists deduplicate
     true,
   );
   assert.equal((await request("admin/insights")).status, 401);
+  const login = await request("admin/login", admin);
+  assert.equal(login.status, 200);
   const stats = await (
     await request("admin/insights", undefined, {
-      headers: { Authorization: `Bearer ${admin}` },
+      cookie: adminCookie(login),
     })
   ).json();
   assert.equal(stats.feedbacks, 1);
   assert.equal(stats.confusions, 1);
   assert.equal(stats.passages, s.route.steps.length);
   assert.ok(stats.rate <= 100);
+});
+function adminCookie(response) {
+  const cookie = response.headers
+    .getSetCookie()
+    .find((value) => value.startsWith("campass_admin="));
+  assert.ok(cookie, "admin session cookie missing");
+  return cookie.split(";")[0];
+}
+
+test("HTTP admin login sets a private eight-hour production cookie and logout revokes it", async () => {
+  assert.equal((await request("admin/insights")).status, 401);
+  assert.equal(
+    (
+      await request("admin/insights", undefined, {
+        headers: { Authorization: `Bearer ${admin.password}` },
+      })
+    ).status,
+    401,
+  );
+  const login = await request("admin/login", admin);
+  assert.equal(login.status, 200);
+  const sessionCookie = adminCookie(login);
+  const header = login.headers
+    .getSetCookie()
+    .find((value) => value.startsWith("campass_admin="));
+  assert.match(header, /HttpOnly/i);
+  assert.match(header, /SameSite=Strict/i);
+  assert.match(header, /Secure/i);
+  assert.match(header, /Max-Age=28800/i);
+  assert.match(header, /Path=\//i);
+  assert.deepEqual(await login.json(), { ok: true });
+  assert.equal(
+    (await request("admin/insights", undefined, { cookie: sessionCookie }))
+      .status,
+    200,
+  );
+  const logout = await request("admin/logout", {}, { cookie: sessionCookie });
+  assert.equal(logout.status, 200);
+  assert.match(
+    logout.headers
+      .getSetCookie()
+      .find((value) => value.startsWith("campass_admin=")),
+    /Max-Age=0/i,
+  );
+  assert.equal(
+    (await request("admin/insights", undefined, { cookie: sessionCookie }))
+      .status,
+    401,
+  );
+  const db = new DatabaseSync(databasePath);
+  try {
+    assert.equal(
+      db
+        .prepare("SELECT id FROM admin_sessions WHERE id=?")
+        .get(sessionCookie.split("=")[1]),
+      undefined,
+    );
+  } finally {
+    db.close();
+  }
+});
+
+test("HTTP admin rejects expired sessions and cross-origin login/logout", async () => {
+  assert.equal(
+    (
+      await request("admin/login", admin, {
+        origin: "https://untrusted.invalid",
+      })
+    ).status,
+    403,
+  );
+  const login = await request("admin/login", admin);
+  const sessionCookie = adminCookie(login);
+  assert.equal(
+    (
+      await request(
+        "admin/logout",
+        {},
+        { cookie: sessionCookie, origin: "https://untrusted.invalid" },
+      )
+    ).status,
+    403,
+  );
+  assert.equal(
+    (await request("admin/insights", undefined, { cookie: sessionCookie }))
+      .status,
+    200,
+  );
+  const db = new DatabaseSync(databasePath);
+  try {
+    db.prepare("UPDATE admin_sessions SET expires=? WHERE id=?").run(
+      Date.now() - 1,
+      sessionCookie.split("=")[1],
+    );
+  } finally {
+    db.close();
+  }
+  assert.equal(
+    (await request("admin/insights", undefined, { cookie: sessionCookie }))
+      .status,
+    401,
+  );
+});
+
+test("HTTP signing in again replaces the previous browser session", async () => {
+  const first = await request("admin/login", admin);
+  const firstCookie = adminCookie(first);
+  const second = await request("admin/login", admin, { cookie: firstCookie });
+  assert.equal(second.status, 200);
+  const secondCookie = adminCookie(second);
+  assert.notEqual(secondCookie, firstCookie);
+  assert.equal(
+    (await request("admin/insights", undefined, { cookie: firstCookie }))
+      .status,
+    401,
+  );
+  assert.equal(
+    (await request("admin/insights", undefined, { cookie: secondCookie }))
+      .status,
+    200,
+  );
+});
+
+test("HTTP admin failures are generic and changing owner cookies cannot evade five-failure blocking", async () => {
+  const headers = { "X-Forwarded-For": "198.51.100.7" };
+  const wrongId = await request(
+    "admin/login",
+    { ...admin, id: "wrong" },
+    { headers },
+  );
+  const wrongPassword = await request(
+    "admin/login",
+    { ...admin, password: "wrong" },
+    { headers },
+  );
+  assert.equal(wrongId.status, 401);
+  assert.equal(wrongPassword.status, 401);
+  assert.deepEqual(await wrongId.json(), await wrongPassword.json());
+  for (let i = 3; i <= 5; i++) {
+    const result = await request(
+      "admin/login",
+      {},
+      { headers, cookie: `campass_owner=${randomUUID()}` },
+    );
+    assert.equal(result.status, i === 5 ? 429 : 401);
+  }
+  assert.equal(
+    (await request("admin/login", admin, { headers, cookie: "" })).status,
+    429,
+  );
+  assert.equal(
+    (
+      await request("admin/login", admin, {
+        headers: { "X-Forwarded-For": "198.51.100.8" },
+      })
+    ).status,
+    200,
+  );
 });
 test("HTTP photo validates uploads and unconfigured model returns unavailable", async () => {
   const bad = new FormData();

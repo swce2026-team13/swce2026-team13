@@ -1,12 +1,18 @@
 "use client";
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Building2, ChevronRight, MapPin } from "lucide-react";
 import { places, type Place } from "@/shared/utils/catalog";
 import { waypoints, type Route } from "@/shared/utils/routing";
 import type { Session } from "@/shared/types/session";
-import type { Candidate, Recognition } from "@/shared/types/recognition";
+import type {
+  Candidate,
+  Recognition,
+  Intent,
+  IntentResult,
+} from "@/shared/types/recognition";
 import { Tag } from "@/components/ui";
 import { classroomSearch } from "@/shared/utils/classrooms";
+import { createContext, useContext } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   navigationHref,
@@ -20,7 +26,7 @@ function useCampusState() {
   const view = viewForPath(usePathname());
   const params = useSearchParams();
   const selectedDestination = params.get("destination") || places[0].id;
-  const selectedStart = params.get("start") || "bus";
+  const selectedStart = params.get("start") || "gate";
   const selectedElevator = params.get("elevator") !== "false";
   const selectedBuilding = params.get("building") || "혜인관";
   const selectedQuery = params.get("q") || "";
@@ -28,6 +34,7 @@ function useCampusState() {
   const [query, setQuery] = useState(""),
     [results, setResults] = useState<Place[]>([]),
     [searchNote, setSearchNote] = useState("");
+  const [searchIntent, setSearchIntent] = useState<Intent>("destination");
   const [classroomSelection, setClassroomSelection] = useState<ReturnType<
     typeof classroomSearch
   > | null>(null);
@@ -55,8 +62,7 @@ function useCampusState() {
     [reason, setReason] = useState("방향 혼란"),
     [comment, setComment] = useState(""),
     [sent, setSent] = useState(false);
-  const [adminToken, setAdminToken] = useState(""),
-    [insight, setInsight] = useState<Insight | null>(null);
+  const [insight, setInsight] = useState<Insight | null>(null);
   const imageRef = useRef("");
   function go(next: View, values: Record<string, string> = {}) {
     setError("");
@@ -101,40 +107,6 @@ function useCampusState() {
             );
         }
       }
-      if (view === "search" && (selectedQuery || selectedCategory)) {
-        try {
-          const result = selectedCategory
-            ? await api<{ places: Place[] }>(
-                `places?category=${encodeURIComponent(selectedCategory)}`,
-              )
-            : await api<{ places: Place[] }>("intent", {
-                query: selectedQuery,
-              });
-          if (cancelled) return;
-          const selection = classroomSearch(
-            selectedQuery,
-            result.places,
-            selectedCategory || undefined,
-          );
-          setQuery(selectedQuery);
-          setResults(selection.candidates);
-          setClassroomSelection(selection);
-          setClassroomBuilding(selection.selectedBuilding || null);
-          setSearchNote(
-            selectedCategory === "classroom"
-              ? "건물을 선택한 뒤 호실을 입력해 주세요."
-              : "검색 결과",
-          );
-          setSearchRevision((value) => value + 1);
-        } catch (error) {
-          if (!cancelled)
-            setError(
-              error instanceof Error
-                ? error.message
-                : "검색 결과를 불러오지 못했어요.",
-            );
-        }
-      }
     });
     return () => {
       cancelled = true;
@@ -146,9 +118,72 @@ function useCampusState() {
     selectedStart,
     selectedElevator,
     selectedBuilding,
-    selectedQuery,
-    selectedCategory,
   ]);
+  useEffect(() => {
+    if (view !== "search") return;
+    let cancelled = false;
+    Promise.resolve().then(async () => {
+      if (cancelled) return;
+      setQuery(selectedQuery);
+      setResults([]);
+      setSearchIntent("destination");
+      setClassroomSelection(null);
+      setClassroomBuilding(null);
+      setSearchNote("검색 결과");
+      if (!selectedQuery && !selectedCategory) return;
+      try {
+        const result: Pick<IntentResult, "intent" | "conditions" | "places"> =
+          selectedCategory
+            ? {
+                ...(await api<{ places: Place[] }>(
+                  `places?category=${encodeURIComponent(selectedCategory)}`,
+                )),
+                intent: "destination",
+                conditions: {},
+              }
+            : await api<IntentResult>("intent", { query: selectedQuery });
+        if (cancelled) return;
+        const nextElevator = result.conditions.elevator;
+        if (typeof nextElevator === "boolean") {
+          setElevator(nextElevator);
+          const url = new URL(window.location.href);
+          url.searchParams.set("elevator", String(nextElevator));
+          window.history.replaceState(
+            null,
+            "",
+            `${url.pathname}${url.search}${url.hash}`,
+          );
+        }
+        setSearchIntent(result.intent);
+        if (result.intent !== "destination") return;
+        const selection = classroomSearch(
+          selectedQuery,
+          result.places,
+          selectedCategory || undefined,
+        );
+        setResults(selection.candidates);
+        setClassroomSelection(selection);
+        setClassroomBuilding(selection.selectedBuilding || null);
+        setSearchNote(
+          selectedCategory === "classroom"
+            ? "건물을 선택한 뒤 호실을 입력해 주세요."
+            : "검색 결과",
+        );
+        setSearchRevision((value) => value + 1);
+      } catch (error) {
+        if (!cancelled)
+          setError(
+            error instanceof Error
+              ? error.message
+              : "검색 결과를 불러오지 못했어요.",
+          );
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+    // URL의 elevator 값만 바꿀 때는 의도 분류 요청을 다시 보내지 않음
+  }, [view, selectedQuery, selectedCategory]);
   function saveSession(s: Session) {
     if (s.id !== session?.id) {
       setFeedbackPoint("");
@@ -167,6 +202,8 @@ function useCampusState() {
     try {
       await fn();
     } catch (e) {
+      if (e instanceof Error && "status" in e && e.status === 401)
+        setInsight(null);
       setError(e instanceof Error ? e.message : "잠시 후 다시 시도해 주세요.");
     } finally {
       setBusy(false);
@@ -401,25 +438,38 @@ function useCampusState() {
     results,
     setResults,
     searchNote,
+    setSearchNote,
+    searchIntent,
     classroomSelection,
     setClassroomSelection,
     classroomBuilding,
     setClassroomBuilding,
     searchRevision,
+    setSearchRevision,
     destination,
+    setDestination,
     start,
+    setStart,
     elevator,
+    setElevator,
     route,
+    setRoute,
     session,
+    setSession,
     building,
+    setBuilding,
     floor,
     setFloor,
     busy,
+    setBusy,
     error,
     setError,
     ready,
+    setReady,
     vision,
+    setVision,
     preview,
+    setPreview,
     recognition,
     setRecognition,
     candidate,
@@ -435,11 +485,11 @@ function useCampusState() {
     comment,
     setComment,
     sent,
-    adminToken,
-    setAdminToken,
+    setSent,
     insight,
     setInsight,
     go,
+    saveSession,
     run,
     search,
     choose,
@@ -454,6 +504,7 @@ function useCampusState() {
     back,
     step,
     nextStep,
+    guideViews,
     hasSession,
     buildingPlaces,
     floors,

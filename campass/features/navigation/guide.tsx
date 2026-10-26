@@ -92,7 +92,7 @@ export default function Screen() {
                 이동 중 다른 장소를 찾으시나요?
               </span>
               <form
-                className="search-box compact"
+                className="search-box compact glass-card"
                 onSubmit={(e) => {
                   e.preventDefault();
                   if (query.trim()) search();

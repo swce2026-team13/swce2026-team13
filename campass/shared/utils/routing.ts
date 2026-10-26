@@ -17,8 +17,19 @@ export type Waypoint = {
   direction: "forward" | "right" | "up";
   x: number;
   y: number;
+  stage?: boolean;
 };
 export const waypoints: Waypoint[] = [
+  {
+    id: "gate",
+    name: "학교 정문",
+    instruction: "학교 정문에서 출발하세요",
+    detail: "본관 1층 로비 방향으로 이동해 주세요.",
+    photo: "bus",
+    direction: "forward",
+    x: 32,
+    y: 320,
+  },
   {
     id: "bus",
     name: "1164·2115번 정류장",
@@ -31,13 +42,14 @@ export const waypoints: Waypoint[] = [
   },
   {
     id: "main",
-    name: "본관 입구",
-    instruction: "본관 입구를 지나 이동하세요",
+    name: "본관 1층 로비",
+    instruction: "본관 1층 로비를 지나 이동하세요",
     detail: "지하주차장 통로 입구를 찾아주세요.",
     photo: "bus",
     direction: "right",
     x: 52,
     y: 160,
+    stage: true,
   },
   {
     id: "parking-entry",
@@ -51,13 +63,14 @@ export const waypoints: Waypoint[] = [
   },
   {
     id: "parking",
-    name: "P1 중앙",
+    name: "지하주차장 P1",
     instruction: "오른쪽 통로로 이동하세요",
     detail: "혜인관으로 이어지는 방향을 확인해 주세요.",
     photo: "corridor",
     direction: "right",
     x: 160,
     y: 240,
+    stage: true,
   },
   {
     id: "hyein",
@@ -68,6 +81,7 @@ export const waypoints: Waypoint[] = [
     direction: "forward",
     x: 263,
     y: 240,
+    stage: true,
   },
   {
     id: "elevator",
@@ -98,24 +112,41 @@ export const waypoints: Waypoint[] = [
     direction: "forward",
     x: 263,
     y: 65,
+    stage: true,
   },
 ];
 // 시연 동선 · 실내 연결 미검증
-type Edge = { from: string; to: string; meters: number; stairs?: boolean };
+type Edge = {
+  from: string;
+  to: string;
+  meters: number;
+  stairs?: boolean;
+  connection?: boolean;
+  floorMove?: boolean;
+};
 const edges: Edge[] = [
-  { from: "bus", to: "main", meters: 40 },
-  { from: "main", to: "parking-entry", meters: 30 },
+  { from: "gate", to: "main", meters: 40, connection: true },
+  { from: "bus", to: "main", meters: 40, connection: true },
+  { from: "main", to: "parking-entry", meters: 30, connection: true },
   { from: "parking-entry", to: "parking", meters: 25 },
-  { from: "parking", to: "hyein", meters: 45 },
+  { from: "parking", to: "hyein", meters: 45, connection: true },
   { from: "hyein", to: "elevator", meters: 15 },
-  { from: "elevator", to: "interview", meters: 35 },
-  { from: "hyein", to: "stairs", meters: 5, stairs: true },
-  { from: "stairs", to: "interview", meters: 30, stairs: true },
+  { from: "elevator", to: "interview", meters: 35, floorMove: true },
+  { from: "hyein", to: "stairs", meters: 5 },
+  {
+    from: "stairs",
+    to: "interview",
+    meters: 30,
+    stairs: true,
+    floorMove: true,
+  },
 ];
 export type Route = {
   steps: Waypoint[];
   distance: number;
   minutes: number;
+  connections: number;
+  floorMoves: number;
   verified: false;
   elevator: boolean;
 };
@@ -171,11 +202,25 @@ export function calculateRoute(
     }
     return point;
   });
+  const usedEdges = ids.slice(0, -1).map((id, index) => {
+    const nextId = ids[index + 1];
+
+    return edges.find(
+      (edge) =>
+        (edge.from === id && edge.to === nextId) ||
+        (edge.from === nextId && edge.to === id),
+    )!;
+  });
+
+  const connections = usedEdges.filter((edge) => edge.connection).length;
+  const floorMoves = usedEdges.filter((edge) => edge.floorMove).length;
   const distance = dist.get(destination)!;
   return {
     steps,
     distance,
     minutes: Math.max(1, Math.ceil(distance / 40) + (elevator ? 3 : 1)),
+    connections,
+    floorMoves,
     verified: false,
     elevator,
   };

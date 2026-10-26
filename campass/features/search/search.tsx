@@ -1,7 +1,13 @@
 "use client";
-import { ArrowRight, Building2, ChevronRight, Search } from "lucide-react";
+import {
+  ArrowRight,
+  Building2,
+  Map,
+  MessageSquareText,
+  Search,
+} from "lucide-react";
 import { places } from "@/shared/utils/catalog";
-import { Notice, Tag } from "@/components/ui";
+import { Notice } from "@/components/ui";
 import { ClassroomPicker } from "@/features/search/classroom-picker";
 import { useCampus } from "@/features/navigation/campus-provider";
 export default function Screen() {
@@ -11,12 +17,15 @@ export default function Screen() {
     results,
     setResults,
     searchNote,
+    searchIntent,
+    elevator,
     classroomSelection,
     setClassroomSelection,
     classroomBuilding,
     setClassroomBuilding,
     searchRevision,
     busy,
+    go,
     search,
     choose,
   } = useCampus();
@@ -24,7 +33,7 @@ export default function Screen() {
     <section className="content stack">
       <h1>어디를 찾으시나요?</h1>
       <form
-        className="search-box"
+        className="search-box glass-card"
         onSubmit={(e) => {
           e.preventDefault();
           if (query.trim()) search();
@@ -41,8 +50,16 @@ export default function Screen() {
           <ArrowRight />
         </button>
       </form>
-      <p>{searchNote}</p>
-      {classroomBuilding && classroomSelection ? (
+      {searchIntent !== "destination" && <p>{searchNote}</p>}
+      {searchIntent !== "destination" ? (
+        <Notice>
+          {searchIntent === "next"
+            ? "먼저 목적지를 알려 주세요."
+            : elevator
+              ? "엘리베이터로 안내할게요. 어디로 가시나요?"
+              : "계단으로 안내할게요. 어디로 가시나요?"}
+        </Notice>
+      ) : classroomBuilding && classroomSelection ? (
         <ClassroomPicker
           key={`${searchRevision}-${classroomBuilding.id}`}
           building={classroomBuilding}
@@ -64,21 +81,60 @@ export default function Screen() {
           }}
         />
       ) : (
-        <>
-          <div className="between">
-            <h3>목적지 후보</h3>
-            <span className="muted small">{results.length}곳</span>
+        <div className="ai-search-flow">
+          <div className="ai-user-message">
+            {query || "목적지를 찾고 있어요"}
           </div>
-          {results.length === 0 ? (
-            <Notice>
-              <b>일치하는 장소가 없어요</b>
-              <p>혜인관, 301, 면접처럼 장소명으로 다시 검색해 주세요.</p>
-            </Notice>
-          ) : (
-            results.map((p) => (
+
+          <div className="ai-assistant-label">
+            <MessageSquareText size={15} />
+            <span>CAMPASS</span>
+          </div>
+
+          <div className="card ai-answer-card">
+            <span className="ai-answer-type">목적지 찾기로 이해했어요</span>
+
+            {results.length === 0 ? (
+              <>
+                <h3>일치하는 장소를 찾지 못했어요</h3>
+                <p className="muted">
+                  건물명, 강의실, 행사 이름을 조금 더 자세히 말해 주세요.
+                </p>
+              </>
+            ) : (
+              <>
+                <h3>
+                  {results.length === 1
+                    ? `${results[0].name}이에요`
+                    : "목적지가 여러 곳이에요. 어디를 찾으시나요?"}
+                </h3>
+
+                <p className="muted">
+                  {results.length === 1
+                    ? "찾은 장소가 맞다면 아래 버튼을 눌러 주세요."
+                    : "원하는 목적지를 하나 골라 주세요."}
+                </p>
+              </>
+            )}
+          </div>
+
+          {results.map((p) => (
+            <div className="card ai-place-card" key={p.id}>
+              <div className="row">
+                <span className="icon-box">
+                  <Building2 size={22} />
+                </span>
+
+                <div>
+                  <strong>{p.name}</strong>
+                  <p className="muted small">
+                    {p.building} {p.floor}
+                  </p>
+                </div>
+              </div>
+
               <button
-                className="card place-result"
-                key={p.id}
+                className="button primary"
                 disabled={busy}
                 onClick={() =>
                   classroomSelection?.pickerBuildingIds.includes(p.id)
@@ -86,25 +142,20 @@ export default function Screen() {
                     : choose(p)
                 }
               >
-                <span className="icon-box">
-                  <Building2 size={22} />
-                </span>
-                <span>
-                  <b>{p.name}</b>
-                  <small>
-                    {classroomSelection?.pickerBuildingIds.includes(p.id)
-                      ? "호실 입력하기"
-                      : `${p.building} ${p.floor}`}
-                  </small>
-                  <Tag tone={p.verified ? "gray" : "amber"}>
-                    {p.verified ? "공식 자료" : "시연용 예시"}
-                  </Tag>
-                </span>
-                <ChevronRight size={20} />
+                여기로 길찾기
               </button>
-            ))
-          )}
-        </>
+            </div>
+          ))}
+
+          <button
+            type="button"
+            className="button secondary"
+            onClick={() => go("map")}
+          >
+            <Map size={19} />
+            캠퍼스 지도에서 직접 고르기
+          </button>
+        </div>
       )}
     </section>
   );

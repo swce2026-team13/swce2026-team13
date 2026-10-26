@@ -4,6 +4,7 @@ import { AppError, calculateRoute, waypoints } from "@/shared/utils/routing";
 import {
   assertRequestOrigin,
   database,
+  loginAdmin,
   ownerToken,
   readBytes,
   readJson,
@@ -15,6 +16,7 @@ import {
   interpretIntent,
   recognizePhoto,
 } from "@/server/integrations/providers";
+import { ADMIN_SESSION_SECONDS } from "@/server/db/store";
 export async function handle(request: NextRequest) {
   const { token, owner } = ownerToken(
     request.cookies.get("campass_owner")?.value,
@@ -43,15 +45,42 @@ export async function handle(request: NextRequest) {
     if (method !== "GET") {
       assertRequestOrigin(request, process.env.APP_ORIGIN);
     }
-    if (["admin/login", "admin/logout", "route-insights"].includes(endpoint)) {
-      throw new AppError(
-        "아직 구현되지 않은 API입니다.",
-        501,
-        "NOT_IMPLEMENTED",
-      );
-    }
     const db = database();
     db.limit(`request:${owner}`, 180, 60000);
+    const adminSession = request.cookies.get("campass_admin")?.value;
+    const adminCookieOptions = {
+      httpOnly: true,
+      sameSite: "strict" as const,
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+    };
+    if (method === "POST" && endpoint === "admin/login") {
+      const body = await readJson(request);
+      // 배포 프록시가 X-Forwarded-For를 실제 접속 IP로 덮어써야 함
+      const address =
+        request.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim() ||
+        "unknown";
+      const session = loginAdmin(db, body, address);
+      if (adminSession) db.deleteAdminSession(adminSession);
+      const result = response({ ok: true });
+      result.cookies.set("campass_admin", session.id, {
+        ...adminCookieOptions,
+        maxAge: ADMIN_SESSION_SECONDS,
+        expires: new Date(session.expires),
+      });
+      return result;
+    }
+    if (method === "POST" && endpoint === "admin/logout") {
+      if (adminSession) db.deleteAdminSession(adminSession);
+      const result = response({ ok: true });
+      result.cookies.set("campass_admin", "", {
+        ...adminCookieOptions,
+        maxAge: 0,
+        expires: new Date(0),
+      });
+      return result;
+    }
+    if (parts[0] === "admin") requireAdmin(adminSession, db);
     if (method === "GET" && endpoint === "health")
       return response({ ok: true, service: "campass", schema: 1 });
     if (method === "GET" && endpoint === "catalog")
@@ -74,9 +103,36 @@ export async function handle(request: NextRequest) {
         ),
       });
     }
+    if (method === "GET" && endpoint === "route-insights") {
+      const start = textField(request.nextUrl.searchParams.get("start"));
+      const destination = textField(
+        request.nextUrl.searchParams.get("destination"),
+      );
+
+      const elevatorValue = request.nextUrl.searchParams.get("elevator");
+
+      if (elevatorValue !== "true" && elevatorValue !== "false") {
+        throw new AppError("엘리베이터 옵션을 확인해 주세요.");
+      }
+
+      const route = calculateRoute(
+        start,
+        destination,
+        elevatorValue === "true",
+      );
+
+      const routeIds = new Set(route.steps.map((step) => step.id));
+      const insight = db.insights();
+
+      const points = insight.points.filter((point) => routeIds.has(point.id));
+
+      return response({
+        points,
+        scope: "current-route",
+        dataMode: insight.dataMode,
+      });
+    }
     if (method === "GET" && endpoint === "admin/insights") {
-      db.limit("admin-attempts", 60, 60000);
-      requireAdmin(request.headers.get("authorization"));
       return response(db.insights());
     }
     if (method === "GET" && parts[0] === "sessions" && parts.length === 2)

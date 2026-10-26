@@ -1,17 +1,29 @@
 "use client";
+import { useEffect, useRef, useState } from "react";
 import { ShieldCheck } from "lucide-react";
 import { Notice, Tag } from "@/components/ui";
 import { useCampus } from "@/features/navigation/campus-provider";
 import { api } from "@/shared/utils/api";
 import type { Insight } from "@/shared/types/insight";
 export default function Screen() {
-  const { busy, adminToken, setAdminToken, insight, setInsight, run } =
-    useCampus();
-  function loadInsights(): Promise<void> {
-    return run(async () => {
-      setInsight(await api<Insight>("admin/insights", undefined, adminToken));
-    });
-  }
+  const { busy, insight, setInsight, run } = useCampus();
+  const [id, setId] = useState("");
+  const [password, setPassword] = useState("");
+  const authRevision = useRef(0);
+  useEffect(() => {
+    let cancelled = false;
+    const revision = authRevision.current;
+    api<Insight>("admin/insights")
+      .then((value) => {
+        if (!cancelled && revision === authRevision.current) setInsight(value);
+      })
+      .catch(() => {
+        if (!cancelled && revision === authRevision.current) setInsight(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [setInsight]);
   return (
     <section className="content stack">
       <div className="row">
@@ -25,30 +37,53 @@ export default function Screen() {
       </p>
       {!insight ? (
         <form
-          className="card stack"
+          className="card stack admin-login-card"
           onSubmit={(e) => {
             e.preventDefault();
-            loadInsights();
+            run(async () => {
+              authRevision.current++;
+              try {
+                await api("admin/login", { id, password });
+                setInsight(await api<Insight>("admin/insights"));
+              } finally {
+                setPassword("");
+              }
+            });
           }}
         >
-          <ShieldCheck className="blue-text" />
-          <h3>관리자 인증</h3>
-          <label className="field-label">
-            관리자 토큰
+          <div className="admin-login-heading">
+            <ShieldCheck className="blue-text" />
+            <h3>관리자 인증</h3>
+            <p>관리자 계정으로 로그인해 주세요.</p>
+          </div>
+          <label className="field-label admin-login-field">
+            아이디
             <input
-              type="password"
-              autoComplete="off"
-              value={adminToken}
-              onChange={(e) => setAdminToken(e.target.value)}
-              placeholder="서버에 설정한 토큰"
+              autoComplete="username"
+              value={id}
+              onChange={(e) => setId(e.target.value)}
+              placeholder="관리자 아이디"
+              required
             />
           </label>
-          <button className="button primary" disabled={busy || !adminToken}>
-            인사이트 열기
+          <label className="field-label admin-login-field">
+            비밀번호
+            <input
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="관리자 비밀번호"
+              required
+            />
+          </label>
+          <button
+            className="button primary"
+            disabled={busy || !id || !password}
+          >
+            로그인
           </button>
-          <p className="small">
-            관리자 토큰은 이 화면을 사용하는 동안만 메모리에 보관해요.
-          </p>
+          <p className="small">로그인 상태는 8시간 동안 유지돼요.</p>
         </form>
       ) : (
         <>
@@ -110,16 +145,27 @@ export default function Screen() {
           <button
             className="button secondary"
             disabled={busy}
-            onClick={() => loadInsights()}
+            onClick={() =>
+              run(async () => {
+                authRevision.current++;
+                setInsight(await api<Insight>("admin/insights"));
+              })
+            }
           >
             통계 새로고침
           </button>
           <button
             className="text-button centered"
-            onClick={() => {
-              setAdminToken("");
-              setInsight(null);
-            }}
+            disabled={busy}
+            onClick={() =>
+              run(async () => {
+                authRevision.current++;
+                await api("admin/logout", {});
+                setId("");
+                setPassword("");
+                setInsight(null);
+              })
+            }
           >
             관리자 로그아웃
           </button>

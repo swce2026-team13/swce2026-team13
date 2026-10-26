@@ -16,6 +16,9 @@ export async function api<T>(
   });
   const value = await response.json();
   if (!response.ok)
-    throw new Error(value.error?.message || "요청을 완료하지 못했어요.");
+    throw Object.assign(
+      new Error(value.error?.message || "요청을 완료하지 못했어요."),
+      { status: response.status },
+    );
   return value;
 }

@@ -1,6 +1,11 @@
 import { AppError } from "../../shared/utils/routing.ts";
 export { database } from "../db/index.ts";
-export { assertRequestOrigin, ownerToken, requireAdmin } from "../auth/index.ts";
+export {
+  assertRequestOrigin,
+  ownerToken,
+  requireAdmin,
+  loginAdmin,
+} from "../auth/index.ts";
 export async function readBytes(request: Request, limit: number) {
   if (Number(request.headers.get("content-length")) > limit)
     throw new AppError("파일 또는 요청 크기가 너무 커요.", 413, "TOO_LARGE");
