@@ -103,3 +103,19 @@ test("새로고침에는 유효한 ID만 복원하고 초기화와 만료 때 �
   assert.equal(await restoreConversation(storage, resolve, now + conversationLifetimeMs + 1), null);
   assert.equal(storage.getItem(conversationStorageKey), null);
 });
+
+test("초기화 뒤에 끝난 복원은 이전 대화를 다시 저장하지 않아요", async () => {
+  const storage = memory();
+  const now = 1_000_000;
+  const place = findPlace("hyein")!;
+  saveConversation(storage, selectConversationPlace(null, place, undefined, undefined, now));
+  let finish!: (value: typeof place) => void;
+  const lookup = new Promise<typeof place>((resolve) => { finish = resolve; });
+  let current = true;
+  const restoring = restoreConversation(storage, () => lookup, now, () => current);
+  clearConversation(storage);
+  current = false;
+  finish(place);
+  assert.equal(await restoring, null);
+  assert.equal(storage.getItem(conversationStorageKey), null);
+});

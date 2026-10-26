@@ -204,7 +204,8 @@ export default function Screen() {
 
 function GuideQuestionCard({ guide }: { guide: GuideViewModel }) {
   const { session, elevator, busy, go, continueConversation } = useCampus();
-  const request = useRef(createIntentRequest((query) => api<IntentResult>("intent", { query })));
+  const request = useRef(createIntentRequest((query, signal) => api<IntentResult>("intent", { query }, signal)));
+  const pendingRef = useRef(false);
   useEffect(() => {
     const current = request.current;
     return () => current.cancel();
@@ -216,7 +217,8 @@ function GuideQuestionCard({ guide }: { guide: GuideViewModel }) {
   const answer = result ? answerGuideIntent(guide, result) : null;
 
   async function ask() {
-    if (pending || busy || !question.trim()) return;
+    if (pendingRef.current || pending || busy || !question.trim()) return;
+    pendingRef.current = true;
     setPending(true);
     setResult(null);
     setError("");
@@ -228,6 +230,7 @@ function GuideQuestionCard({ guide }: { guide: GuideViewModel }) {
         ? "질문이 많아 잠시 쉬고 있어요. 잠시 후 다시 물어봐 주세요."
         : "질문을 해석하지 못했어요. 잠시 후 다시 물어봐 주세요.");
     } finally {
+      pendingRef.current = false;
       setPending(false);
     }
   }

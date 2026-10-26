@@ -35,6 +35,7 @@ export async function restoreConversation(
   storage: ConversationStorage,
   resolve: (id: string) => Promise<Place | true | undefined>,
   now = Date.now(),
+  isCurrent = () => true,
 ): Promise<{ context: ConversationContext; places: Place[] } | null> {
   const stored = storage.getItem(conversationStorageKey);
   if (!stored) return null;
@@ -84,10 +85,11 @@ export async function restoreConversation(
       ...(typeof data.turnId === "string" ? { turnId: data.turnId } : {}),
       expiresAt: data.expiresAt,
     };
+    if (!isCurrent()) return null;
     saveConversation(storage, context);
     return { context, places };
   } catch {
-    clearConversation(storage);
+    if (isCurrent()) clearConversation(storage);
     return null;
   }
 }

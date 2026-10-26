@@ -25,6 +25,47 @@ test("연속 질문에서 늦은 응답과 화면을 떠난 뒤 응답은 결과
   assert.equal(await leaving, null);
 });
 
+test("연속 요청은 이전 호출을 취소하고 같은 질문은 한 번만 보내요", async () => {
+  const pending = new Map<string, (result: IntentResult) => void>();
+  const signals = new Map<string, AbortSignal>();
+  let calls = 0;
+  const requests = createIntentRequest((query, signal) => {
+    calls++;
+    signals.set(query, signal);
+    return new Promise<IntentResult>((resolve) => pending.set(query, resolve));
+  });
+  const first = requests.run("혜인관 어디예요?");
+  const second = requests.run("한림관 6층 가고 싶어요");
+  const duplicate = requests.run("한림관 6층 가고 싶어요");
+  assert.equal(calls, 2);
+  assert.equal(signals.get("혜인관 어디예요?")?.aborted, true);
+  const result = await interpretIntent("한림관 6층 가고 싶어요", {});
+  pending.get("한림관 6층 가고 싶어요")!(result);
+  assert.equal(await second, result);
+  assert.equal(await duplicate, result);
+  pending.get("혜인관 어디예요?")!(result);
+  assert.equal(await first, null);
+
+  const stale = requests.run("초기화 전 질문");
+  requests.cancel();
+  assert.equal(signals.get("초기화 전 질문")?.aborted, true);
+  pending.get("초기화 전 질문")!(result);
+  assert.equal(await stale, null);
+});
+
+test("동기 오류 뒤 같은 질문을 다시 보낼 수 있어요", async () => {
+  const result = await interpretIntent("혜인관", {});
+  let calls = 0;
+  const requests = createIntentRequest(() => {
+    calls++;
+    if (calls === 1) throw new Error("일시적 실패");
+    return Promise.resolve(result);
+  });
+  await assert.rejects(requests.run("혜인관"), /일시적 실패/);
+  assert.equal(await requests.run("혜인관"), result);
+  assert.equal(calls, 2);
+});
+
 test("명확한 호실·조건·면접 질문은 외부 호출 없이 처리해요", async () => {
   for (const [query, destination, elevator] of [
     ["혜인관 301호 어디예요?", "hyein-301", undefined],
@@ -96,7 +137,13 @@ test("등록되지 않은 장소·층과 잘못된 필드는 길찾기에 전달
     { intent: "destination", startPlaceId: 3, destinationPlaceIds: ["interview"], elevator: null },
     { intent: "destination", startPlaceId: null, destinationPlaceIds: "interview", elevator: null },
     { intent: "destination", startPlaceId: null, destinationPlaceIds: ["interview"], elevator: "true" },
-  ]) assert.deepEqual(await interpretIntent(query, config, answer(value)), keyword);
+  ]) {
+    const result = await interpretIntent(query, config, answer(value));
+    assert.equal(result.mode, keyword.mode);
+    assert.deepEqual(result.places, keyword.places);
+    assert.equal(result.startPlaceId, keyword.startPlaceId);
+    assert.deepEqual(result.conditions, keyword.conditions);
+  }
   assert.equal(findPlace("hallim|99"), undefined);
   assert.equal((await interpretIntent("혜인관 999호 어디예요", {})).places.length, 0);
   const deduplicated = await interpretIntent(query, config,

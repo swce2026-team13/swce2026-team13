@@ -90,7 +90,9 @@ function useCampusState() {
   const [query, setQuery] = useState(""),
     [results, setResults] = useState<Place[]>([]),
     [searchNote, setSearchNote] = useState("");
-  const intentRequest = useRef(createIntentRequest((query) => api<IntentResult>("intent", { query })));
+  const intentRequest = useRef(createIntentRequest((query, signal) => api<IntentResult>("intent", { query }, signal)));
+  const searchSubmissionRef = useRef<string | null>(null);
+  const conversationGeneration = useRef(0);
   const [searchStartRequested, setSearchStartRequested] = useState(false);
   const [searchIntent, setSearchIntent] = useState<Intent>("destination");
   const [conversationReady, setConversationReady] = useState(false);
@@ -135,13 +137,18 @@ function useCampusState() {
     useState(false);
   const [insight, setInsight] = useState<Insight | null>(null);
   const imageRef = useRef("");
+  const busyRef = useRef(false);
   const recognitionAbortRef = useRef<AbortController | null>(null);
   function rememberConversation(next: ConversationContext | null) {
+    conversationGeneration.current++;
     conversationRef.current = next;
     setConversation(next);
     try { saveConversation(sessionStorage, next); } catch { /* 저장 공간을 사용할 수 없어도 검색은 계속해요. */ }
   }
   function resetConversation() {
+    conversationGeneration.current++;
+    intentRequest.current.cancel();
+    searchSubmissionRef.current = null;
     conversationPlaces.current.clear();
     conversationRef.current = null;
     setConversation(null);
@@ -248,22 +255,23 @@ function useCampusState() {
   ]);
   useEffect(() => {
     let cancelled = false;
-    restoreConversation(sessionStorage, async (id) => {
+    const generation = conversationGeneration.current;
+    Promise.resolve().then(() => restoreConversation(sessionStorage, async (id) => {
       try {
         const value = await api<{ place: Place }>(`places/${encodeURIComponent(id)}`);
         return value.place;
       } catch {
         return waypoints.some((waypoint) => waypoint.id === id) ? true : undefined;
       }
-    }).then((restored) => {
-      if (cancelled) return;
+    }, Date.now(), () => !cancelled && generation === conversationGeneration.current)).then((restored) => {
+      if (cancelled || generation !== conversationGeneration.current) return;
       if (restored) {
         conversationRef.current = restored.context;
         setConversation(restored.context);
         for (const place of restored.places) conversationPlaces.current.set(place.id, place);
       }
     }).catch(() => {
-      if (!cancelled) resetConversation();
+      if (!cancelled && generation === conversationGeneration.current) resetConversation();
     }).finally(() => {
       if (!cancelled) setConversationReady(true);
     });
@@ -278,6 +286,10 @@ function useCampusState() {
     if (view !== "search") return;
     if (!conversationReady) return;
     const request = intentRequest.current;
+    const submissionKey = `${selectedQuery.trim()}\0${selectedCategory}`;
+    const finishSubmission = () => {
+      if (searchSubmissionRef.current === submissionKey) searchSubmissionRef.current = null;
+    };
     let cancelled = false;
     Promise.resolve().then(async () => {
       if (cancelled) return;
@@ -288,7 +300,10 @@ function useCampusState() {
       setClassroomSelection(null);
       setClassroomBuilding(null);
       setSearchNote("검색 결과");
-      if (!selectedQuery && !selectedCategory) return;
+      if (!selectedQuery && !selectedCategory) {
+        finishSubmission();
+        return;
+      }
       const saved = conversationRef.current;
       if (!selectedCategory && saved) {
         const places = rememberedTurnPlaces(saved, selectedTurn,
@@ -300,12 +315,14 @@ function useCampusState() {
           if (saved.startPlaceId) setStart(saved.startPlaceId);
           if (saved.elevator !== undefined) setElevator(saved.elevator);
           setSearchRevision((value) => value + 1);
+          finishSubmission();
           return;
         }
       }
       try {
         let hadPendingCandidates = false;
-        let result: Pick<IntentResult, "intent" | "conditions" | "places" | "startPlaceId" | "startRequested"> | null;
+        let result: Pick<IntentResult, "intent" | "conditions" | "places" | "startPlaceId" | "startRequested"> &
+          Partial<Pick<IntentResult, "message">> | null;
         if (selectedCategory) {
           result = {
             ...(await api<{ places: Place[] }>(
@@ -325,6 +342,7 @@ function useCampusState() {
           result = merged.result;
         }
         if (cancelled || !result) return;
+        setSearchNote(result.message || "검색 결과");
         const nextElevator = result.conditions.elevator;
         setSearchStartRequested(Boolean(result.startRequested));
         if (typeof nextElevator === "boolean" || result.startRequested) {
@@ -369,12 +387,14 @@ function useCampusState() {
         );
         setSearchRevision((value) => value + 1);
       } catch (error) {
-        if (!cancelled)
-          setError(
-            error instanceof Error
-              ? error.message
-              : "검색 결과를 불러오지 못했어요.",
-          );
+        if (!cancelled) {
+          const status = (error as { status?: unknown } | null)?.status;
+          setSearchNote(status === 429
+            ? "질문이 많아 잠시 쉬고 있어요. 장소 이름으로 다시 검색해 주세요."
+            : "질문을 이해하지 못했어요. 장소 이름으로 다시 검색해 주세요.");
+        }
+      } finally {
+        finishSubmission();
       }
     });
     return () => {
@@ -395,7 +415,8 @@ function useCampusState() {
     setSent(s.feedbackSubmitted);
   }
   async function run(fn: () => Promise<void>) {
-    if (busy) return;
+    if (busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
     setError("");
     try {
@@ -405,6 +426,7 @@ function useCampusState() {
         setInsight(null);
       setError(e instanceof Error ? e.message : "잠시 후 다시 시도해 주세요.");
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   }
@@ -450,6 +472,8 @@ function useCampusState() {
     [],
   );
   function search(value = query, category?: string) {
+    const submissionKey = `${value.trim()}\0${category || ""}`;
+    if (searchSubmissionRef.current === submissionKey) return;
     const fresh = view === "home" || (view === "search" && !value.trim());
     if (fresh) {
       resetConversation();
@@ -459,6 +483,7 @@ function useCampusState() {
     }
     else if (view === "search" && conversationRef.current?.clarification)
       rememberConversation({ ...conversationRef.current, clarification: undefined });
+    searchSubmissionRef.current = submissionKey;
     go("search", { q: value, category: category || "",
       ...(value.trim() && !category ? { turn: crypto.randomUUID() } : {}),
       ...(fresh ? { start: "", elevator: "true" } : {}) });

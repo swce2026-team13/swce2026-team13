@@ -353,7 +353,7 @@ test("Gemini status logs give only the reason, never the key or the sentence", a
     [{ GEMINI_MODEL: "test-model" }, reply({}), "[gemini] 건너뜀: GEMINI_API_KEY 없음"],
     [{ GEMINI_API_KEY: "test-key" }, reply({}), "[gemini] 건너뜀: GEMINI_MODEL 없음"],
     [gemini, () => new Promise<string>(() => {}), "[gemini] 키워드 검색으로 대체: timeout"],
-    ...[400, 401, 403, 404, 429].map((status) => [
+    ...[400, 401, 403, 404, 429, 503].map((status) => [
       gemini,
       async () => {
         throw Object.assign(new Error(`${unresolved} test-key`), { status });
@@ -420,7 +420,7 @@ test("Gemini fills unresolved destinations with registered places only", async (
   const many = fakeGemini(
     reply({ intent: "destination", placeIds: places.map((p) => p.id), elevator: null }),
   );
-  assert.equal((await interpretIntent(unresolved, gemini, many.ask)).places.length, 5);
+  assert.deepEqual((await interpretIntent(unresolved, gemini, many.ask)).places, []);
 
   const invented = fakeGemini(
     reply({ intent: "destination", placeIds: ["invented"], elevator: null }),
@@ -428,6 +428,35 @@ test("Gemini fills unresolved destinations with registered places only", async (
   const fallback = await interpretIntent(unresolved, gemini, invented.ask);
   assert.equal(fallback.mode, "keyword");
   assert.deepEqual(fallback.places, []);
+});
+
+test("Gemini 후보가 규칙 후보와 충돌하거나 필드별 장소가 다르면 규칙 결과를 지켜요", async () => {
+  const query = "커피 마시고 싶은데 도서관 근처로";
+  const keyword = await interpretIntent(query, {});
+  assert.ok(keyword.places.length > 1);
+  const conflict = await interpretIntent(query, gemini,
+    reply({ intent: "destination", startPlaceId: null, destinationPlaceIds: ["interview"], elevator: null }));
+  assert.deepEqual(conflict.places.map((place) => place.id), keyword.places.map((place) => place.id));
+
+  const fields = await interpretIntent(unresolved, gemini,
+    reply({ intent: "destination", startPlaceId: null,
+      destinationPlaceIds: ["interview"], placeIds: ["hyein-301"], elevator: null }));
+  assert.deepEqual(fields.places, []);
+});
+
+test("범위 밖 질문과 AI 연결 실패는 임의의 장소를 확정하지 않아요", async () => {
+  const weather = await interpretIntent("오늘 날씨 어때요", gemini,
+    reply({ intent: "destination", startPlaceId: null, destinationPlaceIds: ["interview"], elevator: null }));
+  assert.deepEqual(weather.places, []);
+  const outside = await interpretIntent("강남역 가는 법", gemini,
+    reply({ intent: "destination", startPlaceId: null, destinationPlaceIds: ["interview"], elevator: null }));
+  assert.deepEqual(outside.places, []);
+
+  const failure = await interpretIntent(unresolved, gemini, async () => {
+    throw Object.assign(new Error("서버 오류"), { status: 503 });
+  });
+  assert.deepEqual(failure.places, []);
+  assert.equal(failure.message, "질문을 이해하지 못했어요. 장소 이름으로 다시 검색해 주세요.");
 });
 
 test("잘못된 의도는 거부하고 유효한 의도와 이동 조건만 사용해요", async () => {
@@ -470,7 +499,11 @@ test("Gemini timeouts, errors, quota limits and malformed JSON fall back to keyw
     const { ask, calls } = fakeGemini(failure);
     const result = await interpretIntent(unresolved, gemini, ask, 20);
     assert.equal(calls.length, 1);
-    assert.deepEqual(result, keyword);
+    assert.equal(result.mode, keyword.mode);
+    assert.equal(result.intent, keyword.intent);
+    assert.deepEqual(result.places, keyword.places);
+    assert.deepEqual(result.conditions, keyword.conditions);
+    assert.equal(result.message, "질문을 이해하지 못했어요. 장소 이름으로 다시 검색해 주세요.");
   }
   let aborted = false;
   const { ask } = fakeGemini(
