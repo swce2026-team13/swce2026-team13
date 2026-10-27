@@ -70,7 +70,7 @@ function describe(result: IntentResult | null) {
 }
 
 const keywordOnly = process.argv.includes("--keyword-only");
-const withGemini = !keywordOnly && Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_MODEL);
+const withGemini = process.argv.includes("--live") && !keywordOnly && Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_MODEL);
 const rows: string[] = [];
 let keywordCorrect = 0;
 let geminiCorrect = 0;

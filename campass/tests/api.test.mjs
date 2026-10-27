@@ -86,6 +86,14 @@ test("HTTP pages support direct navigation and unknown paths return 404", async 
     assert.match(response.headers.get("content-type"), /text\/html/);
   }
   assert.equal((await fetch(`${origin}/missing-page`)).status, 404);
+  for (const [path, type] of [
+    ["/favicon.ico", /image\//],
+    ["/manifest.webmanifest", /application\/manifest\+json/],
+  ]) {
+    const response = await fetch(`${origin}${path}`);
+    assert.equal(response.status, 200, path);
+    assert.match(response.headers.get("content-type"), type);
+  }
 });
 
 async function request(path, body, options = {}) {
@@ -129,7 +137,7 @@ test("HTTP intent exposes destination, condition and next responses with travel 
       "엘리베이터 타고 혜인관 3층",
       "destination",
       { elevator: true },
-      "interview",
+      "hyein|3",
     ],
     [
       "계단으로 면접 보러 갈게요",
