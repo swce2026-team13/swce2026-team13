@@ -4,9 +4,9 @@ import {
   campusMap,
   getFloorElevations,
   toScenePosition,
-} from "../lib/campus-map.ts";
-import { campusBuildings } from "../lib/campus3d/types.ts";
-import { loadCampusThree } from "../components/campus-map/three-loader.js";
+} from "../shared/utils/campus-map.ts";
+import { campusBuildings } from "../shared/utils/campus3d/types.ts";
+import { loadCampusThree } from "../features/navigation/campus-map/three-loader.js";
 
 test("첨부 지도의 건물과 등고선은 유효한 좌표와 층 높이를 가진다", () => {
   assert.equal(campusMap.buildings.length, 12);

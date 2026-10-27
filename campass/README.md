@@ -74,6 +74,15 @@ API 테스트는 별도 임시 SQLite DB와 임의 포트의 서버를 생성합
 
 `docs/`, `Doc/`, 상세 백엔드 문서는 로컬 전용이며 Git에서 제외합니다.
 
+## 코드 구조
+
+- `app/`: URL별 페이지와 API 진입점을 모아요. API의 공통 인증·요청 검증은 `server/services/api.ts`에서 유지해요.
+- `features/`: `search`, `navigation`, `recognition`, `feedback`, `admin`별 화면과 기능 컴포넌트를 모아요.
+- `components/ui/`: 공통 버튼·카드·아이콘·모달을 모아요. 전체 화면 틀은 `components/app-shell.tsx`에 있어요.
+- `server/`: `db`는 저장소, `auth`는 인증, `services`는 요청·장소 처리, `integrations`는 외부 연동을 맡아요.
+- `shared/`: 화면과 서버에서 함께 쓰는 자료형은 `types`, 공통 함수는 `utils`에 모아요.
+- `campus-data`, `styles`, `tests`, `scripts`, `public`의 기존 위치는 유지해요.
+
 ## 관리자 시연 데이터
 
 `npm run seed:demo`는 최근 14일의 예시 세션 40개를 넣어요. 다시 실행하면 기존 예시만 교체해요. `npm run seed:demo:clear`는 예시 기록만 지워요. DB는 `DATABASE_PATH`를 따르고, 없으면 `./data/campass.sqlite`를 사용해요.

@@ -1,1 +1,1 @@
-export { default } from "@/components/screens/prepare";
+export { default } from "@/features/navigation/prepare";

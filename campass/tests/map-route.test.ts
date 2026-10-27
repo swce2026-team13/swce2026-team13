@@ -4,9 +4,9 @@ import {
   selectRouteBuilding,
   buildingRoute,
   mapRouteBuildings,
-} from "../lib/map-route.ts";
-import { calculateRoute } from "../lib/routing.ts";
-import { toGuideMapData } from "../lib/guide-view.ts";
+} from "../shared/utils/map-route.ts";
+import { calculateRoute } from "../shared/utils/routing.ts";
+import { toGuideMapData } from "../shared/utils/guide-view.ts";
 
 test("건물을 누르면 출발과 도착을 고르고 연속 중복 선택은 무시해요", () => {
   const first = selectRouteBuilding([], "본관");

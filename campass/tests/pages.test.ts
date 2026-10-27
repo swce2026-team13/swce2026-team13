@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
-import { navigationHref } from "../lib/navigation.ts";
+import { navigationHref } from "../shared/utils/navigation.ts";
 
 test("새 목적지 이동에서 이전 세션의 위치 복구 모드 해제", () => {
   for (const next of ["prepare", "guide", "search"] as const) {
@@ -76,7 +76,7 @@ test("모달 직접 접속과 일반 이동의 슬롯 초기화 지원", () => {
   ]) {
     assert.ok(existsSync(`app/@modal/${page}`), `슬롯 누락: ${page}`);
   }
-  const modal = readFileSync("components/route-modal.tsx", "utf8");
+  const modal = readFileSync("components/ui/route-modal.tsx", "utf8");
   assert.match(modal, /modalPaths\.has\(usePathname\(\)\)/);
   assert.match(modal, /if \(!visible\) return null/);
   assert.match(modal, /element\.close\(\)/);

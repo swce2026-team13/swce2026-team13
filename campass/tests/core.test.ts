@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 test("catalog finds official Hyein rooms and accepts the Figma spelling alias", async () => {
-  const { searchPlaces } = await import("../lib/catalog.ts");
+  const { searchPlaces } = await import("../shared/utils/catalog.ts");
   assert.ok(searchPlaces("혜인관 301").some((p) => p.id === "hyein-301"));
   assert.ok(searchPlaces("헤인관 면접").some((p) => p.id === "interview"));
   assert.equal(searchPlaces("헤인관 면접")[0].id, "interview");
@@ -13,7 +13,7 @@ test("catalog finds official Hyein rooms and accepts the Figma spelling alias", 
 });
 
 test("routing is connected, excludes stairs when requested, and rejects unknown/unreachable nodes", async () => {
-  const { calculateRoute } = await import("../lib/routing.ts");
+  const { calculateRoute } = await import("../shared/utils/routing.ts");
   const normal = calculateRoute("bus_stop_2115", "interview", false);
   const accessible = calculateRoute("bus_stop_2115", "interview", true);
   assert.equal(normal.steps.at(-1)?.id, "interview");
@@ -25,7 +25,7 @@ test("routing is connected, excludes stairs when requested, and rejects unknown/
 });
 
 test("2115 정류장에서 면접 대기실과 은주1관 5층 앞 경로가 나뉜다", async () => {
-  const { calculateRoute, waypoints } = await import("../lib/routing.ts");
+  const { calculateRoute, waypoints } = await import("../shared/utils/routing.ts");
   assert.ok(!waypoints.some((w) => w.id === "bus"));
 
   const interview = calculateRoute("bus_stop_2115", "interview", true);
@@ -66,7 +66,7 @@ test("2115 정류장에서 면접 대기실과 은주1관 5층 앞 경로가 나
 });
 
 test("sessions persist, reject other owners and stale progress, deduplicate confusion and feedback", async () => {
-  const { Store } = await import("../lib/store.ts");
+  const { Store } = await import("../server/db/store.ts");
   const path = join(
     mkdtempSync(join(tmpdir(), "campass-test-")),
     "test.sqlite",
@@ -102,7 +102,7 @@ test("sessions persist, reject other owners and stale progress, deduplicate conf
 });
 
 test("recovery only accepts valid locations and does not erase observed history", async () => {
-  const { Store } = await import("../lib/store.ts");
+  const { Store } = await import("../server/db/store.ts");
   const store = new Store(":memory:");
   const session = store.create("owner", "bus_stop_2115", "interview", true);
   assert.throws(() =>
@@ -122,7 +122,7 @@ test("recovery only accepts valid locations and does not erase observed history"
 
 test("unconfigured AI never fabricates predictions and invalid provider responses fail closed", async () => {
   const { recognizePhoto, validatePrediction } =
-    await import("../lib/providers.ts");
+    await import("../server/integrations/providers.ts");
   const result = await recognizePhoto(
     new Blob(["test"], { type: "image/jpeg" }),
     {},
@@ -144,7 +144,7 @@ test("unconfigured AI never fabricates predictions and invalid provider response
 });
 
 test("recovery orientation belongs to the confirmed location and is cleared on next step", async () => {
-  const { Store } = await import("../lib/store.ts");
+  const { Store } = await import("../server/db/store.ts");
   const store = new Store(":memory:");
   const s = store.create("owner", "bus_stop_2115", "interview", true);
   const recovered = store.recover(
@@ -166,7 +166,7 @@ test("recovery orientation belongs to the confirmed location and is cleared on n
 });
 
 test("same-origin requests use public host instead of the Next internal hostname", async () => {
-  const { assertRequestOrigin } = await import("../lib/server.ts");
+  const { assertRequestOrigin } = await import("../server/services/request.ts");
   const request = new Request("http://localhost:3000/api/intent", {
     headers: { host: "127.0.0.1:3000", origin: "http://127.0.0.1:3000" },
   });

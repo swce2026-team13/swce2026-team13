@@ -1,1 +1,1 @@
-export { default } from "@/components/screens/places";
+export { default } from "@/features/search/places";

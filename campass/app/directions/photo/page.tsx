@@ -1,1 +1,1 @@
-export { default } from "@/components/screens/photo";
+export { default } from "@/features/recognition/photo";

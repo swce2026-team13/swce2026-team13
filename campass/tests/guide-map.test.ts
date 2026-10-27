@@ -1,21 +1,21 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import test from "node:test";
-import { calculateRoute } from "../lib/routing.ts";
-import { allPlaces } from "../lib/rooms.ts";
-import { Store } from "../lib/store.ts";
+import { calculateRoute } from "../shared/utils/routing.ts";
+import { allPlaces } from "../server/services/rooms.ts";
+import { Store } from "../server/db/store.ts";
 import {
   guideLegLabel,
   toGuideMapData,
   toGuideViewModel,
-} from "../lib/guide-view.ts";
-import { searchPlaces } from "../lib/catalog.ts";
+} from "../shared/utils/guide-view.ts";
+import { searchPlaces } from "../shared/utils/catalog.ts";
 import {
   overviewLinkPair,
   overviewLinks,
   overviewRouteHighlight,
-} from "../lib/campus-overview.ts";
-import { campusLinks } from "../lib/campus3d/types.ts";
+} from "../shared/utils/campus-overview.ts";
+import { campusLinks } from "../shared/utils/campus3d/types.ts";
 
 test("공모전 발표는 검색되고, 2115에서 엘리베이터로 본관 1층 → 유담관 8층 → L층으로 가요", () => {
   for (const q of ["공모전", "결선"])

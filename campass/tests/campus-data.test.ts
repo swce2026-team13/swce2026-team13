@@ -9,10 +9,10 @@ import {
   loadPlaces,
   loadRooms,
   nodeKey,
-} from "../lib/campus3d/types.ts";
-import { places } from "../lib/catalog.ts";
-import { calculateRoute } from "../lib/routing.ts";
-import { Store } from "../lib/store.ts";
+} from "../shared/utils/campus3d/types.ts";
+import { places } from "../shared/utils/catalog.ts";
+import { calculateRoute } from "../shared/utils/routing.ts";
+import { Store } from "../server/db/store.ts";
 
 test("캠퍼스 데이터는 건물 13, 연결 22(삭제 제외), 입구 35", () => {
   assert.equal(campusBuildings().length, 13);

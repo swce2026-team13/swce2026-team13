@@ -1,13 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { calculateRoute } from "../lib/routing.ts";
+import { calculateRoute } from "../shared/utils/routing.ts";
 import {
   legRows,
   optionSummary,
   pickOption,
   stepFreeText,
-} from "../lib/route-cards.ts";
-import { Store } from "../lib/store.ts";
+} from "../shared/utils/route-cards.ts";
+import { Store } from "../server/db/store.ts";
 
 const interview = (elevator: boolean) =>
   calculateRoute("bus_stop_2115", "interview", elevator);

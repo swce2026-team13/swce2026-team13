@@ -1,4 +1,4 @@
-import type { ConversationContext } from "../lib/conversation-context.ts";
+import type { ConversationContext } from "../shared/utils/conversation-context.ts";
 
 export type EvaluationCategory = "단순 장소" | "복합 질문" | "후속 질문" | "모호한 질문" | "의미·오타·별칭" | "범위 밖·미등록";
 export type EvaluationCase = {

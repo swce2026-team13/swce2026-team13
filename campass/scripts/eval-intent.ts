@@ -1,6 +1,6 @@
 import { setTimeout } from "node:timers/promises";
-import { interpretIntent, type IntentResult } from "../lib/providers.ts";
-import { allPlaces } from "../lib/rooms.ts";
+import { interpretIntent, type IntentResult } from "../server/integrations/providers.ts";
+import { allPlaces } from "../server/services/rooms.ts";
 
 type Example = {
   query: string;

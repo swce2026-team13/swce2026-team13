@@ -1,12 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { places, searchPlaces } from "../lib/catalog.ts";
-import { classroomFloors, classroomSearch } from "../lib/classrooms.ts";
-import { calculateRoute } from "../lib/routing.ts";
-import { allPlaces, facilityPlaces, findPlace, roomPlaces } from "../lib/rooms.ts";
-import { loadRooms } from "../lib/campus3d/types.ts";
-import { geminiCatalog } from "../lib/gemini.ts";
-import { Store } from "../lib/store.ts";
+import { places, searchPlaces } from "../shared/utils/catalog.ts";
+import { classroomFloors, classroomSearch } from "../shared/utils/classrooms.ts";
+import { calculateRoute } from "../shared/utils/routing.ts";
+import { allPlaces, facilityPlaces, findPlace, roomPlaces } from "../server/services/rooms.ts";
+import { loadRooms } from "../shared/utils/campus3d/types.ts";
+import { geminiCatalog } from "../server/integrations/gemini.ts";
+import { Store } from "../server/db/store.ts";
 
 const rooms = roomPlaces();
 const search = (query: string) =>
