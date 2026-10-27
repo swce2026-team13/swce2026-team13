@@ -1,15 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { places } from "../lib/catalog.ts";
-import { allPlaces } from "../lib/rooms.ts";
-import { calculateRoute } from "../lib/routing.ts";
+import { places } from "../shared/utils/catalog.ts";
+import { allPlaces } from "../server/services/rooms.ts";
+import { calculateRoute } from "../shared/utils/routing.ts";
 import {
   placeLabel,
   startChoices,
   startLabel,
   startMapIds,
   samePlace,
-} from "../lib/route-start.ts";
+} from "../shared/utils/route-start.ts";
 
 test("장소명에 포함된 건물과 층을 요약에 반복하지 않는다", () => {
   assert.equal(placeLabel(places.find((p) => p.id === "eunju1_5f_front")!), "은주1관 5층 앞");

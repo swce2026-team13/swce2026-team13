@@ -29,7 +29,7 @@ function sources(dir: string): string[] {
 }
 
 test("피그마 아이콘으로 바꾼 lucide 아이콘을 가져오는 파일이 없음", () => {
-  const files = ["app", "components", "lib"].flatMap(sources);
+  const files = ["app", "components", "features", "server", "shared"].flatMap(sources);
   for (const file of files) {
     const text = readFileSync(file, "utf8");
     for (const match of text.matchAll(/import\s*\{([^}]*)\}\s*from\s*["']lucide-react["']/g)) {

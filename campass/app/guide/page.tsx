@@ -1,1 +1,1 @@
-export { default } from "@/components/screens/guide";
+export { default } from "@/features/navigation/guide";

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { emptyPick, pickOnMap, pickStatus } from "../lib/map-pick.ts";
+import { emptyPick, pickOnMap, pickStatus } from "../shared/utils/map-pick.ts";
 
 test("처음 누른 건물은 출발, 두 번째로 누른 건물은 도착", () => {
   const first = pickOnMap(emptyPick, "bon", true);

@@ -1,8 +1,8 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { execFileSync } from "node:child_process";
-import { campus } from "../lib/catalog.ts";
-import { askGemini } from "../lib/gemini.ts";
+import { campus } from "../shared/utils/catalog.ts";
+import { askGemini } from "../server/integrations/gemini.ts";
 import { evaluationCases } from "./intent-eval-cases.ts";
 import { evaluateCases, summarize, type EvaluationMode } from "./intent-eval-core.ts";
 

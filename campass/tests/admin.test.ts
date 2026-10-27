@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Store } from "../lib/store.ts";
-import * as server from "../lib/server.ts";
+import { Store } from "../server/db/store.ts";
+import * as server from "../server/services/request.ts";
 
 const credentials = { id: "administrator", password: "test-password-12345" };
 function setup(t: TestContext, path = ":memory:") {

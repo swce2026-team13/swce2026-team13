@@ -1,7 +1,7 @@
 "use client";
-import { BackIcon, CloseIcon, MapIcon } from "./icons";
-import { useCampus } from "./campus-provider";
-import { titles, viewForPath } from "@/lib/navigation";
+import { BackIcon, CloseIcon, MapIcon } from "./ui/icons";
+import { useCampus } from "../features/navigation/campus-provider";
+import { titles, viewForPath } from "@/shared/utils/navigation";
 import { usePathname } from "next/navigation";
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

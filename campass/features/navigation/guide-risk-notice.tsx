@@ -1,0 +1,91 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { AlertTriangle } from "lucide-react";
+import { api, useCampus } from "@/features/navigation/campus-provider";
+import { getConfusionAdvice } from "@/shared/utils/confusion-advice";
+
+type RouteInsightPoint = {
+  id: string;
+  name: string;
+  passages: number;
+  confusions: number;
+  rate: number;
+  topReason: string | null;
+};
+
+type RouteInsightResponse = {
+  points: RouteInsightPoint[];
+  dataMode: string;
+};
+
+type GuideRiskNoticeProps = {
+  currentWaypointId: string | null | undefined;
+  start: string;
+  destination: string;
+  elevator: boolean;
+};
+
+export function GuideRiskNotice({
+  currentWaypointId,
+  start,
+  destination,
+  elevator,
+}: GuideRiskNoticeProps) {
+  const { session } = useCampus();
+  const option = session?.route.option ?? "";
+  const [points, setPoints] = useState<RouteInsightPoint[]>([]);
+  const [dataMode, setDataMode] = useState("");
+
+  useEffect(() => {
+    if (!currentWaypointId) return;
+
+    const params = new URLSearchParams({
+      start,
+      destination,
+      elevator: String(elevator),
+      option,
+    });
+
+    api<RouteInsightResponse>(
+  `route-insights?${params}`,
+)
+  .then((data) => {
+    setPoints(data.points);
+    setDataMode(data.dataMode);
+  })
+  .catch(() => {
+    setPoints([]);
+    setDataMode("");
+  });
+  }, [currentWaypointId, start, destination, elevator, option]);
+
+  const currentRisk = useMemo(
+    () =>
+      points.find(
+        (point) =>
+          point.id === currentWaypointId &&
+          point.confusions > 0,
+      ) ?? null,
+    [points, currentWaypointId],
+  );
+  const isDemo = dataMode === "demo-route-activity";
+
+  if (!currentRisk) return null;
+
+  return (
+    <aside className="guide-risk-notice">
+      <div className="guide-risk-title">
+        <AlertTriangle size={18} strokeWidth={1.7} />
+        <strong>헤매는 사람이 많은 구간이에요</strong>
+      </div>
+      {isDemo && (
+  <span className="guide-risk-demo-label">
+    시연용 예시 기록 포함
+  </span>
+)}
+
+      <p>{getConfusionAdvice(currentRisk.topReason)}</p>
+    </aside>
+  );
+}

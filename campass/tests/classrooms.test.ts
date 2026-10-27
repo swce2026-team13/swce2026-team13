@@ -1,12 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { places, searchPlaces } from "../lib/catalog.ts";
+import { places, searchPlaces } from "../shared/utils/catalog.ts";
 import {
   classroomFloors,
   classroomSearch,
   roomsOnFloor,
   digitsOnly,
-} from "../lib/classrooms.ts";
+} from "../shared/utils/classrooms.ts";
 
 test("classroom category shows buildings instead of individual rooms", () => {
   const result = classroomSearch(

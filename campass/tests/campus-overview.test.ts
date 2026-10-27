@@ -9,8 +9,8 @@ import {
   overviewLinks,
   overviewMarkers,
   project,
-} from "../lib/campus-overview.ts";
-import { campusLinks } from "../lib/campus3d/types.ts";
+} from "../shared/utils/campus-overview.ts";
+import { campusLinks } from "../shared/utils/campus3d/types.ts";
 
 test("개요도 건물 13곳이 모두 윤곽과 색이 있음", () => {
   assert.equal(overviewBuildings.length, 13);

@@ -1,10 +1,10 @@
 import test, { mock } from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
-import { recognizePhoto, interpretIntent } from "../lib/providers.ts";
-import * as providers from "../lib/providers.ts";
-import { places } from "../lib/catalog.ts";
-import { findPlace } from "../lib/rooms.ts";
+import { recognizePhoto, interpretIntent } from "../server/integrations/providers.ts";
+import * as providers from "../server/integrations/providers.ts";
+import { places } from "../shared/utils/catalog.ts";
+import { findPlace } from "../server/services/rooms.ts";
 
 async function fixture(
   value: unknown,

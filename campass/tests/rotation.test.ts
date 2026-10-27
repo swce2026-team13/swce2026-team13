@@ -1,6 +1,6 @@
 import test, { mock } from "node:test";
 import assert from "node:assert/strict";
-import { createRotation } from "../lib/rotation.ts";
+import { createRotation } from "../shared/utils/rotation.ts";
 
 function setup(count = 3) {
   mock.timers.enable({ apis: ["setTimeout"] });

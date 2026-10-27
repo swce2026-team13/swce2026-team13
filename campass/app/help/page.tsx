@@ -1,1 +1,1 @@
-export { default } from "@/components/screens/help";
+export { default } from "@/features/navigation/help";

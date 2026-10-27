@@ -1,7 +1,7 @@
-import { Store, type Session, type Feedback } from "../lib/store.ts";
-import { calculateRoute, type Route } from "../lib/routing.ts";
-import { allPlaces } from "../lib/rooms.ts";
-import { nodeLabel } from "../lib/campus3d/route.ts";
+import { Store, type Session, type Feedback } from "../server/db/store.ts";
+import { calculateRoute, type Route } from "../shared/utils/routing.ts";
+import { allPlaces } from "../server/services/rooms.ts";
+import { nodeLabel } from "../shared/utils/campus3d/route.ts";
 
 const store = new Store(process.env.DATABASE_PATH || "./data/campass.sqlite");
 const demoWhere = "id GLOB 'demo-*' AND owner='demo' AND json_extract(data,'$.demo')=1";

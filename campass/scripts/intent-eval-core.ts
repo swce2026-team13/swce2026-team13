@@ -1,9 +1,9 @@
 import { performance } from "node:perf_hooks";
-import type { AskGemini } from "../lib/gemini.ts";
-import { conversationLifetimeMs, mergeConversation } from "../lib/conversation-context.ts";
-import { findPlace, allPlaces } from "../lib/rooms.ts";
-import { calculateRoute, startPoint } from "../lib/routing.ts";
-import { classifyIntent, interpretIntent, type IntentResult } from "../lib/providers.ts";
+import type { AskGemini } from "../server/integrations/gemini.ts";
+import { conversationLifetimeMs, mergeConversation } from "../shared/utils/conversation-context.ts";
+import { findPlace, allPlaces } from "../server/services/rooms.ts";
+import { calculateRoute, startPoint } from "../shared/utils/routing.ts";
+import { classifyIntent, interpretIntent, type IntentResult } from "../server/integrations/providers.ts";
 import { evaluationCases, type EvaluationCase, type EvaluationCategory } from "./intent-eval-cases.ts";
 
 export type EvaluationMode = "keyword" | "mock" | "live";

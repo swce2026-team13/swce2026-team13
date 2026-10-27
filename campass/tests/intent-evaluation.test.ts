@@ -1,10 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { clearConversation, mergeConversation, restoreConversation, saveConversation, selectConversationPlace } from "../lib/conversation-context.ts";
-import { createIntentRequest } from "../lib/intent-request.ts";
-import { interpretIntent, type IntentResult } from "../lib/providers.ts";
-import { allPlaces, findPlace } from "../lib/rooms.ts";
-import { calculateRoute, waypoints } from "../lib/routing.ts";
+import { clearConversation, mergeConversation, restoreConversation, saveConversation, selectConversationPlace } from "../shared/utils/conversation-context.ts";
+import { createIntentRequest } from "../shared/utils/intent-request.ts";
+import { interpretIntent, type IntentResult } from "../server/integrations/providers.ts";
+import { allPlaces, findPlace } from "../server/services/rooms.ts";
+import { calculateRoute, waypoints } from "../shared/utils/routing.ts";
 import { evaluationCases } from "../scripts/intent-eval-cases.ts";
 import { evaluateCases, summarize, validateEvaluationCases } from "../scripts/intent-eval-core.ts";
 

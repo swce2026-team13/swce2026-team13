@@ -1,9 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { calculateRoute } from "../lib/routing.ts";
-import { graphEdges, PARKING } from "../lib/campus3d/route.ts";
-import { allPlaces } from "../lib/rooms.ts";
-import { Store } from "../lib/store.ts";
+import { calculateRoute } from "../shared/utils/routing.ts";
+import { graphEdges, PARKING } from "../shared/utils/campus3d/route.ts";
+import { allPlaces } from "../server/services/rooms.ts";
+import { Store } from "../server/db/store.ts";
 
 test("엘리베이터를 켜면 2115 정류장에서 면접 대기실까지 엘리베이터 길 하나", () => {
   const route = calculateRoute("bus_stop_2115", "interview", true);

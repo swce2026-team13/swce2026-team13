@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "@fontsource-variable/noto-sans-kr";
 import "./globals.css";
 import { Suspense } from "react";
-import { CampusProvider } from "@/components/campus-provider";
+import { CampusProvider } from "@/features/navigation/campus-provider";
 import { AppShell } from "@/components/app-shell";
 export const metadata: Metadata = {
   title: "CAMPASS · 서경대학교 캠퍼스 길찾기",

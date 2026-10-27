@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { interpretIntent } from "../lib/providers.ts";
-import { allPlaces, findPlace } from "../lib/rooms.ts";
-import { calculateRoute, waypoints } from "../lib/routing.ts";
+import { interpretIntent } from "../server/integrations/providers.ts";
+import { allPlaces, findPlace } from "../server/services/rooms.ts";
+import { calculateRoute, waypoints } from "../shared/utils/routing.ts";
 import {
   clearConversation,
   conversationLifetimeMs,
@@ -12,7 +12,7 @@ import {
   restoreConversation,
   saveConversation,
   selectConversationPlace,
-} from "../lib/conversation-context.ts";
+} from "../shared/utils/conversation-context.ts";
 
 const ask = (query: string) => interpretIntent(query, {});
 const find = (id: string) => findPlace(id);

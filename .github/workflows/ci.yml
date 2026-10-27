@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_PATH: ${{ runner.temp }}/campass-ci.sqlite
+      GEMINI_API_KEY: ""
+      GEMINI_MODEL: ""
+      VISION_API_URL: ""
+      INTENT_API_URL: ""
+      NEXT_TELEMETRY_DISABLED: "1"
+    defaults:
+      run:
+        working-directory: campass
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: campass/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: node node_modules/next/dist/bin/next typegen
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm run test:api

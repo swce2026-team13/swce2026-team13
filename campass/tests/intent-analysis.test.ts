@@ -1,10 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { interpretIntent } from "../lib/providers.ts";
-import { calculateRoute } from "../lib/routing.ts";
-import { allPlaces, findPlace } from "../lib/rooms.ts";
-import { createIntentRequest } from "../lib/intent-request.ts";
-import type { IntentResult } from "../lib/providers.ts";
+import { interpretIntent } from "../server/integrations/providers.ts";
+import { calculateRoute } from "../shared/utils/routing.ts";
+import { allPlaces, findPlace } from "../server/services/rooms.ts";
+import { createIntentRequest } from "../shared/utils/intent-request.ts";
+import type { IntentResult } from "../server/integrations/providers.ts";
 
 const config = { GEMINI_API_KEY: "시험용", GEMINI_MODEL: "시험용" };
 const answer = (value: unknown) => async () => JSON.stringify(value);
