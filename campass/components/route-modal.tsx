@@ -1,9 +1,17 @@
 "use client";
 
 import { useEffect, useId, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { CloseIcon } from "./icons";
 import { useCampus } from "./campus-provider";
+import { routes } from "@/lib/navigation";
+
+const modalPaths = new Set<string>([
+  routes.map,
+  routes.places,
+  routes["guide-map"],
+  routes.help,
+]);
 
 export function RouteModal({
   title,
@@ -13,11 +21,13 @@ export function RouteModal({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const visible = modalPaths.has(usePathname());
   const { error, setError, busy } = useCampus();
   const dialog = useRef<HTMLDialogElement>(null);
   const titleId = useId();
 
   useEffect(() => {
+    if (!visible) return;
     const element = dialog.current!;
     const previous = document.activeElement as HTMLElement | null;
     const overflow = document.body.style.overflow;
@@ -28,7 +38,9 @@ export function RouteModal({
       document.body.style.overflow = overflow;
       previous?.focus();
     };
-  }, []);
+  }, [visible]);
+
+  if (!visible) return null;
 
   return (
     <dialog
