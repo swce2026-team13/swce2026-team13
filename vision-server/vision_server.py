@@ -19,14 +19,15 @@ MAX_BYTES = 5 * 1024 * 1024
 WAYPOINT_ALIAS = {
     "hallim_eunju_passage": "hallim_6f_corridor",
     "eunju_5f_entrance": "eunju1_5f_front",
+    "p1_parking": "parking",
 }
 
 # 프론트 routing.ts의 waypoints id 목록. 비워 두면 거르지 않음(테스트용)
 FRONTEND_WAYPOINTS = {
-       "bus_stop_2115", "main_bus_stop_passage", "main_corridor",
-       "main_elevator_front", "to_hallim", "hallim_to_elevator",
-       "hallim_elevator_front", "hallim_6f_elevator", "hallim_6f_corridor",
-       "eunju1_5f_front",
+    "bus_stop_2115", "main_bus_stop_passage", "main_corridor",
+    "main_elevator_front", "to_hallim", "hallim_to_elevator",
+    "hallim_elevator_front", "hallim_6f_elevator", "hallim_6f_corridor",
+    "eunju1_5f_front", "parking",
 }
 
 app = FastAPI()
