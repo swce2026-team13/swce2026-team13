@@ -50,7 +50,7 @@ test("2115에서 면접 대기실까지 모든 단계가 실제 노드와 건물
       ["eunju1|5", 2],
       ["스콘스퀘어", 2],
       ["hyein|1", 3],
-      ["hyein|3", 3],
+      ["hyein|2", 3],
     ],
   );
   assert.equal(
@@ -66,50 +66,50 @@ test("2115에서 면접 대기실까지 모든 단계가 실제 노드와 건물
 test("위치 정보를 제외한 경로 후보와 단계 순서·문구·개수는 변경 전과 같다", () => {
   const cases = [
     [
-      "bus_stop_2115",
-      "interview",
-      true,
-      "f0ab5b751912a3674bc79a554737d7a51690db8d57b9141fa074c0e95a5af246",
-    ],
-    [
-      "bus_stop_2115",
-      "interview",
-      false,
-      "eb87cfb689accea75a01ce36b3c06a80748e74a1fd1863fc873cfd69e1ef9f8a",
-    ],
-    [
-      "yudam",
-      "hyein",
-      true,
-      "3429a1bfd6289918532b9e270d8df7a1ed2572d95d83aba27efd9f1484640034",
-    ],
-    [
-      "gate",
-      "interview",
-      false,
-      "f69de3d58136f5ea3ae661967353961f81aed0478e1d59e28542f1f290137198",
-    ],
-    [
-      "to_hallim",
-      "interview",
-      true,
-      "d9349138ec4a4fcb3162de81380fe82270f6526cc83d2c6d218e9d8aa8693c3e",
-    ],
-    [
-      "hallim_6f_corridor",
-      "interview",
-      true,
-      "f8fca51b5f758e939a9b791d32e3bc8c66954e95b3e9760594b49f869978ceb8",
-    ],
+  "bus_stop_2115",
+  "interview",
+  true,
+  "a71f788ebbe1f69b87cbc9cfd4f1b98fe38b603bad52965428834e1ea4428fb1",
+],
+[
+  "bus_stop_2115",
+  "interview",
+  false,
+  "53514961759da1d02abc393023b7838edf94464bd7078bb69c59eb97e1aef368",
+],
+[
+  "yudam",
+  "hyein",
+  true,
+  "87ca6c6397041c6f4e51fc10cf5e7a6970dd6457f8df98fd2b6ea78a5d92db1b",
+],
+[
+  "gate",
+  "interview",
+  false,
+  "574bef14119c8cf8d85c85eb6413bcd52d2d40d475659914bae3cf3fb5994939",
+],
+[
+  "to_hallim",
+  "interview",
+  true,
+  "e1d12343f9fe7842f6ceb0b15a465629a3cd41d6dbd1b857f24c9387ecf1b193",
+],
+[
+  "hallim_6f_corridor",
+  "interview",
+  true,
+  "0315e599cf36cacaede3375c6cccb7c88dae2243e4af00ad06026a27fff9aebf",
+],
   ] as const;
   for (const [start, destination, elevator, expected] of cases) {
     const route = calculateRoute(start, destination, elevator, allPlaces());
     // 지도에서 안 쓰게 된 예전 좌표(x, y, stage)도 빼고 비교
     const before = JSON.stringify(route, (key, value) =>
-      ["node", "link", "leg", "x", "y", "stage"].includes(key)
-        ? undefined
-        : value,
-    );
+  ["node", "link", "leg", "x", "y", "stage"].includes(key)
+    ? undefined
+    : value,
+);
     assert.equal(
       createHash("sha256").update(before).digest("hex"),
       expected,

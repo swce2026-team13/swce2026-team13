@@ -18,7 +18,7 @@ test("엘리베이터를 켜면 2115 정류장에서 면접 대기실까지 엘�
     "eunju1|5",
     "스콘스퀘어",
     "hyein|1",
-    "hyein|3",
+    "hyein|2",
   ]);
   assert.deepEqual(route.options[0].links.slice(1, 3), [
     "bon|1>bon|5",
@@ -38,15 +38,14 @@ test("엘리베이터를 끄면 지하통로 길이 먼저, 연결통로 길이 
     "지하주차장",
     "hyein|B1",
     "hyein|1",
-    "hyein|2",
-    "hyein|3",
+    "hyein|2"
   ]);
   assert.equal(route.options[1].name, "연결통로 길");
   assert.ok(!route.options[1].nodes.includes(PARKING));
   assert.deepEqual(route.options[0].legs.at(-1), {
     building: "혜인관",
     from: "지하 1층",
-    to: "3층",
+    to: "2층",
   });
 });
 

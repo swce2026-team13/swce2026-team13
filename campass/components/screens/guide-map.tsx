@@ -5,7 +5,14 @@ import { GuideMapViewport } from "@/components/guide-map-viewport";
 import { toGuideViewModel } from "@/lib/guide-view";
 import { useCampus } from "@/components/campus-provider";
 export default function Screen() {
-  const { session, go, step, nextStep, hasSession } = useCampus();
+const {
+  session,
+  go,
+  step,
+  nextStep,
+  hasSession,
+  destinationCard,
+} = useCampus();
   const guide = toGuideViewModel(session);
   return (
     <>
@@ -37,6 +44,7 @@ export default function Screen() {
             <h3>{step?.name}</h3>
             <p>다음 · {nextStep?.name || "목적지"}</p>
           </div>
+          {destinationCard}
           <button className="button primary" onClick={() => go("guide")}>
             단계 안내로 돌아가기
           </button>

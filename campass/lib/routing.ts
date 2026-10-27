@@ -44,7 +44,7 @@ export const waypoints: Waypoint[] = [
     name: "학교 정문",
     instruction: "학교 정문에서 출발하세요",
     detail: "본관 1층 로비 방향으로 이동해 주세요.",
-    photo: "bus",
+    photo: "",
     direction: "forward",
   },
   {
@@ -52,7 +52,7 @@ export const waypoints: Waypoint[] = [
     name: "본관 1층 로비",
     instruction: "본관 1층 로비를 지나 이동하세요",
     detail: "지하주차장 통로 입구를 찾아주세요.",
-    photo: "bus",
+    photo: "",
     direction: "right",
   },
   {
@@ -60,7 +60,7 @@ export const waypoints: Waypoint[] = [
     name: "지하주차장 통로 입구",
     instruction: "통로를 따라 직진하세요",
     detail: "약 25m 이동 후 오른쪽 · 시연 거리",
-    photo: "corridor",
+    photo: "",
     direction: "forward",
   },
   {
@@ -68,7 +68,7 @@ export const waypoints: Waypoint[] = [
     name: "지하주차장 P1",
     instruction: "오른쪽 통로로 이동하세요",
     detail: "혜인관으로 이어지는 방향을 확인해 주세요.",
-    photo: "corridor",
+    photo: "",
     direction: "right",
   },
   {
@@ -76,7 +76,7 @@ export const waypoints: Waypoint[] = [
     name: "혜인관 입구",
     instruction: "혜인관으로 들어가세요",
     detail: "층 이동 안내를 확인해 주세요.",
-    photo: "corridor",
+    photo: "",
     direction: "forward",
   },
   {
@@ -84,7 +84,7 @@ export const waypoints: Waypoint[] = [
     name: "혜인관 엘리베이터",
     instruction: "엘리베이터로 이동하세요",
     detail: "목적지 층을 확인한 뒤 이동해 주세요.",
-    photo: "corridor",
+    photo: "",
     direction: "up",
   },
   {
@@ -92,15 +92,15 @@ export const waypoints: Waypoint[] = [
     name: "혜인관 계단",
     instruction: "계단으로 이동하세요",
     detail: "목적지 층의 안내 표지를 확인해 주세요.",
-    photo: "corridor",
+    photo: "",
     direction: "up",
   },
   {
     id: "interview",
-    name: "혜인관 3층 면접 대기실",
+    name: "혜인관 2층 면접 대기실",
     instruction: "면접 대기실에 도착했어요",
     detail: "시연용 목적지입니다. 실제 행사 장소를 확인해 주세요.",
-    photo: "corridor",
+    photo: "",
     direction: "forward",
   },
   {
@@ -124,7 +124,7 @@ export const waypoints: Waypoint[] = [
     name: "본관 복도",
     instruction: "복도를 따라 이동하세요",
     detail: "엘리베이터 앞으로 이동해 주세요.",
-    photo: "corridor",
+    photo: "",
     direction: "forward",
   },
   {
@@ -132,7 +132,7 @@ export const waypoints: Waypoint[] = [
     name: "본관 엘리베이터 앞",
     instruction: "엘리베이터 앞을 지나 이동하세요",
     detail: "한림관으로 이어지는 연결통로를 찾아 주세요.",
-    photo: "corridor",
+    photo: "",
     direction: "forward",
   },
   {
@@ -140,7 +140,7 @@ export const waypoints: Waypoint[] = [
     name: "본관 5층↔한림관 3층 연결통로",
     instruction: "연결통로를 따라 한림관으로 이동하세요",
     detail: "한림관 3층 엘리베이터 방향으로 이동해 주세요.",
-    photo: "corridor",
+    photo: "",
     direction: "forward",
   },
   {
@@ -148,7 +148,7 @@ export const waypoints: Waypoint[] = [
     name: "한림관 3층 엘리베이터 가는 길",
     instruction: "엘리베이터 쪽으로 이동하세요",
     detail: "한림관 3층 엘리베이터 앞으로 이동해 주세요.",
-    photo: "corridor",
+    photo: "",
     direction: "forward",
   },
   {
@@ -156,7 +156,7 @@ export const waypoints: Waypoint[] = [
     name: "한림관 3층 엘리베이터 앞",
     instruction: "엘리베이터로 6층까지 이동하세요",
     detail: "6층에서 내려 주세요.",
-    photo: "corridor",
+    photo: "",
     direction: "up",
   },
   {
@@ -164,7 +164,7 @@ export const waypoints: Waypoint[] = [
     name: "한림관 6층 엘리베이터 앞",
     instruction: "6층에 도착했어요",
     detail: "은주1관으로 이어지는 연결통로 방향으로 이동해 주세요.",
-    photo: "corridor",
+    photo: "",
     direction: "forward",
   },
   {
@@ -172,7 +172,7 @@ export const waypoints: Waypoint[] = [
     name: "한림관 6층↔은주1관 5층 연결통로",
     instruction: "연결통로를 따라 은주1관으로 이동하세요",
     detail: "은주1관 5층으로 이어져요.",
-    photo: "corridor",
+    photo: "",
     direction: "forward",
   },
   {
@@ -180,7 +180,7 @@ export const waypoints: Waypoint[] = [
     name: "은주1관 5층 앞",
     instruction: "은주1관 5층에 도착했어요",
     detail: "시연용 임시 목적지입니다.",
-    photo: "corridor",
+    photo: "",
     direction: "forward",
   },
 ];
@@ -201,7 +201,7 @@ const waypointNodes: Record<string, string> = {
   hyein: "hyein|B1",
   elevator: "hyein|B1",
   stairs: "hyein|B1",
-  interview: "hyein|3",
+  interview: "hyein|2",
 };
 // 연결통로 위에 있는 사진 안내 지점
 const waypointLinks: Record<string, string> = {
@@ -334,7 +334,7 @@ function nodeWaypoints(
   // 혜인관 층 이동을 시작하는 층
   if (nodeArea(node) === "hyein" && up)
     list.push(byElevator ? "elevator" : "stairs");
-  if (node === "hyein|3" && !next && arrival === "interview")
+  if (node === "hyein|2" && !next && arrival === "interview")
     list.push("interview");
   return list;
 }
@@ -459,7 +459,7 @@ function buildSteps(
     // 시연 목적지가 아니면 '다음 지점 방향으로' 안내. 도중에 지나는 시연 도착 지점도 같게
     if (
       nextPoint &&
-      point.photo &&
+      waypoints.some((waypoint) => waypoint.id === point.id) &&
       (!demo.includes(arrival) || demo.includes(point.id))
     ) {
       point.instruction = `${nextPoint.name} 방향으로 이동하세요`;

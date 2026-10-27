@@ -73,11 +73,15 @@ const recoveryHidden = [
   "elevator",
 ];
 
+const defaultDestination =
+  places.find((place) => place.id === "interview") ?? places[0];
+
 function useCampusState() {
   const router = useRouter();
   const view = viewForPath(usePathname());
   const params = useSearchParams();
-  const selectedDestination = params.get("destination") || places[0].id;
+  const selectedDestination =
+  params.get("destination") || defaultDestination.id;
   const selectedStart = params.get("start") || "";
   const selectedElevator = params.get("elevator") !== "false";
   const selectedBuilding = params.get("building") || "혜인관";
@@ -106,7 +110,8 @@ function useCampusState() {
     null,
   );
   const [searchRevision, setSearchRevision] = useState(0);
-  const [destination, setDestination] = useState<Place>(places[0]),
+  const [destination, setDestination] =
+  useState<Place>(defaultDestination),
     [start, setStart] = useState(""),
     [elevator, setElevator] = useState(true),
     [route, setRoute] = useState<Route | null>(null);
@@ -210,7 +215,7 @@ function useCampusState() {
           (value) => value.place,
           () => undefined,
         )) ||
-        places[0];
+      defaultDestination;
       if (cancelled || revision !== routeRevision.current) return;
       setDestination(destination);
       setStart(selectedStart);
