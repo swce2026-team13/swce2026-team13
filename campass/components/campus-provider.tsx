@@ -59,6 +59,13 @@ export async function api<T>(
     );
   return value;
 }
+
+const manualPickableWaypointIds = [
+  "bus_stop_2115",
+  "gate",
+  "parking",
+];
+
 // 복구 목록에서 빼는 중간 지점
 const recoveryHidden = [
   "main_bus_stop_passage",
@@ -756,12 +763,9 @@ function cancelRecognition() {
   const manualPicker = (
     <div className="stack">
       <h3>위치를 직접 선택할 수 있어요</h3>
-      {waypoints
-        .filter((w) => !["stairs", "interview"].includes(w.id))
-        // 직접 위치 선택에서는 연결통로 · 복도 · 엘리베이터 앞 같은 중간 지점을 빼고
-        // 사용자가 실제 장소로 알아볼 수 있는 지점만 보여 줌
-        .filter((w) => !recoveryHidden.includes(w.id))
-        .map((w) => (
+     {waypoints
+      .filter((w) => manualPickableWaypointIds.includes(w.id))
+     .map((w) => (
           <button
             className="choice"
             key={w.id}

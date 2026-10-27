@@ -21,14 +21,18 @@ export default function Screen({
 }) {
   const params = useSearchParams();
   const { busy, choose, go } = useCampus();
+  const visibleFacilities = facilities.filter(
+  (place) => place.id !== "eunju1_5f_front",
+);
   const tab = params.get("tab") === "facility" ? "facility" : "classroom";
   const building =
     buildings.find((b) => b.name === params.get("building"))?.name ?? "혜인관";
   const [openFloor, setOpenFloor] = useState("");
   const floors = classroomFloors(building, [...places, ...rooms]);
   // 편의시설 상세(A4a)에서는 탭을 숨김
-  const detail =
-    tab === "facility" && facilities.some((p) => p.id === params.get("place"));
+ const detail =
+  tab === "facility" &&
+  visibleFacilities.some((p) => p.id === params.get("place"));
 
   // 탭과 건물 선택은 기록을 쌓지 않고 주소에만 남겨 새로고침해도 유지
   function update(values: Record<string, string>) {
@@ -136,7 +140,7 @@ export default function Screen({
           )}
         </>
       ) : (
-        <FacilityFinder facilities={facilities} />
+        <FacilityFinder facilities={visibleFacilities} />
       )}
     </section>
   );
