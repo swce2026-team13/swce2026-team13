@@ -50,7 +50,7 @@ test("2115에서 면접 대기실까지 모든 단계가 실제 노드와 건물
       ["eunju1|5", 2],
       ["스콘스퀘어", 2],
       ["hyein|1", 3],
-      ["hyein|3", 3],
+      ["hyein|2", 3],
     ],
   );
   assert.equal(
@@ -69,13 +69,13 @@ test("위치 정보를 제외한 경로 후보와 단계 순서·문구·개수�
   "bus_stop_2115",
   "interview",
   true,
-  "267b35c4b797ec3175e044d0742a97cf17ab7831ad0e8e8cf8e5630f4f6313a9",
+  "a71f788ebbe1f69b87cbc9cfd4f1b98fe38b603bad52965428834e1ea4428fb1",
 ],
 [
   "bus_stop_2115",
   "interview",
   false,
-  "43633aff7e68c9276d904e04766d022c3f2ec9ec85caabd606f5995f6d3af241",
+  "53514961759da1d02abc393023b7838edf94464bd7078bb69c59eb97e1aef368",
 ],
 [
   "yudam",
@@ -87,19 +87,19 @@ test("위치 정보를 제외한 경로 후보와 단계 순서·문구·개수�
   "gate",
   "interview",
   false,
-  "cafc1affe14f3b17e4bebfb37eb0957cdf6597038f940b3df064a38f7bfe01ac",
+  "574bef14119c8cf8d85c85eb6413bcd52d2d40d475659914bae3cf3fb5994939",
 ],
 [
   "to_hallim",
   "interview",
   true,
-  "6645624a05f8728b61fcd4b4b89937056a8f9aee069743f44ba426da686b0213",
+  "e1d12343f9fe7842f6ceb0b15a465629a3cd41d6dbd1b857f24c9387ecf1b193",
 ],
 [
   "hallim_6f_corridor",
   "interview",
   true,
-  "c70d1fedc5e1c78f02d815d04434a7ba237db83b946e2c2b757765cf7b7a1775",
+  "0315e599cf36cacaede3375c6cccb7c88dae2243e4af00ad06026a27fff9aebf",
 ],
   ] as const;
   for (const [start, destination, elevator, expected] of cases) {

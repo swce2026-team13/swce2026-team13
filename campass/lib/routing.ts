@@ -97,7 +97,7 @@ export const waypoints: Waypoint[] = [
   },
   {
     id: "interview",
-    name: "혜인관 3층 면접 대기실",
+    name: "혜인관 2층 면접 대기실",
     instruction: "면접 대기실에 도착했어요",
     detail: "시연용 목적지입니다. 실제 행사 장소를 확인해 주세요.",
     photo: "",
@@ -201,7 +201,7 @@ const waypointNodes: Record<string, string> = {
   hyein: "hyein|B1",
   elevator: "hyein|B1",
   stairs: "hyein|B1",
-  interview: "hyein|3",
+  interview: "hyein|2",
 };
 // 연결통로 위에 있는 사진 안내 지점
 const waypointLinks: Record<string, string> = {
@@ -334,7 +334,7 @@ function nodeWaypoints(
   // 혜인관 층 이동을 시작하는 층
   if (nodeArea(node) === "hyein" && up)
     list.push(byElevator ? "elevator" : "stairs");
-  if (node === "hyein|3" && !next && arrival === "interview")
+  if (node === "hyein|2" && !next && arrival === "interview")
     list.push("interview");
   return list;
 }
