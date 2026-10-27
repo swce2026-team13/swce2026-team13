@@ -216,7 +216,7 @@ export async function recognizePhoto(
   form.append("campusId", "seokyeong");
   const candidates = validatePrediction(
     await provider(config.VISION_API_URL, config.VISION_API_KEY, form),
-  ).filter((c) => c.confidence >= 0.7);
+  ).filter((c) => c.confidence >= 0.75);
   return {
     status: candidates.length ? "matched" : "no_match",
     candidates,
