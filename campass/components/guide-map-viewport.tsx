@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Photo, Tag } from "@/components/ui";
 import { CampusOverviewMap } from "@/components/campus-overview-map";
+import { CampusMap } from "@/components/campus-map";
+import { mapRouteBuildings } from "@/lib/map-route";
 import {
   guideLegLabel,
   type GuideMapData,
@@ -17,27 +19,11 @@ type GuideMapViewportProps = {
   map?: GuideMapData;
 };
 
-function supportsWebGL() {
-  if (typeof window === "undefined") return true;
-
-  try {
-    const canvas = document.createElement("canvas");
-
-    return Boolean(
-      window.WebGLRenderingContext &&
-        (canvas.getContext("webgl") ||
-          canvas.getContext("experimental-webgl")),
-    );
-  } catch {
-    return false;
-  }
-}
-
 function RouteMap({ map }: { map: GuideMapData }) {
-  const [webglSupported] = useState(() => supportsWebGL());
-    const highlight = overviewRouteHighlight(map);
-
-  if (!highlight) {
+  const [flat, setFlat] = useState(false);
+  const highlight = overviewRouteHighlight(map);
+  const buildings = mapRouteBuildings(map);
+  if (!map.nodes.length) {
     return (
       <div className="guide-map-viewport-placeholder">
         <strong>표시할 수 있는 경로가 없어요</strong>
@@ -45,21 +31,16 @@ function RouteMap({ map }: { map: GuideMapData }) {
       </div>
     );
   }
-
-  if (!webglSupported) {
-    return (
-      <>
-        <div className="guide-map-viewport-placeholder">
-          <strong>이 기기에서는 3D 지도를 사용할 수 없어요</strong>
-          <p>대신 2D 캠퍼스 지도로 경로를 보여드릴게요.</p>
-        </div>
-
-        <CampusOverviewMap highlight={highlight} />
-      </>
-    );
-  }
-
-  return <CampusOverviewMap highlight={highlight} />;
+  const overview = <CampusOverviewMap highlight={highlight} />;
+  return (
+    <>
+      {flat ? overview : <CampusMap selectedBuildings={buildings.ids} currentBuilding={buildings.currentId} fallback={overview} />}
+      <button type="button" className="button secondary guide-map-toggle" onClick={() => setFlat(!flat)}>
+        {flat ? "3D 지도 보기" : "2D 경로 보기"}
+      </button>
+      <p className="guide-map-viewport-next">연결 통로와 출발 입구는 2D 경로에서 확인해요.</p>
+    </>
+  );
 }
 
 export function GuideMapViewport({

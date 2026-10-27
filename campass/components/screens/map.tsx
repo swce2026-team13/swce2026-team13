@@ -4,6 +4,7 @@ import { places } from "@/lib/catalog";
 import { LEGEND, overviewMarkers } from "@/lib/campus-overview";
 import { emptyPick, markerStarts, pickOnMap, pickStatus } from "@/lib/map-pick";
 import { CampusOverviewMap } from "@/components/campus-overview-map";
+import { CampusMap } from "@/components/campus-map";
 import { CheckIcon } from "@/components/icons";
 import { useCampus } from "@/components/campus-provider";
 
@@ -23,6 +24,10 @@ const pickName = (id: string) =>
 export default function Screen() {
   const { busy, ready, go } = useCampus();
   const [pick, setPick] = useState(emptyPick);
+  const [flat, setFlat] = useState(false);
+  const selected = [pick.start, pick.destination].filter((id): id is string => Boolean(id));
+  const detailBuilding = places.find((place) => place.id === (pick.destination ?? pick.start) && place.category === "building");
+  const overview = <CampusOverviewMap selected={selected} startable={startMarkers} onSelect={(id, building) => setPick((previous) => pickOnMap(previous, id, building))} />;
   const status = pickStatus(pick);
   const turn = !pick.start ? "start" : !pick.destination ? "destination" : "";
   const rows = [
@@ -78,16 +83,14 @@ export default function Screen() {
 
         <div className="overview-card">
           <div className="overview-heading">
-            <b>캠퍼스 개요도</b>
-            <span>건물을 눌러 보세요</span>
+            <b>캠퍼스 지도</b>
+            <button type="button" className="text-button" onClick={() => setFlat(!flat)}>{flat ? "3D 지도 보기" : "2D 지도 보기"}</button>
           </div>
-          <CampusOverviewMap
-            selected={[pick.start, pick.destination].filter(
-              (id): id is string => Boolean(id),
-            )}
-            startable={startMarkers}
-            onSelect={(id, building) => setPick(pickOnMap(pick, id, building))}
-          />
+          {flat ? overview : <CampusMap selectedBuildings={selected} onBuilding={(id) => setPick((previous) => pickOnMap(previous, id, true))} fallback={overview} />}
+          <div className="chips filters" aria-label="입구에서 출발">
+            {startMarkers.map((id) => <button key={id} className={pick.start === id ? "active" : ""} aria-pressed={pick.start === id} onClick={() => setPick((previous) => pickOnMap(previous, id, false))}>{markerNames[id]}</button>)}
+          </div>
+          {detailBuilding && <button type="button" className="button secondary" onClick={() => go("places", { building: detailBuilding.name })}>{detailBuilding.name} 층별 장소 보기</button>}
           <ul className="overview-legend" aria-label="학과 범례">
             {LEGEND.map((item) => (
               <li key={item.label}>

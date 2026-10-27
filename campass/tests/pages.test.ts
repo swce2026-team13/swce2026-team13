@@ -69,7 +69,6 @@ test("모달 직접 접속과 일반 이동의 슬롯 초기화 지원", () => {
   for (const page of [
     "default.tsx",
     "page.tsx",
-    "[...catchAll]/page.tsx",
     "(.)help/page.tsx",
     "(.)map/page.tsx",
     "(.)map/places/page.tsx",
@@ -77,6 +76,11 @@ test("모달 직접 접속과 일반 이동의 슬롯 초기화 지원", () => {
   ]) {
     assert.ok(existsSync(`app/@modal/${page}`), `슬롯 누락: ${page}`);
   }
+  const modal = readFileSync("components/route-modal.tsx", "utf8");
+  assert.match(modal, /modalPaths\.has\(usePathname\(\)\)/);
+  assert.match(modal, /if \(!visible\) return null/);
+  assert.match(modal, /element\.close\(\)/);
+  assert.match(modal, /document\.body\.style\.overflow = overflow/);
 });
 
 test("공통 레이아웃에서 페이지와 모달 연결", () => {
