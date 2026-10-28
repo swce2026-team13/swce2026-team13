@@ -21,7 +21,7 @@ export function ownerToken(cookie: string | undefined) {
     cookie && /^[0-9a-f-]{36}$/.test(cookie) ? cookie : randomUUID();
   return { token, owner: createHash("sha256").update(token).digest("hex") };
 }
-export function loginAdmin(
+export async function loginAdmin(
   db: Store,
   input: Record<string, unknown>,
   address: string,
@@ -36,7 +36,6 @@ export function loginAdmin(
     );
   const hash = (s: string) => createHash("sha256").update(s).digest();
   const key = `admin-login:${hash(address).toString("hex")}`;
-  db.checkLoginLimit(key);
   // 길이를 맞추려고 해시로 바꾼 뒤, 형식이 이상한 입력도 두 값을 항상 모두 비교
   const idMatches = timingSafeEqual(
     hash(typeof input.id === "string" ? input.id : ""),
@@ -46,19 +45,10 @@ export function loginAdmin(
     hash(typeof input.password === "string" ? input.password : ""),
     hash(password),
   );
-  if (!idMatches || !passwordMatches) {
-    db.recordLoginFailure(key);
-    throw new AppError(
-      "아이디 또는 비밀번호를 확인해 주세요.",
-      401,
-      "UNAUTHORIZED",
-    );
-  }
-  db.clearLoginFailures(key);
-  return db.createAdminSession();
+  return db.loginAttempt(key, idMatches && passwordMatches);
 }
-export function requireAdmin(cookie: string | undefined, db = database()) {
-  if (!cookie || !db.hasAdminSession(cookie))
+export async function requireAdmin(cookie: string | undefined, db = database()) {
+  if (!cookie || !(await db.hasAdminSession(cookie)))
     throw new AppError(
       "관리자 인증 정보를 확인해 주세요.",
       401,

@@ -1,8 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { testStore } from "./postgres-helper.ts";
 
 test("catalog finds official Hyein rooms and accepts the Figma spelling alias", async () => {
   const { searchPlaces } = await import("../shared/utils/catalog.ts");
@@ -65,50 +63,49 @@ test("2115 정류장에서 면접 대기실과 은주1관 5층 앞 경로가 나
   assert.match(eunju.steps[0].detail, /연결통로/);
 });
 
-test("sessions persist, reject other owners and stale progress, deduplicate confusion and feedback", async () => {
+test("sessions persist, reject other owners and stale progress, deduplicate confusion and feedback", async (t) => {
   const { Store } = await import("../server/db/store.ts");
-  const path = join(
-    mkdtempSync(join(tmpdir(), "campass-test-")),
-    "test.sqlite",
-  );
-  let store = new Store(path);
-  let session = store.create("owner", "bus_stop_2115", "interview", true);
-  assert.throws(() => store.get(session.id, "other"), /찾을/);
-  assert.throws(() => store.advance(session.id, "owner", 4), /단계/);
-  store.confusion(session.id, "owner");
-  store.confusion(session.id, "owner");
-  assert.equal(store.insights().confusions, 1);
-  assert.throws(
-    () => store.feedback(session.id, "owner", { confused: false }),
+  const fixture = await testStore(t);
+  if (!fixture) return;
+  let { store } = fixture;
+  let session = await store.create("owner", "bus_stop_2115", "interview", true);
+  await assert.rejects(store.get(session.id, "other"), /찾을/);
+  await assert.rejects(store.advance(session.id, "owner", 4), /단계/);
+  await store.confusion(session.id, "owner");
+  await store.confusion(session.id, "owner");
+  assert.equal((await store.insights()).confusions, 1);
+  await assert.rejects(
+    store.feedback(session.id, "owner", { confused: false }),
     /도착/,
   );
   while (session.status !== "completed")
-    session = store.advance(session.id, "owner", session.version);
+    session = await store.advance(session.id, "owner", session.version);
   const input = {
     confused: true,
     waypointId: "bus_stop_2115",
     reason: "방향 혼란",
     comment: "표지판이 필요해요",
   };
-  store.feedback(session.id, "owner", input);
-  store.feedback(session.id, "owner", input);
-  assert.equal(store.insights().feedbacks, 1);
-  assert.equal(store.insights().confusions, 1);
-  store.close();
-  store = new Store(path);
-  assert.equal(store.get(session.id, "owner").status, "completed");
-  assert.ok(store.insights().passages > 0);
-  store.close();
+  await store.feedback(session.id, "owner", input);
+  await store.feedback(session.id, "owner", input);
+  assert.equal((await store.insights()).feedbacks, 1);
+  assert.equal((await store.insights()).confusions, 1);
+  await store.close();
+  store = new Store(fixture.url);
+  fixture.store = store;
+  assert.equal((await store.get(session.id, "owner")).status, "completed");
+  assert.ok((await store.insights()).passages > 0);
 });
 
-test("recovery only accepts valid locations and does not erase observed history", async () => {
-  const { Store } = await import("../server/db/store.ts");
-  const store = new Store(":memory:");
-  const session = store.create("owner", "bus_stop_2115", "interview", true);
-  assert.throws(() =>
+test("recovery only accepts valid locations and does not erase observed history", async (t) => {
+  const fixture = await testStore(t);
+  if (!fixture) return;
+  const { store } = fixture;
+  const session = await store.create("owner", "bus_stop_2115", "interview", true);
+  await assert.rejects(
     store.recover(session.id, "owner", "missing", session.version),
   );
-  const recovered = store.recover(
+  const recovered = await store.recover(
     session.id,
     "owner",
     "parking-entry",
@@ -116,8 +113,7 @@ test("recovery only accepts valid locations and does not erase observed history"
   );
   assert.equal(recovered.route.steps[0].id, "parking-entry");
   assert.equal(recovered.destination, "interview");
-  assert.equal(store.insights().passages, 2);
-  store.close();
+  assert.equal((await store.insights()).passages, 2);
 });
 
 test("unconfigured AI never fabricates predictions and invalid provider responses fail closed", async () => {
@@ -143,11 +139,12 @@ test("unconfigured AI never fabricates predictions and invalid provider response
   );
 });
 
-test("recovery orientation belongs to the confirmed location and is cleared on next step", async () => {
-  const { Store } = await import("../server/db/store.ts");
-  const store = new Store(":memory:");
-  const s = store.create("owner", "bus_stop_2115", "interview", true);
-  const recovered = store.recover(
+test("recovery orientation belongs to the confirmed location and is cleared on next step", async (t) => {
+  const fixture = await testStore(t);
+  if (!fixture) return;
+  const { store } = fixture;
+  const s = await store.create("owner", "bus_stop_2115", "interview", true);
+  const recovered = await store.recover(
     s.id,
     "owner",
     "parking-entry",
@@ -155,14 +152,13 @@ test("recovery orientation belongs to the confirmed location and is cleared on n
     "backward",
   );
   assert.equal(recovered.recoveryDirection, "backward");
-  assert.equal(store.get(s.id, "owner").recoveryDirection, "backward");
-  const manual = store.recover(s.id, "owner", "main", recovered.version);
+  assert.equal((await store.get(s.id, "owner")).recoveryDirection, "backward");
+  const manual = await store.recover(s.id, "owner", "main", recovered.version);
   assert.equal(manual.recoveryDirection, "unknown");
   assert.equal(
-    store.advance(s.id, "owner", manual.version).recoveryDirection,
+    (await store.advance(s.id, "owner", manual.version)).recoveryDirection,
     "unknown",
   );
-  store.close();
 });
 
 test("same-origin requests use public host instead of the Next internal hostname", async () => {

@@ -1,7 +1,5 @@
-import { DatabaseSync } from "node:sqlite";
 import { randomBytes, randomUUID } from "node:crypto";
-import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
+import pg, { type PoolClient, type QueryResultRow } from "pg";
 import { AppError, calculateRoute, startPoint, waypoints } from "../../shared/utils/routing.ts";
 import { currentPlaceId } from "../../shared/utils/catalog.ts";
 import { allPlaces } from "../services/rooms.ts";
@@ -10,127 +8,140 @@ import { campusBuildings } from "../../shared/utils/campus3d/types.ts";
 import { confusionLevel, confusionLevels, confusionReasons } from "../../shared/utils/confusion-advice.ts";
 import type { Session, Feedback, RecognitionFeedback } from "../../shared/types/session.ts";
 export type { Session, Feedback, RecognitionFeedback } from "../../shared/types/session.ts";
+
 export const ADMIN_SESSION_SECONDS = 8 * 60 * 60;
+type Connection = PoolClient | pg.Pool;
+
+function connectionOptions(url: string) {
+  const parsed = new URL(url);
+  if (!["postgres:", "postgresql:"].includes(parsed.protocol))
+    throw new Error("DATABASE_URL must be a PostgreSQL URL");
+  const local = ["localhost", "127.0.0.1", "::1", "[::1]"].includes(parsed.hostname);
+  return {
+    connectionString: url,
+    max: 1,
+    idleTimeoutMillis: 10_000,
+    connectionTimeoutMillis: 5_000,
+    // Shared transaction pooling does not support named prepared statements.
+    // node-postgres only creates those when a query config has a name; use text/values below.
+    ssl: local ? false : { rejectUnauthorized: true },
+  };
+}
+
 export class Store {
-  db: DatabaseSync;
-  constructor(path: string) {
-    if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true });
-    this.db = new DatabaseSync(path);
-    this.db
-      .exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;
-      CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, owner TEXT NOT NULL, data TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
-      CREATE TABLE IF NOT EXISTS passages (session_id TEXT REFERENCES sessions(id), waypoint_id TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(session_id,waypoint_id));
-      CREATE TABLE IF NOT EXISTS confusions (session_id TEXT, waypoint_id TEXT, reason TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(session_id,waypoint_id), FOREIGN KEY(session_id,waypoint_id) REFERENCES passages(session_id,waypoint_id));
-      CREATE TABLE IF NOT EXISTS feedback (session_id TEXT PRIMARY KEY REFERENCES sessions(id), data TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
-      CREATE TABLE IF NOT EXISTS recognition_feedback (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        data TEXT NOT NULL,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-      CREATE TABLE IF NOT EXISTS rate_limits (key TEXT PRIMARY KEY, hits INTEGER NOT NULL, expires INTEGER NOT NULL);
-      CREATE TABLE IF NOT EXISTS admin_sessions (id TEXT PRIMARY KEY, expires INTEGER NOT NULL);
-      PRAGMA user_version=1;`);
+  readonly pool: pg.Pool;
+
+  constructor(url: string) {
+    this.pool = new pg.Pool(connectionOptions(url));
   }
-  close() {
-    this.db.close();
+
+  async close() {
+    await this.pool.end();
   }
-  transaction<T>(fn: () => T): T {
-    this.db.exec("BEGIN IMMEDIATE");
+
+  async query<T extends QueryResultRow = QueryResultRow>(
+    sql: string,
+    values: unknown[] = [],
+    connection: Connection = this.pool,
+  ): Promise<T[]> {
+    return (await connection.query<T>(sql, values)).rows;
+  }
+
+  async transaction<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
+    const client = await this.pool.connect();
     try {
-      const value = fn();
-      this.db.exec("COMMIT");
+      await client.query("BEGIN");
+      const value = await fn(client);
+      await client.query("COMMIT");
       return value;
-    } catch (e) {
-      this.db.exec("ROLLBACK");
-      throw e;
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => undefined);
+      throw error;
+    } finally {
+      client.release();
     }
   }
-  limit(key: string, max: number, windowMs: number) {
+
+  async limit(key: string, max: number, windowMs: number) {
     const now = Date.now();
-    this.db.prepare("DELETE FROM rate_limits WHERE expires <= ?").run(now);
-    const row = this.db
-      .prepare(
-        `INSERT INTO rate_limits(key,hits,expires) VALUES (?,1,?) ON CONFLICT(key) DO UPDATE SET hits=hits+1 RETURNING hits`,
-      )
-      .get(key, now + windowMs) as { hits: number };
+    const [row] = await this.query<{ hits: number }>(
+      `INSERT INTO rate_limits(key,hits,expires) VALUES ($1,1,$2)
+       ON CONFLICT(key) DO UPDATE SET
+         hits=CASE WHEN rate_limits.expires <= $3 THEN 1 ELSE rate_limits.hits+1 END,
+         expires=CASE WHEN rate_limits.expires <= $3 THEN $2 ELSE rate_limits.expires END
+       RETURNING hits`,
+      [key, now + windowMs, now],
+    );
     if (row.hits > max)
-      throw new AppError(
-        "요청이 많아요. 잠시 후 다시 시도해 주세요.",
-        429,
-        "RATE_LIMITED",
-      );
+      throw new AppError("요청이 많아요. 잠시 후 다시 시도해 주세요.", 429, "RATE_LIMITED");
     return row.hits;
   }
-  checkLoginLimit(key: string) {
-    const row = this.db
-      .prepare("SELECT hits FROM rate_limits WHERE key=? AND expires>?")
-      .get(key, Date.now()) as { hits: number } | undefined;
-    if (row && row.hits >= 5)
-      throw new AppError(
-        "로그인 시도가 많아요. 10분 후 다시 시도해 주세요.",
-        429,
-        "RATE_LIMITED",
+
+  async loginAttempt(key: string, authorized: boolean) {
+    const outcome = await this.transaction(async (client) => {
+      // Transaction-scoped lock serializes attempts across server instances.
+      await this.query("SELECT pg_advisory_xact_lock(hashtext($1))", [key], client);
+      const now = Date.now();
+      const [row] = await this.query<{ hits: number }>(
+        "SELECT hits FROM rate_limits WHERE key=$1 AND expires>$2",
+        [key, now],
+        client,
       );
+      if (row && row.hits >= 5) return { kind: "blocked" as const };
+      if (!authorized) {
+        const [failure] = await this.query<{ hits: number }>(
+          `INSERT INTO rate_limits(key,hits,expires) VALUES ($1,1,$2)
+           ON CONFLICT(key) DO UPDATE SET
+             hits=CASE WHEN rate_limits.expires <= $3 THEN 1 ELSE rate_limits.hits+1 END,
+             expires=CASE WHEN rate_limits.expires <= $3 THEN $2 ELSE rate_limits.expires END
+           RETURNING hits`,
+          [key, now + 600_000, now],
+          client,
+        );
+        if (failure.hits === 5)
+          await this.query("UPDATE rate_limits SET expires=$2 WHERE key=$1", [key, now + 600_000], client);
+        return { kind: failure.hits >= 5 ? "blocked" as const : "invalid" as const };
+      }
+      await this.query("DELETE FROM rate_limits WHERE key=$1", [key], client);
+      const session = {
+        id: randomBytes(32).toString("hex"),
+        expires: now + ADMIN_SESSION_SECONDS * 1000,
+      };
+      await this.query("INSERT INTO admin_sessions(id,expires) VALUES ($1,$2)", [session.id, session.expires], client);
+      return { kind: "ok" as const, session };
+    });
+    if (outcome.kind === "blocked")
+      throw new AppError("로그인 시도가 많아요. 10분 후 다시 시도해 주세요.", 429, "RATE_LIMITED");
+    if (outcome.kind === "invalid")
+      throw new AppError("아이디 또는 비밀번호를 확인해 주세요.", 401, "UNAUTHORIZED");
+    return outcome.session!;
   }
-  recordLoginFailure(key: string) {
-    const hits = this.limit(key, 5, 10 * 60 * 1000);
-    if (hits === 5) {
-      this.db
-        .prepare("UPDATE rate_limits SET expires=? WHERE key=?")
-        .run(Date.now() + 10 * 60 * 1000, key);
-      this.checkLoginLimit(key);
-    }
+
+  async hasAdminSession(id: string) {
+    const rows = await this.query("SELECT 1 FROM admin_sessions WHERE id=$1 AND expires>$2", [id, Date.now()]);
+    return rows.length > 0;
   }
-  clearLoginFailures(key: string) {
-    this.db.prepare("DELETE FROM rate_limits WHERE key=?").run(key);
+
+  async deleteAdminSession(id: string) {
+    await this.query("DELETE FROM admin_sessions WHERE id=$1", [id]);
   }
-  createAdminSession() {
-    const now = Date.now();
-    this.db.prepare("DELETE FROM admin_sessions WHERE expires<=?").run(now);
-    const session = {
-      id: randomBytes(32).toString("hex"),
-      expires: now + ADMIN_SESSION_SECONDS * 1000,
-    };
-    this.db
-      .prepare("INSERT INTO admin_sessions(id,expires) VALUES (?,?)")
-      .run(session.id, session.expires);
-    return session;
+
+  private async save(session: Session, client: PoolClient) {
+    await this.query("UPDATE sessions SET data=$1::jsonb WHERE id=$2", [JSON.stringify(session), session.id], client);
   }
-  hasAdminSession(id: string) {
-    return Boolean(
-      this.db
-        .prepare("SELECT 1 FROM admin_sessions WHERE id=? AND expires>?")
-        .get(id, Date.now()),
-    );
-  }
-  deleteAdminSession(id: string) {
-    this.db.prepare("DELETE FROM admin_sessions WHERE id=?").run(id);
-  }
-  save(session: Session) {
-    this.db
-      .prepare("UPDATE sessions SET data=? WHERE id=?")
-      .run(JSON.stringify(session), session.id);
-  }
-  passage(session: Session) {
+
+  private async passage(session: Session, client: PoolClient) {
     const id = session.route.steps[session.currentStep].id;
-    this.db
-      .prepare(
-        "INSERT OR IGNORE INTO passages(session_id,waypoint_id) VALUES (?,?)",
-      )
-      .run(session.id, id);
+    await this.query(
+      "INSERT INTO passages(session_id,waypoint_id) VALUES ($1,$2) ON CONFLICT DO NOTHING",
+      [session.id, id], client,
+    );
     if (!session.visited.includes(id)) session.visited.push(id);
   }
-  create(
-    owner: string,
-    start: string,
-    destination: string,
-    elevator: boolean,
-    option?: string,
-  ): Session {
-    const route = calculateRoute(start, destination, elevator, allPlaces(), {
-      option,
-    });
-    return this.transaction(() => {
+
+  async create(owner: string, start: string, destination: string, elevator: boolean, option?: string): Promise<Session> {
+    const route = calculateRoute(start, destination, elevator, allPlaces(), { option });
+    return this.transaction(async (client) => {
       const session: Session = {
         id: randomUUID(),
         destination: currentPlaceId(destination),
@@ -143,211 +154,157 @@ export class Store {
         visited: [],
         feedbackSubmitted: false,
       };
-      this.db
-        .prepare("INSERT INTO sessions(id,owner,data) VALUES (?,?,?)")
-        .run(session.id, owner, JSON.stringify(session));
-      this.passage(session);
-      this.save(session);
+      await this.query("INSERT INTO sessions(id,owner,data) VALUES ($1,$2,$3::jsonb)",
+        [session.id, owner, JSON.stringify(session)], client);
+      await this.passage(session, client);
+      await this.save(session, client);
       return session;
     });
   }
-  get(id: string, owner: string): Session {
-    const row = this.db
-      .prepare("SELECT data FROM sessions WHERE id=? AND owner=?")
-      .get(id, owner) as { data: string } | undefined;
-    if (!row)
-      throw new AppError("안내 기록을 찾을 수 없어요.", 404, "NOT_FOUND");
-    const session: Session = JSON.parse(row.data);
+
+  async get(id: string, owner: string, client?: PoolClient): Promise<Session> {
+    const [row] = await this.query<{ data: Session }>(
+      `SELECT data FROM sessions WHERE id=$1 AND owner=$2${client ? " FOR UPDATE" : ""}`,
+      [id, owner], client,
+    );
+    if (!row) throw new AppError("안내 기록을 찾을 수 없어요.", 404, "NOT_FOUND");
+    const session = row.data;
     session.destination = currentPlaceId(session.destination);
     return session;
   }
-  active(id: string, owner: string, version?: number) {
-    const s = this.get(id, owner);
-    if (s.status !== "active")
+
+  private async active(id: string, owner: string, client: PoolClient, version?: number) {
+    const session = await this.get(id, owner, client);
+    if (session.status !== "active")
       throw new AppError("이미 도착한 안내입니다.", 409, "COMPLETED");
-    if (version !== undefined && s.version !== version)
-      throw new AppError(
-        "단계가 변경됐어요. 새로고침해 주세요.",
-        409,
-        "STALE_VERSION",
-      );
-    return s;
+    if (version !== undefined && session.version !== version)
+      throw new AppError("단계가 변경됐어요. 새로고침해 주세요.", 409, "STALE_VERSION");
+    return session;
   }
-  advance(id: string, owner: string, version: number) {
-    return this.transaction(() => {
-      const s = this.active(id, owner, version);
-      s.currentStep++;
-      s.version++;
-      s.recovered = false;
-      s.recoveryDirection = "unknown";
-      if (s.currentStep === s.route.steps.length - 1) s.status = "completed";
-      this.passage(s);
-      this.save(s);
-      return s;
+
+  async advance(id: string, owner: string, version: number) {
+    return this.transaction(async (client) => {
+      const session = await this.active(id, owner, client, version);
+      session.currentStep++;
+      session.version++;
+      session.recovered = false;
+      session.recoveryDirection = "unknown";
+      if (session.currentStep === session.route.steps.length - 1) session.status = "completed";
+      await this.passage(session, client);
+      await this.save(session, client);
+      return session;
     });
   }
-  previous(id: string, owner: string, version: number) {
-  return this.transaction(() => {
-    const s = this.get(id, owner);
 
-    if (s.version !== version)
-      throw new AppError(
-        "단계가 변경되었어요. 새로고침해 주세요.",
-        409,
-        "STALE_VERSION",
-      );
-
-    if (s.currentStep <= 0)
-      throw new AppError(
-        "첫 번째 단계입니다.",
-        409,
-        "FIRST_STEP",
-      );
-
-    s.currentStep--;
-    s.version++;
-    s.status = "active";
-    s.recovered = false;
-    s.recoveryDirection = "unknown";
-
-    this.save(s);
-    return s;
-  });
-}
-  confusion(id: string, owner: string) {
-    return this.transaction(() => {
-      const s = this.active(id, owner);
-      this.db
-        .prepare(
-          "INSERT OR IGNORE INTO confusions(session_id,waypoint_id,reason) VALUES (?,?,?)",
-        )
-        .run(id, s.route.steps[s.currentStep].id, "위치 재확인");
-      return s;
+  async previous(id: string, owner: string, version: number) {
+    return this.transaction(async (client) => {
+      const session = await this.get(id, owner, client);
+      if (session.version !== version)
+        throw new AppError("단계가 변경되었어요. 새로고침해 주세요.", 409, "STALE_VERSION");
+      if (session.currentStep <= 0)
+        throw new AppError("첫 번째 단계입니다.", 409, "FIRST_STEP");
+      session.currentStep--;
+      session.version++;
+      session.status = "active";
+      session.recovered = false;
+      session.recoveryDirection = "unknown";
+      await this.save(session, client);
+      return session;
     });
   }
-  recover(
-    id: string,
-    owner: string,
-    waypointId: string,
-    version: number,
+
+  async confusion(id: string, owner: string) {
+    return this.transaction(async (client) => {
+      const session = await this.active(id, owner, client);
+      await this.query(
+        "INSERT INTO confusions(session_id,waypoint_id,reason) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING",
+        [id, session.route.steps[session.currentStep].id, "위치 재확인"], client,
+      );
+      return session;
+    });
+  }
+
+  async recover(
+    id: string, owner: string, waypointId: string, version: number,
     direction: Session["recoveryDirection"] = "unknown",
   ) {
-    return this.transaction(() => {
+    return this.transaction(async (client) => {
       if (!["forward", "backward", "unknown"].includes(direction))
         throw new AppError("위치 방향을 확인해 주세요.");
-      const s = this.active(id, owner, version);
-      // 복구 전에 고른 길과 같은 이름의 후보가 있으면 그 길로 이어 감
-      const chosen = s.route.options?.find((o) => o.id === s.route.option);
-      const route = calculateRoute(
-        waypointId,
-        s.destination,
-        s.route.elevator,
-        allPlaces(),
-      );
-      const same = route.options.find((o) => o.name === chosen?.name);
-      s.route =
-        same && same.id !== route.option
-          ? calculateRoute(
-              waypointId,
-              s.destination,
-              s.route.elevator,
-              allPlaces(),
-              { option: same.id },
-            )
-          : route;
-      s.currentStep = 0;
-      s.version++;
-      s.recovered = true;
-      s.recoveryDirection = direction;
-      if (s.route.steps.length === 1) s.status = "completed";
-      this.passage(s);
-      this.save(s);
-      return s;
+      const session = await this.active(id, owner, client, version);
+      const chosen = session.route.options?.find((option) => option.id === session.route.option);
+      const route = calculateRoute(waypointId, session.destination, session.route.elevator, allPlaces());
+      const same = route.options.find((option) => option.name === chosen?.name);
+      session.route = same && same.id !== route.option
+        ? calculateRoute(waypointId, session.destination, session.route.elevator, allPlaces(), { option: same.id })
+        : route;
+      session.currentStep = 0;
+      session.version++;
+      session.recovered = true;
+      session.recoveryDirection = direction;
+      if (session.route.steps.length === 1) session.status = "completed";
+      await this.passage(session, client);
+      await this.save(session, client);
+      return session;
     });
   }
-  feedback(id: string, owner: string, input: Feedback) {
-    return this.transaction(() => {
-      const s = this.get(id, owner);
-      if (s.status !== "completed")
-        throw new AppError(
-          "도착 후 피드백을 보낼 수 있어요.",
-          409,
-          "NOT_COMPLETED",
-        );
-      if (s.feedbackSubmitted) return { saved: true, duplicate: true };
-      if (
-        typeof input.confused !== "boolean" ||
-        (input.comment?.length ?? 0) > 500
-      )
+
+  async feedback(id: string, owner: string, input: Feedback) {
+    return this.transaction(async (client) => {
+      const session = await this.get(id, owner, client);
+      if (session.status !== "completed")
+        throw new AppError("도착 후 피드백을 보낼 수 있어요.", 409, "NOT_COMPLETED");
+      if (session.feedbackSubmitted) return { saved: true, duplicate: true };
+      if (typeof input.confused !== "boolean" || (input.comment?.length ?? 0) > 500)
         throw new AppError("피드백 내용을 확인해 주세요.");
-      if (
-        input.confused &&
-        (!input.waypointId ||
-          !s.visited.includes(input.waypointId) ||
-          ![
-            "방향 혼란",
-            "사진 불일치",
-            "지도랑 달랐어요",
-           "표지판 부족",
-            "기타",
-          ].includes(input.reason ?? ""))
-      )
+      if (input.confused && (!input.waypointId || !session.visited.includes(input.waypointId) ||
+        !["방향 혼란", "사진 불일치", "지도랑 달랐어요", "표지판 부족", "기타"].includes(input.reason ?? "")))
         throw new AppError("방문한 구간과 혼란 이유를 선택해 주세요.");
       if (input.confused)
-        this.db
-          .prepare(
-            "INSERT OR IGNORE INTO confusions(session_id,waypoint_id,reason) VALUES (?,?,?)",
-          )
-          .run(id, input.waypointId!, input.reason!);
-      this.db
-        .prepare("INSERT INTO feedback(session_id,data) VALUES (?,?)")
-        .run(id, JSON.stringify(input));
-      s.feedbackSubmitted = true;
-      this.save(s);
-      return { saved: true, duplicate: false };
+        await this.query(
+          "INSERT INTO confusions(session_id,waypoint_id,reason) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING",
+          [id, input.waypointId, input.reason], client,
+        );
+      const inserted = await this.query(
+        "INSERT INTO feedback(session_id,data) VALUES ($1,$2::jsonb) ON CONFLICT DO NOTHING RETURNING session_id",
+        [id, JSON.stringify(input)], client,
+      );
+      session.feedbackSubmitted = true;
+      await this.save(session, client);
+      return { saved: true, duplicate: inserted.length === 0 };
     });
   }
-    recognitionFeedback(input: RecognitionFeedback) {
-    if (
-      !input.predictedWaypointId ||
-      typeof input.confidence !== "number" ||
-      !["forward", "backward", "unknown"].includes(input.direction)
-    ) {
+
+  async recognitionFeedback(input: RecognitionFeedback) {
+    if (!input.predictedWaypointId || typeof input.confidence !== "number" ||
+      !["forward", "backward", "unknown"].includes(input.direction))
       throw new AppError("사진 인식 피드백 내용을 확인해 주세요.");
-    }
-
-    this.db
-      .prepare(
-        "INSERT INTO recognition_feedback(data) VALUES (?)",
-      )
-      .run(JSON.stringify(input));
-
+    await this.query("INSERT INTO recognition_feedback(data) VALUES ($1::jsonb)", [JSON.stringify(input)]);
     return { saved: true };
   }
-  insights(filters: { period?: string; building?: string; reason?: string; demo?: string } = {}) {
+
+  async insights(filters: { period?: string; building?: string; reason?: string; demo?: string } = {}) {
     const { period = "all", building, reason, demo = "include" } = filters;
-    if (!["all", "7d", "today"].includes(period) ||
-        !["include", "exclude"].includes(demo) ||
-        (building !== undefined && !campusBuildings().some((b) => b.id === building)) ||
-        (reason !== undefined && !confusionReasons.some((r) => r === reason)))
+    if (!["all", "7d", "today"].includes(period) || !["include", "exclude"].includes(demo) ||
+      (building !== undefined && !campusBuildings().some((b) => b.id === building)) ||
+      (reason !== undefined && !confusionReasons.some((r) => r === reason)))
       throw new AppError("통계 필터를 확인해 주세요.");
-    // 오늘은 한국 시간 자정, 최근 7일은 오늘을 포함한 일곱 날짜로 집계해요.
     const now = new Date();
     const day = new Date(now.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
     const midnight = Date.parse(`${day}T00:00:00+09:00`);
     const since = period === "all" ? null : new Date(
       midnight - (period === "7d" ? 6 * 24 * 60 * 60 * 1000 : 0),
     ).toISOString();
-    const rows = this.db.prepare(`
+    const rows = await this.query<{
+      session_id: string; id: string; reason: string | null; feedback: Feedback | null; demo: boolean;
+    }>(`
       SELECT p.session_id, p.waypoint_id AS id, c.reason, f.data AS feedback,
-        (s.id GLOB 'demo-*' AND s.owner='demo' AND json_extract(s.data,'$.demo')=1) AS demo
+        (s.id LIKE 'demo-%' AND s.owner='demo' AND s.data->>'demo'='true') AS demo
       FROM passages p JOIN sessions s ON s.id=p.session_id
       LEFT JOIN confusions c ON c.session_id=p.session_id AND c.waypoint_id=p.waypoint_id
       LEFT JOIN feedback f ON f.session_id=p.session_id
-      WHERE (? IS NULL OR julianday(p.created_at)>=julianday(?))
-    `).all(since, since) as {
-      session_id: string; id: string; reason: string | null; feedback: string | null; demo: number;
-    }[];
+      WHERE ($1::timestamptz IS NULL OR p.created_at >= $1::timestamptz)
+    `, [since]);
     const areas = new Map<string, string>();
     const filtered = rows.filter((row) => {
       if (!building) return true;
@@ -358,8 +315,7 @@ export class Store {
       }
       return areas.get(row.id) === building;
     });
-    // 예시를 뺀 상태에서도 다시 포함할 수 있게, 같은 범위의 예시 세션 수를 알려줘요.
-    const demoSessions = new Set(filtered.filter((r) => r.demo).map((r) => r.session_id)).size;
+    const demoSessions = new Set(filtered.filter((row) => row.demo).map((row) => row.session_id)).size;
     const groups = new Map<string, { passages: number; confusions: number; reasons: Map<string, number> }>();
     const feedbackSessions = new Set<string>();
     for (const row of filtered) {
@@ -371,7 +327,7 @@ export class Store {
         group.reasons.set(row.reason, (group.reasons.get(row.reason) ?? 0) + 1);
       }
       groups.set(row.id, group);
-      if (row.feedback && (!reason || JSON.parse(row.feedback).reason === reason))
+      if (row.feedback && (!reason || row.feedback.reason === reason))
         feedbackSessions.add(row.session_id);
     }
     const points = [...groups].map(([id, group]) => {
@@ -379,16 +335,15 @@ export class Store {
         .sort((a, b) => b.count - a.count || a.reason.localeCompare(b.reason, "ko"));
       return {
         id, passages: group.passages, confusions: group.confusions,
-        // 사진 안내 지점이 아니면 그래프 노드 이름으로 보완해요.
-        name: waypoints.find((w) => w.id === id)?.name ?? nodeLabel(id),
+        name: waypoints.find((waypoint) => waypoint.id === id)?.name ?? nodeLabel(id),
         rate: Math.round(group.confusions / group.passages * 1000) / 10,
         level: confusionLevel(group.passages, group.confusions),
         reasons, topReason: reasons[0]?.reason ?? null,
       };
     }).sort((a, b) => confusionLevels.indexOf(a.level) - confusionLevels.indexOf(b.level) ||
       b.confusions / b.passages - a.confusions / a.passages || b.confusions - a.confusions);
-    const passages = points.reduce((n, p) => n + p.passages, 0);
-    const confusions = points.reduce((n, p) => n + p.confusions, 0);
+    const passages = points.reduce((n, point) => n + point.passages, 0);
+    const confusions = points.reduce((n, point) => n + point.confusions, 0);
     return {
       passages, confusions,
       rate: passages ? Math.round(confusions / passages * 1000) / 10 : 0,

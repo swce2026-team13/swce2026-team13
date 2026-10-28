@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import test from "node:test";
 import { calculateRoute } from "../shared/utils/routing.ts";
 import { allPlaces } from "../server/services/rooms.ts";
-import { Store } from "../server/db/store.ts";
+import { testStore } from "./postgres-helper.ts";
 import {
   guideLegLabel,
   toGuideMapData,
@@ -118,10 +118,12 @@ test("위치 정보를 제외한 경로 후보와 단계 순서·문구·개수�
   }
 });
 
-test("안내 지도는 선택한 후보와 현재 단계의 위치 정보를 사용한다", () => {
-  const store = new Store(":memory:");
-  try {
-    const session = store.create("검증", "bus_stop_2115", "interview", false);
+test("안내 지도는 선택한 후보와 현재 단계의 위치 정보를 사용한다", async (t) => {
+  const fixture = await testStore(t);
+  if (!fixture) return;
+  const { store } = fixture;
+  {
+    const session = await store.create("검증", "bus_stop_2115", "interview", false);
     const option = session.route.options.at(-1)!;
     session.route.option = option.id;
     session.route.steps = option.steps;
@@ -142,15 +144,15 @@ test("안내 지도는 선택한 후보와 현재 단계의 위치 정보를 사
       toGuideViewModel(session).map?.nodes,
       session.route.options[0].nodes,
     );
-  } finally {
-    store.db.close();
   }
 });
 
-test("건물 단계 글자는 실제 건물과 층을 표시하고 예전 세션은 위치 없이도 열린다", () => {
-  const store = new Store(":memory:");
-  try {
-    const session = store.create("검증", "bus_stop_2115", "interview", true);
+test("건물 단계 글자는 실제 건물과 층을 표시하고 예전 세션은 위치 없이도 열린다", async (t) => {
+  const fixture = await testStore(t);
+  if (!fixture) return;
+  const { store } = fixture;
+  {
+    const session = await store.create("검증", "bus_stop_2115", "interview", true);
     assert.equal(toGuideViewModel(session).legLabel, "본관 1층 → 5층 · 1/4");
     for (const step of session.route.steps) {
       delete step.node;
@@ -163,8 +165,6 @@ test("건물 단계 글자는 실제 건물과 층을 표시하고 예전 세션
     session.route.options = [];
     assert.equal(toGuideViewModel(session).map, null);
     assert.equal(toGuideViewModel(null).map, null);
-  } finally {
-    store.db.close();
   }
 });
 

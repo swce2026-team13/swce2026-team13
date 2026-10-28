@@ -2,14 +2,21 @@ import { Store, type Session, type Feedback } from "../server/db/store.ts";
 import { calculateRoute, type Route } from "../shared/utils/routing.ts";
 import { allPlaces } from "../server/services/rooms.ts";
 import { nodeLabel } from "../shared/utils/campus3d/route.ts";
+import type { PoolClient } from "pg";
 
-const store = new Store(process.env.DATABASE_PATH || "./data/campass.sqlite");
-const demoWhere = "id GLOB 'demo-*' AND owner='demo' AND json_extract(data,'$.demo')=1";
+const url = process.env.DEMO_DATABASE_URL;
+if (!url || process.env.NODE_ENV === "production" || process.env.VERCEL)
+  throw new Error("Demo seeding requires a local DEMO_DATABASE_URL outside production");
+const parsed = new URL(url);
+if (!["localhost", "127.0.0.1", "::1", "[::1]"].includes(parsed.hostname) ||
+    parsed.pathname !== "/campass_demo" || url === process.env.DATABASE_URL)
+  throw new Error("DEMO_DATABASE_URL must target a separate local campass_demo database");
+const store = new Store(url);
+const demoWhere = "id LIKE 'demo-%' AND owner='demo' AND data->>'demo'='true'";
 
-function clearDemo() {
-  for (const table of ["feedback", "confusions", "passages"])
-    store.db.exec(`DELETE FROM ${table} WHERE session_id IN (SELECT id FROM sessions WHERE ${demoWhere})`);
-  store.db.exec(`DELETE FROM sessions WHERE ${demoWhere}`);
+async function clearDemo(client: PoolClient) {
+  // Child records are removed by foreign-key cascades; ordinary sessions are untouched.
+  await store.query(`DELETE FROM sessions WHERE ${demoWhere}`, [], client);
 }
 
 let seed = 57;
@@ -25,9 +32,9 @@ function shuffled<T>(values: T[]) {
 
 try {
   if (process.argv.includes("--clear")) {
-    store.transaction(clearDemo);
-    const row = store.db.prepare(`SELECT COUNT(*) AS count FROM sessions WHERE ${demoWhere}`).get();
-    console.log(`예시 기록을 지웠어요. 남은 예시 세션 ${row?.count}개예요.`);
+    await store.transaction(clearDemo);
+    const [row] = await store.query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM sessions WHERE ${demoWhere}`);
+    console.log(`예시 기록을 지웠어요. 남은 예시 세션 ${row.count}개예요.`);
   } else {
     const places = allPlaces();
     const plans = [
@@ -71,9 +78,9 @@ try {
     const now = Date.now();
     let passageCount = 0;
     let confusionCount = 0;
-    store.transaction(() => {
-      clearDemo();
-      sessions.forEach(({ destination, route }, index) => {
+    await store.transaction(async (client) => {
+      await clearDemo(client);
+      for (const [index, { destination, route }] of sessions.entries()) {
         const id = `demo-${String(index + 1).padStart(3, "0")}`;
         const date = new Date(now - (index % 14) * 24 * 60 * 60 * 1000).toISOString();
         const visited = [...new Set(route.steps.map((s) => s.id))];
@@ -82,16 +89,16 @@ try {
           version: route.steps.length - 1, status: "completed", recovered: false,
           recoveryDirection: "unknown", visited, feedbackSubmitted: feedbackIndices.has(index),
         };
-        store.db.prepare("INSERT INTO sessions(id,owner,data,created_at) VALUES (?,'demo',?,?)")
-          .run(id, JSON.stringify(session), date);
+        await store.query("INSERT INTO sessions(id,owner,data,created_at) VALUES ($1,'demo',$2::jsonb,$3)",
+          [id, JSON.stringify(session), date], client);
         for (const waypoint of visited) {
-          store.db.prepare("INSERT INTO passages(session_id,waypoint_id,created_at) VALUES (?,?,?)")
-            .run(id, waypoint, date);
+          await store.query("INSERT INTO passages(session_id,waypoint_id,created_at) VALUES ($1,$2,$3)",
+            [id, waypoint, date], client);
           passageCount++;
         }
         for (const signal of signals.get(index) ?? []) {
-          store.db.prepare("INSERT INTO confusions(session_id,waypoint_id,reason,created_at) VALUES (?,?,?,?)")
-            .run(id, signal.waypointId, signal.reason, date);
+          await store.query("INSERT INTO confusions(session_id,waypoint_id,reason,created_at) VALUES ($1,$2,$3,$4)",
+            [id, signal.waypointId, signal.reason, date], client);
           confusionCount++;
         }
         if (feedbackIndices.has(index)) {
@@ -99,15 +106,15 @@ try {
           const feedback: Feedback = signal
             ? { confused: true, ...signal, comment: "갈림길에서 헷갈렸어요" }
             : { confused: false, comment: "" };
-          store.db.prepare("INSERT INTO feedback(session_id,data,created_at) VALUES (?,?,?)")
-            .run(id, JSON.stringify(feedback), date);
+          await store.query("INSERT INTO feedback(session_id,data,created_at) VALUES ($1,$2::jsonb,$3)",
+            [id, JSON.stringify(feedback), date], client);
         }
-      });
+      }
     });
     console.log(`예시 세션 ${sessions.length}개 · 통과 ${passageCount}건 · 혼란 ${confusionCount}건 · 피드백 ${feedbackIndices.size}건을 넣었어요.`);
-    for (const point of store.insights().points)
+    for (const point of (await store.insights()).points)
       console.log(`${point.name}: ${point.level} · 혼란 ${point.confusions}건 / 통과 ${point.passages}건 · ${point.rate}%`);
   }
 } finally {
-  store.close();
+  await store.close();
 }
