@@ -17,6 +17,10 @@ function connectionOptions(url: string) {
   if (!["postgres:", "postgresql:"].includes(parsed.protocol))
     throw new Error("DATABASE_URL must be a PostgreSQL URL");
   const local = ["localhost", "127.0.0.1", "::1", "[::1]"].includes(parsed.hostname);
+  // pg-connection-string lets URL SSL parameters replace the ssl object below.
+  if (!local && [...parsed.searchParams.keys()].some((key) => key.toLowerCase().startsWith("ssl")))
+    throw new Error("Remove SSL parameters from the database URL; configure verified TLS with DATABASE_CA_CERT");
+  const ca = process.env.DATABASE_CA_CERT?.replace(/\\n/g, "\n").trim();
   return {
     connectionString: url,
     max: 1,
@@ -24,7 +28,7 @@ function connectionOptions(url: string) {
     connectionTimeoutMillis: 5_000,
     // Shared transaction pooling does not support named prepared statements.
     // node-postgres only creates those when a query config has a name; use text/values below.
-    ssl: local ? false : { rejectUnauthorized: true },
+    ssl: local ? false : { rejectUnauthorized: true, ...(ca ? { ca } : {}) },
   };
 }
 

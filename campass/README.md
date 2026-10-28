@@ -31,6 +31,7 @@ npm run dev
 | 이름 | 설명 |
 | --- | --- |
 | `DATABASE_URL` | 앱 전용 Supabase Transaction pooler 연결 문자열 (6543, 서버 전용) |
+| `DATABASE_CA_CERT` | Supabase Database Settings > SSL Configuration에서 내려받은 CA 인증서의 PEM 내용. 원격 DB의 서버 인증서 검증에 사용 |
 | `MIGRATION_DATABASE_URL` | 마이그레이션/이전 명령 전용 Direct 또는 Session pooler 연결 문자열 |
 | `TEST_DATABASE_URL` | 테스트 전용 로컬 `campass_test` DB. 운영 URL과 구분 |
 | `DEMO_DATABASE_URL` | 시연 데이터 전용 로컬 `campass_demo` DB |
@@ -44,6 +45,8 @@ npm run dev
 ### PostgreSQL 연결과 마이그레이션
 
 Supabase Dashboard의 **Connect**에서 앱용 **Transaction pooler** URL을 복사해 `campass/.env.local`의 `DATABASE_URL`에 입력합니다. 새로 설정한 DB 비밀번호를 URL에 넣고 특수문자는 URL 인코딩합니다. 채팅, 코드, PR에는 연결 문자열을 넣지 않습니다. 마이그레이션에는 같은 프로젝트의 **Direct connection** URL을 `MIGRATION_DATABASE_URL`에 넣습니다. Direct 연결이 IPv6 문제로 불가능하면 Session pooler(5432)를 사용합니다. 앱은 연결 풀을 인스턴스당 1개로 제한하고, TLS를 검증하며, named prepared statements와 query pipelining을 사용하지 않습니다.
+
+Supabase의 pooler 인증서는 기본 OS 신뢰 저장소만으로 검증되지 않을 수 있습니다. Supabase Dashboard의 **Database Settings > SSL Configuration > Download Certificate**에서 해당 프로젝트의 CA 인증서를 내려받고, PEM 전체를 서버 전용 `DATABASE_CA_CERT`에 넣습니다. 여러 줄 그대로 또는 `\\n`을 사용한 한 줄로 넣을 수 있습니다. 로컬에서는 다운로드한 인증서 파일의 절대 경로를 Node.js의 `NODE_EXTRA_CA_CERTS` 환경변수로 지정해도 됩니다. 인증서를 Git에 커밋할 필요는 없습니다. 연결 문자열에는 `sslmode` 등 SSL 쿼리 매개변수를 넣지 마세요. 이 값은 드라이버의 인증서 검증 설정을 덮어쓸 수 있어 원격 연결에서 거부됩니다. 앱과 마이그레이션 모두 서버 인증서와 호스트 이름을 검증합니다.
 
 로컬 PostgreSQL도 사용할 수 있습니다. `campass_dev`, `campass_test`, `campass_demo`라는 서로 다른 DB를 준비하고, `.env.local`의 세 URL을 각각 지정합니다. 테스트 DB 접속 역할에는 `CREATE DATABASE` 권한이 있어야 합니다. 테스트 도우미는 `campass_test`에 직접 쓰지 않고, 무작위 이름의 일회용 DB를 만든 뒤 종료 시 삭제합니다. 테스트와 시연 명령은 로컬 호스트 및 지정된 DB 이름만 허용합니다.
 
@@ -93,7 +96,7 @@ npm start
 1. Vercel에서 이 저장소를 가져오고 **Root Directory**를 `campass`로 설정합니다.
 2. **Node.js 24.x**, **Install Command** `npm ci`, **Build Command** `npm run build`를 사용합니다.
 3. Production과 Preview에 **서로 다른 Supabase 프로젝트/DB**를 준비하고, 각각 마이그레이션을 별도로 적용합니다. 검증 배포에는 Preview DB만 사용합니다.
-4. 각 환경의 서버 전용 `DATABASE_URL`에 해당 프로젝트의 Transaction pooler URL을 입력합니다. `ADMIN_ID`와 12자 이상 `ADMIN_PASSWORD`도 환경별로 입력합니다. Production의 `APP_ORIGIN`은 실제 HTTPS 공개 주소로 설정하고, 주소가 바뀌는 Preview에서는 비워 두어 요청의 Host와 Origin을 비교하게 합니다. 선택형 AI 변수는 필요한 환경에만 입력합니다. `MIGRATION_DATABASE_URL`, `TEST_DATABASE_URL`, `DEMO_DATABASE_URL`, `SQLITE_SOURCE_PATH`는 Vercel 앱 환경변수에 넣지 않습니다.
+4. 각 환경의 서버 전용 `DATABASE_URL`에 해당 프로젝트의 Transaction pooler URL을 입력하고, 같은 프로젝트에서 내려받은 CA 인증서의 PEM 전체를 `DATABASE_CA_CERT`에 입력합니다. `ADMIN_ID`와 12자 이상 `ADMIN_PASSWORD`도 환경별로 입력합니다. Production의 `APP_ORIGIN`은 실제 HTTPS 공개 주소로 설정하고, 주소가 바뀌는 Preview에서는 비워 두어 요청의 Host와 Origin을 비교하게 합니다. 선택형 AI 변수는 필요한 환경에만 입력합니다. `MIGRATION_DATABASE_URL`, `TEST_DATABASE_URL`, `DEMO_DATABASE_URL`, `SQLITE_SOURCE_PATH`는 Vercel 앱 환경변수에 넣지 않습니다.
 5. Preview에서 `/api/health`, 장소 검색, 경로 생성, 세션 다음·이전 이동, 다른 브라우저의 세션 접근 거부, 피드백 중복 방지, 관리자 로그인·로그아웃·통계, 요청 제한을 확인합니다. 재배포 뒤 기존 세션과 통계가 남는지도 확인한 후 Production으로 전환합니다.
 
 프로덕션 DB URL과 관리자 비밀번호는 새 값으로 설정합니다. Supabase Auth, 화면, 사진 인식 서버는 이 배포 설정에서 변경하지 않습니다.
