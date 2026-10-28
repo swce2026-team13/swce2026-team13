@@ -6,6 +6,9 @@ const nextConfig: NextConfig = {
   },
   cacheComponents: true,
   partialPrefetching: true,
+  outputFileTracingIncludes: {
+    "/*": ["./campus-data/*.tsv"],
+  },
   turbopack: {
     rules: {
       "*.css": {
