@@ -88,9 +88,14 @@ export function routeCoordinate(node: string): CampusCoordinate | undefined {
   if (building) {
     const index = building.floors.findIndex((f) => f.floor === floor);
     if (index < 0) return;
+    // 본관의 정류장 연결과 실내 경로는 한 수평 표시점을 공유한다.
+    // 그래프의 출발 지점·층 구분은 유지하고 지도상의 중심 왕복만 없앤다.
+    const anchor = id === "bon"
+      ? campusEntrances().find(e => e.id === "bus_stop_2115")?.local ?? building.center
+      : building.center;
     return {
-      east: building.center[0],
-      north: building.center[1],
+      east: anchor[0],
+      north: anchor[1],
       elevation: getFloorElevations(building)[index],
     };
   }
@@ -142,10 +147,28 @@ export function routeSegments(
   nodes: string[],
 ): [CampusCoordinate, CampusCoordinate][] {
   const points = nodes.map(routeCoordinate);
-  return points.slice(1).flatMap((point, i) => {
+  const segments = points.slice(1).flatMap((point, i) => {
     const previous = points[i];
-    return previous && point
-      ? [[previous, point] as [CampusCoordinate, CampusCoordinate]]
-      : [];
+    if (!previous || !point) return [];
+    const fromYudam = nodes[i].startsWith("yudam|");
+    const toYudam = nodes[i + 1].startsWith("yudam|");
+    // 유담관 출입 연결은 입구 3을 경유한다. 실내 층 이동은 기존 위치를 유지한다.
+    if (fromYudam !== toYudam) {
+      const entrance = campusEntrances().find(e => e.id === "yudam_entrance_3");
+      if (entrance) {
+        const door: CampusCoordinate = {
+          east: entrance.local[0],
+          north: entrance.local[1],
+          // 입구 층은 기존 연결의 유담관 층을 사용하고 등고선 높이로 바꾸지 않는다.
+          elevation: (fromYudam ? previous : point).elevation,
+        };
+        return [[previous, door], [door, point]] as [CampusCoordinate, CampusCoordinate][];
+      }
+    }
+    return [[previous, point] as [CampusCoordinate, CampusCoordinate]];
   });
+  // 동일 좌표의 정류장↔본관 연결은 생략하되 수직 층 이동은 남긴다.
+  return segments.filter(([a, b]) =>
+    Math.hypot(a.east - b.east, a.north - b.north, a.elevation - b.elevation) > 0.001,
+  );
 }

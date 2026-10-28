@@ -3,10 +3,11 @@ import assert from "node:assert/strict";
 import {
   campusMap,
   routeSegments,
+  routeCoordinate,
   getFloorElevations,
   toScenePosition,
 } from "../shared/utils/campus-map.ts";
-import { campusBuildings } from "../shared/utils/campus3d/types.ts";
+import { campusBuildings, campusEntrances } from "../shared/utils/campus3d/types.ts";
 import { loadCampusThree } from "../features/navigation/campus-map/three-loader.js";
 
 test("첨부 지도의 건물과 등고선은 유효한 좌표와 층 높이를 가진다", () => {
@@ -108,11 +109,55 @@ test("지도 좌표의 동·북·해발 방향을 동일한 3D 축으로 변환�
 
 test("route segments retain floor heights and break at unknown nodes", () => {
   const segments = routeSegments(["bus_stop_2115", "bon|1", "bon|5", "hallim|3", "hallim|6", "eunju1|5"]);
-  assert.equal(segments.length, 5);
-  assert.equal(segments[1][0].east, segments[1][1].east);
-  assert.ok(segments[1][1].elevation > segments[1][0].elevation);
-  assert.equal(segments[2][0].elevation, segments[2][1].elevation);
+  assert.equal(segments.length, 4);
+  assert.equal(segments[0][0].east, segments[0][1].east);
+  assert.ok(segments[0][1].elevation > segments[0][0].elevation);
+  assert.equal(segments[1][0].elevation, segments[1][1].elevation);
   assert.equal(routeSegments(["bon|1", "missing", "hallim|3"]).length, 0);
   assert.equal(routeSegments([]).length, 0);
   assert.equal(routeSegments(["to_hallim", "hallim|3"]).length, 1);
+});
+
+test("유담관 진입·퇴장은 입구 3을 경유하고 실내 층 이동은 유지한다", () => {
+  const entrance = campusEntrances().find(e => e.id === "yudam_entrance_3")!;
+  const outside = routeCoordinate("bon|1")!;
+  const inside = routeCoordinate("yudam|8")!;
+  const door = { east: entrance.local[0], north: entrance.local[1], elevation: inside.elevation };
+  assert.deepEqual(routeSegments(["bon|1", "yudam|8"]), [[outside, door], [door, inside]]);
+  assert.deepEqual(routeSegments(["yudam|8", "bon|1"]), [[inside, door], [door, outside]]);
+  assert.deepEqual(routeSegments(["yudam|8", "yudam|6"]), [[inside, routeCoordinate("yudam|6")]]);
+  assert.deepEqual(routeSegments(["missing", "yudam|8"]), []);
+});
+
+test("유담관 입구 3 좌표를 수정하면 연결선도 그 좌표를 사용한다", () => {
+  const entrance = campusEntrances().find(e => e.id === "yudam_entrance_3")!;
+  const saved = [...entrance.local] as [number, number];
+  try {
+    entrance.local = [-111, -4];
+    const segments = routeSegments(["bon|1", "yudam|8", "yudam|6"]);
+    assert.equal(segments[0][1].east, -111);
+    assert.equal(segments[0][1].north, -4);
+    assert.deepEqual(segments[0][1], segments[1][0]);
+    assert.deepEqual(segments[1][1], segments[2][0]);
+  } finally {
+    entrance.local = saved;
+  }
+});
+
+test("본관은 정류장 쪽 공통 표시점으로 연결하고 겹친 선분은 생략한다", () => {
+  const bus=routeCoordinate("bus_stop_2115")!;
+  const main=routeCoordinate("bon|1")!;
+  const upper=routeCoordinate("bon|5")!;
+  assert.deepEqual(main,bus);
+  assert.equal(upper.east,main.east);
+  assert.equal(upper.north,main.north);
+  assert.ok(upper.elevation>main.elevation);
+  const route=routeSegments(["bus_stop_2115","bon|1","yudam|8"]);
+  const door=campusEntrances().find(e=>e.id==="yudam_entrance_3")!;
+  assert.equal(route.length,2);
+  assert.deepEqual(route[0][0],bus);
+  assert.equal(route[0][1].east,door.local[0]);
+  assert.equal(route[0][1].north,door.local[1]);
+  assert.deepEqual(routeSegments(["yudam|8","bon|1","bus_stop_2115"]),route.toReversed().map(([a,b])=>[b,a]));
+  assert.equal(routeSegments(["bon|1","bon|1","bon|5"]).length,1);
 });
