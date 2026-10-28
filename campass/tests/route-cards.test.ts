@@ -7,7 +7,7 @@ import {
   pickOption,
   stepFreeText,
 } from "../shared/utils/route-cards.ts";
-import { Store } from "../server/db/store.ts";
+import { testStore } from "./postgres-helper.ts";
 
 const interview = (elevator: boolean) =>
   calculateRoute("bus_stop_2115", "interview", elevator);
@@ -54,16 +54,17 @@ test("계단 여부 문구와 접힌 카드 한 줄", () => {
   );
 });
 
-test("접힌 카드를 누르면 고른 길이 바뀌고 그 id로 세션이 만들어짐", () => {
+test("접힌 카드를 누르면 고른 길이 바뀌고 그 id로 세션이 만들어짐", async (t) => {
   const options = interview(false).options;
   assert.equal(pickOption(options).id, options[0].id);
   const chosen = pickOption(options, options[1].id);
   assert.equal(chosen.name, "연결통로 길");
-  const store = new Store(":memory:");
-  const session = store.create("owner", "bus_stop_2115", "interview", false, chosen.id);
+  const fixture = await testStore(t);
+  if (!fixture) return;
+  const { store } = fixture;
+  const session = await store.create("owner", "bus_stop_2115", "interview", false, chosen.id);
   assert.equal(session.route.option, chosen.id);
   assert.deepEqual(session.route.steps, chosen.steps);
-  store.close();
 });
 
 test("엘리베이터를 바꿔도 같은 id의 길은 계속 고른 상태, 없으면 첫 후보", () => {
@@ -77,15 +78,16 @@ test("엘리베이터를 바꿔도 같은 id의 길은 계속 고른 상태, 없
   );
 });
 
-test("복구해도 복구 전에 고른 길과 같은 이름의 길로 이어짐", () => {
-  const store = new Store(":memory:");
+test("복구해도 복구 전에 고른 길과 같은 이름의 길로 이어짐", async (t) => {
+  const fixture = await testStore(t);
+  if (!fixture) return;
+  const { store } = fixture;
   const connector = interview(false).options[1];
-  const session = store.create("owner", "bus_stop_2115", "interview", false, connector.id);
-  const recovered = store.recover(session.id, "owner", "main_corridor", session.version);
+  const session = await store.create("owner", "bus_stop_2115", "interview", false, connector.id);
+  const recovered = await store.recover(session.id, "owner", "main_corridor", session.version);
   const chosen = recovered.route.options.find((o) => o.id === recovered.route.option)!;
   assert.equal(chosen.name, "연결통로 길");
   assert.notEqual(recovered.route.options[0].name, "연결통로 길");
   assert.deepEqual(recovered.route.steps, chosen.steps);
   assert.equal(recovered.route.steps[0].id, "main_corridor");
-  store.close();
 });

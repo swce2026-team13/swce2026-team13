@@ -12,7 +12,7 @@ import {
 } from "../shared/utils/campus3d/types.ts";
 import { places } from "../shared/utils/catalog.ts";
 import { calculateRoute } from "../shared/utils/routing.ts";
-import { Store } from "../server/db/store.ts";
+import { testStore } from "./postgres-helper.ts";
 
 test("캠퍼스 데이터는 건물 13, 연결 22(삭제 제외), 입구 35", () => {
   assert.equal(campusBuildings().length, 13);
@@ -73,15 +73,15 @@ test("본관 경로는 바꾸기 전과 같고 예전 id로도 같은 경로", (
   );
 });
 
-test("예전 건물 id로 만든 세션과 저장된 세션을 새 id로 받음", () => {
-  const store = new Store(":memory:");
-  const created = store.create("owner", "bus_stop_2115", "main", true);
+test("예전 건물 id로 만든 세션과 저장된 세션을 새 id로 받음", async (t) => {
+  const fixture = await testStore(t);
+  if (!fixture) return;
+  const { store } = fixture;
+  const created = await store.create("owner", "bus_stop_2115", "main", true);
   assert.equal(created.destination, "bon");
-  store.db
-    .prepare("UPDATE sessions SET data=? WHERE id=?")
-    .run(JSON.stringify({ ...created, destination: "hanlim" }), created.id);
-  assert.equal(store.get(created.id, "owner").destination, "hallim");
-  store.close();
+  await store.query("UPDATE sessions SET data=$1::jsonb WHERE id=$2",
+    [JSON.stringify({ ...created, destination: "hanlim" }), created.id]);
+  assert.equal((await store.get(created.id, "owner")).destination, "hallim");
 });
 
 test("청운관 L층과 2층 장소는 모두 층 코드 2", () => {
