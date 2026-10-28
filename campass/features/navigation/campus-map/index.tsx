@@ -31,6 +31,7 @@ export type CampusMapProps = {
   onBuilding?: (id: string) => void;
   selectedBuildings?: string[];
   currentBuilding?: string;
+  routeNodes?: string[];
   fallback: ReactNode;
 };
 

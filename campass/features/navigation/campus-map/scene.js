@@ -1,5 +1,6 @@
 import {
   campusMap,
+  routeSegments,
   getFloorElevations,
   toScenePosition,
   MAP_HEIGHT_SCALE,
@@ -42,6 +43,8 @@ export function createCampusScene(THREE, container, events) {
   scene.add(light);
   const world = new THREE.Group();
   scene.add(world);
+  const routeLayer = new THREE.Group();
+  world.add(routeLayer);
   const labelLayer = document.createElement("div");
   labelLayer.className = styles.labels;
   labelLayer.setAttribute("aria-hidden", "true");
@@ -189,6 +192,42 @@ export function createCampusScene(THREE, container, events) {
             ? "#5c8cf1"
             : "#e7d6ae",
       );
+    }
+    scheduleRender();
+  }
+  function showRoute(nodes) {
+    for (const child of [...routeLayer.children]) {
+      child.geometry.dispose();
+      child.material.dispose();
+      routeLayer.remove(child);
+    }
+    for (const [from, to] of routeSegments(nodes)) {
+      const a = point(from.east, from.north, from.elevation + 1.2);
+      const b = point(to.east, to.north, to.elevation + 1.2);
+      const delta = b.clone().sub(a);
+      if (delta.length() < 0.01) continue;
+      // 흰 외곽선과 굵은 빨간 선을 건물 위에 겹쳐 실내 구간도 보이게 한다.
+      for (const [radius, color, order] of [
+        [1.5, "#ffffff", 5],
+        [0.95, "#dc2626", 6],
+      ]) {
+        const mesh = new THREE.Mesh(
+          new THREE.CylinderGeometry(radius, radius, delta.length(), 8),
+          new THREE.MeshBasicMaterial({
+            color,
+            depthTest: false,
+            depthWrite: false,
+            transparent: true,
+          }),
+        );
+        mesh.position.copy(a).add(b).multiplyScalar(0.5);
+        mesh.quaternion.setFromUnitVectors(
+          new THREE.Vector3(0, 1, 0),
+          delta.clone().normalize(),
+        );
+        mesh.renderOrder = order;
+        routeLayer.add(mesh);
+      }
     }
     scheduleRender();
   }
@@ -393,6 +432,7 @@ export function createCampusScene(THREE, container, events) {
 
   return {
     fitAll,
+    showRoute,
     zoom(factor) {
       const offset = camera.position.clone().sub(controls.target);
       const distance = THREE.MathUtils.clamp(

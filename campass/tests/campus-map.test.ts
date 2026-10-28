@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   campusMap,
+  routeSegments,
   getFloorElevations,
   toScenePosition,
 } from "../shared/utils/campus-map.ts";
@@ -103,4 +104,15 @@ test("지도 좌표의 동·북·해발 방향을 동일한 3D 축으로 변환�
   assert.equal(a[0], -40);
   assert.equal(a[2], 12);
   assert.ok(Math.abs(b[1] - a[1] - 9 * 1.3) < 1e-10);
+});
+
+test("route segments retain floor heights and break at unknown nodes", () => {
+  const segments = routeSegments(["bus_stop_2115", "bon|1", "bon|5", "hallim|3", "hallim|6", "eunju1|5"]);
+  assert.equal(segments.length, 5);
+  assert.equal(segments[1][0].east, segments[1][1].east);
+  assert.ok(segments[1][1].elevation > segments[1][0].elevation);
+  assert.equal(segments[2][0].elevation, segments[2][1].elevation);
+  assert.equal(routeSegments(["bon|1", "missing", "hallim|3"]).length, 0);
+  assert.equal(routeSegments([]).length, 0);
+  assert.equal(routeSegments(["to_hallim", "hallim|3"]).length, 1);
 });

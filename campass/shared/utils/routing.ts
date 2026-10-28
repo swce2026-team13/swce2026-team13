@@ -10,6 +10,8 @@ import {
   PLAZA,
   buildingById,
   findPaths,
+  findHillPaths,
+  type HillMode,
   floorLabel,
   graphNodes,
   isFloorMove,
@@ -219,7 +221,14 @@ const GENERIC_DETAIL = "시연 경로 · 현장의 안내 표지를 함께 확�
 export type RouteOption = {
   // 같은 조건이면 같은 값 (노드 목록 기준)
   id: string;
-  name: "엘리베이터 길" | "지하통로 길" | "연결통로 길";
+  name:
+    | "엘리베이터 길"
+    | "지하통로 길"
+    | "연결통로 길"
+    | "언덕길"
+    | "한림관·은주관 계단길"
+    | "본관 엘리베이터길";
+  hillMode?: HillMode;
   // 이름이 같은 후보가 있을 때 이 후보만 지나는 건물 (화면에 '○○ 거쳐'로 보여 줌)
   via?: string;
   nodes: string[];
@@ -283,6 +292,7 @@ function destinationNodes(destination: string, list: Place[]) {
   if (!place) return;
   const building = campusBuildings().find((b) => b.name === place.building);
   if (!building) return [];
+  if (place.category === "building" && building.id === "bon") return ["bon|1"];
   const floor =
     place.category === "building" || !place.floor
       ? ""
@@ -469,6 +479,16 @@ function buildSteps(
       point.instruction = "목적지에 도착했어요";
       point.detail = "주변 안내 표지와 목적지를 확인해 주세요.";
     }
+    const hop = path.hops.find((h) => h.from === point.node);
+    if (hop?.edge.hillMode) {
+      point.instruction =
+        hop.edge.hillMode === "hill"
+          ? `실외 언덕길을 따라 ${toward(nodeLabel(hop.to))} 이동하세요`
+          : `외부 계단을 따라 ${toward(nodeLabel(hop.to))} 이동하세요`;
+      point.detail =
+        "실외 동선은 대략적인 안내예요. 현장 표지판을 확인해 주세요.";
+      point.link = hop.edge.id;
+    }
     return point;
   });
 }
@@ -510,11 +530,20 @@ function toOption(
   }
   return {
     id: optionId(path.nodes),
-    name: path.nodes.includes(PARKING)
-      ? "지하통로 길"
-      : elevator
-        ? "엘리베이터 길"
-        : "연결통로 길",
+    hillMode: path.hillMode,
+    name: path.hillMode
+      ? (
+          {
+            hill: "언덕길",
+            stairs: "한림관·은주관 계단길",
+            elevator: "본관 엘리베이터길",
+          } as const
+        )[path.hillMode]
+      : path.nodes.includes(PARKING)
+        ? "지하통로 길"
+        : elevator
+          ? "엘리베이터 길"
+          : "연결통로 길",
     nodes: path.nodes,
     links: path.hops.map((h) =>
       isFloorMove(h.edge) ? `${h.from}>${h.to}` : h.edge.id,
@@ -527,7 +556,10 @@ function toOption(
       (e, i) => isFloorMove(e) && !(i > 0 && isFloorMove(edges[i - 1])),
     ).length,
     lifts: (["elevator", "stairs"] as const).filter((kind) =>
-      edges.some((e) => e.kind === kind),
+      edges.some(
+        (e) =>
+          e.kind === kind || (kind === "stairs" && e.hillMode === "stairs"),
+      ),
     ),
     stepFree: edges.some((e) => e.stepFree === false)
       ? false
@@ -573,8 +605,18 @@ function searchPaths(
   statuses?: LinkStatus[],
 ) {
   const paths = findPaths(from, targets, { elevator, statuses });
-  if (paths.length || statuses) return paths;
-  return findPaths(from, targets, { elevator, statuses: wideStatuses });
+  const effectiveStatuses = paths.length || statuses ? statuses : wideStatuses;
+  const baseline =
+    paths.length || statuses
+      ? paths
+      : findPaths(from, targets, { elevator, statuses: effectiveStatuses });
+  const hillPaths = findHillPaths(
+    from,
+    targets,
+    { elevator, statuses: effectiveStatuses },
+    baseline,
+  );
+  return hillPaths.length ? hillPaths : baseline;
 }
 
 // list: 목적지를 찾을 장소 목록. 서버는 호실 · 편의시설까지 넣어서 넘김

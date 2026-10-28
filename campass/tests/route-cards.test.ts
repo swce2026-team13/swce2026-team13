@@ -12,7 +12,7 @@ import { Store } from "../server/db/store.ts";
 const interview = (elevator: boolean) =>
   calculateRoute("bus_stop_2115", "interview", elevator);
 
-test("2115 정류장 → 면접 대기실: 엘리베이터를 켜면 카드 1개, 끄면 2개", () => {
+test("2115 정류장 → 면접 대기실: 엘리베이터를 켜면 카드 1개, 끄면 3개", () => {
   const on = interview(true).options;
   assert.equal(on.length, 1);
   assert.equal(on[0].name, "엘리베이터 길");
@@ -23,21 +23,20 @@ test("2115 정류장 → 면접 대기실: 엘리베이터를 켜면 카드 1개
     "혜인관 2층",
   ]);
   const off = interview(false).options;
-  assert.equal(off.length, 2);
+  assert.equal(off.length, 3);
   assert.deepEqual(
     off.map((o) => o.name),
-    ["지하통로 길", "연결통로 길"],
+    ["언덕길", "한림관·은주관 계단길", "본관 엘리베이터길"],
   );
   assert.deepEqual(legRows(off[0]), [
-    "본관 1층",
-    "지하통로 → 지하주차장",
+    "스콘스퀘어 광장",
     "혜인관 2층",
   ]);
 });
 
 test("계단 여부 문구와 접힌 카드 한 줄", () => {
   const [underground, connector] = interview(false).options;
-  assert.equal(stepFreeText(underground), "계단 · 언덕이 있어요");
+  assert.equal(stepFreeText(underground), "계단 · 언덕이 있어요 · 실외 길은 대략적인 안내예요");
   // 10/24 팀 확인: 엘리베이터 길의 연결이 모두 계단 없이 이어짐
   assert.equal(stepFreeText(interview(true).options[0]), "계단 없는 길이에요");
   assert.equal(
@@ -58,7 +57,7 @@ test("접힌 카드를 누르면 고른 길이 바뀌고 그 id로 세션이 만
   const options = interview(false).options;
   assert.equal(pickOption(options).id, options[0].id);
   const chosen = pickOption(options, options[1].id);
-  assert.equal(chosen.name, "연결통로 길");
+  assert.equal(chosen.name, "한림관·은주관 계단길");
   const store = new Store(":memory:");
   const session = store.create("owner", "bus_stop_2115", "interview", false, chosen.id);
   assert.equal(session.route.option, chosen.id);
@@ -83,8 +82,8 @@ test("복구해도 복구 전에 고른 길과 같은 이름의 길로 이어짐
   const session = store.create("owner", "bus_stop_2115", "interview", false, connector.id);
   const recovered = store.recover(session.id, "owner", "main_corridor", session.version);
   const chosen = recovered.route.options.find((o) => o.id === recovered.route.option)!;
-  assert.equal(chosen.name, "연결통로 길");
-  assert.notEqual(recovered.route.options[0].name, "연결통로 길");
+  assert.equal(chosen.name, "한림관·은주관 계단길");
+  assert.notEqual(recovered.route.options[0].name, "한림관·은주관 계단길");
   assert.deepEqual(recovered.route.steps, chosen.steps);
   assert.equal(recovered.route.steps[0].id, "main_corridor");
   store.close();

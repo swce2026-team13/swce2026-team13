@@ -451,6 +451,12 @@ export function CampusOverviewMap({
               </g>
             );
           })}
+        {highlight?.segments.map(([from, to], index) => (
+          <g key={index} pointerEvents="none" aria-hidden="true">
+            <line x1={from[0]} y1={from[1]} x2={to[0]} y2={to[1]} stroke="white" strokeWidth={7} strokeLinecap="round" />
+            <line x1={from[0]} y1={from[1]} x2={to[0]} y2={to[1]} stroke="#dc2626" strokeWidth={4} strokeLinecap="round" />
+          </g>
+        ))}
       </svg>
       <svg className="overview-north" viewBox="0 0 7 18" aria-hidden="true">
         <path d="M0 9L3.5 0L7 9L3.5 7Z" fill="#192334" />

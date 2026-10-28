@@ -1,3 +1,4 @@
+import { campusEntrances } from "./campus3d/types.ts";
 import data from "../../campus-data/campus-map-data.json" with { type: "json" };
 
 export type MapBuilding = {
@@ -77,5 +78,74 @@ export type CampusMapController = {
   zoom: (factor: number) => void;
   selectBuilding: (id: string) => void;
   highlightBuildings: (ids: string[], currentId?: string) => void;
+  showRoute: (nodes: string[]) => void;
   dispose: () => void;
 };
+
+export function routeCoordinate(node: string): CampusCoordinate | undefined {
+  const [id, floor] = node.split("|");
+  const building = campusMap.buildings.find((b) => b.id === id);
+  if (building) {
+    const index = building.floors.findIndex((f) => f.floor === floor);
+    if (index < 0) return;
+    return {
+      east: building.center[0],
+      north: building.center[1],
+      elevation: getFloorElevations(building)[index],
+    };
+  }
+  if (node === "스콘스퀘어" || node === "지하주차장")
+    return {
+      east: campusMap.plaza.center[0],
+      north: campusMap.plaza.center[1],
+      elevation: PLAZA_ELEVATION - (node === "지하주차장" ? 6 : 0),
+    };
+  const passage: Record<string, [string, string]> = {
+    to_hallim: ["bon|5", "hallim|3"],
+    hallim_6f_corridor: ["hallim|6", "eunju1|5"],
+  };
+  if (passage[node]) {
+    const [a, b] = passage[node].map((n) => routeCoordinate(n)!);
+    return {
+      east: (a.east + b.east) / 2,
+      north: (a.north + b.north) / 2,
+      elevation: (a.elevation + b.elevation) / 2,
+    };
+  }
+  const entrance = campusEntrances().find((e) => e.id === node);
+  if (!entrance) return;
+  const connected =
+    entrance.connectsTo &&
+    routeCoordinate(
+      entrance.connectsTo.building + "|" + entrance.connectsTo.floor,
+    );
+  // 정문 등 실외 입구 높이는 가장 가까운 등고선 표본으로 추정한다.
+  let elevation = connected?.elevation ?? MAP_BASE_ELEVATION;
+  if (node !== "bus_stop_2115") {
+    let nearest = Infinity;
+    for (const contour of campusMap.contours)
+      for (const p of contour.p) {
+        const distance = Math.hypot(
+          p[0] - entrance.local[0],
+          p[1] - entrance.local[1],
+        );
+        if (distance < nearest) {
+          nearest = distance;
+          elevation = contour.e;
+        }
+      }
+  }
+  return { east: entrance.local[0], north: entrance.local[1], elevation };
+}
+
+export function routeSegments(
+  nodes: string[],
+): [CampusCoordinate, CampusCoordinate][] {
+  const points = nodes.map(routeCoordinate);
+  return points.slice(1).flatMap((point, i) => {
+    const previous = points[i];
+    return previous && point
+      ? [[previous, point] as [CampusCoordinate, CampusCoordinate]]
+      : [];
+  });
+}

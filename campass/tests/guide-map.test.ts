@@ -63,7 +63,7 @@ test("2115에서 면접 대기실까지 모든 단계가 실제 노드와 건물
   );
 });
 
-test("위치 정보를 제외한 경로 후보와 단계 순서·문구·개수는 변경 전과 같다", () => {
+test("엘리베이터 전용 경로의 기존 단계 순서·문구·개수를 유지한다", () => {
   const cases = [
     [
   "bus_stop_2115",
@@ -72,22 +72,10 @@ test("위치 정보를 제외한 경로 후보와 단계 순서·문구·개수�
   "a71f788ebbe1f69b87cbc9cfd4f1b98fe38b603bad52965428834e1ea4428fb1",
 ],
 [
-  "bus_stop_2115",
-  "interview",
-  false,
-  "53514961759da1d02abc393023b7838edf94464bd7078bb69c59eb97e1aef368",
-],
-[
   "yudam",
   "hyein",
   true,
   "87ca6c6397041c6f4e51fc10cf5e7a6970dd6457f8df98fd2b6ea78a5d92db1b",
-],
-[
-  "gate",
-  "interview",
-  false,
-  "574bef14119c8cf8d85c85eb6413bcd52d2d40d475659914bae3cf3fb5994939",
 ],
 [
   "to_hallim",

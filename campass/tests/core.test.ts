@@ -48,11 +48,11 @@ test("2115 정류장에서 면접 대기실과 은주1관 5층 앞 경로가 나
   assert.match(interview.steps[0].detail, /연결통로/);
   assert.deepEqual(
     calculateRoute("bus_stop_2115", "interview", false).steps.map((s) => s.id),
-    ["bus_stop_2115", "main", "parking-entry", "parking", "hyein", "stairs", "interview"],
+    ["bus_stop_2115", "스콘스퀘어", "stairs", "interview"],
   );
   assert.match(
     calculateRoute("bus_stop_2115", "interview", false).steps[0].detail,
-    /본관 1층 로비/,
+    /실외 동선/,
   );
 
   const eunju = calculateRoute("bus_stop_2115", "eunju1_5f_front", true);
