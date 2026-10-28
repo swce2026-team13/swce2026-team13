@@ -4,10 +4,11 @@ import { Store } from "../server/db/store.ts";
 import { testStore } from "./postgres-helper.ts";
 
 test("concurrent navigation updates serialize and reject a stale version", async (t) => {
+  let other: Store | undefined;
+  t.after(async () => { await other?.close(); });
   const fixture = await testStore(t);
   if (!fixture) return;
-  const other = new Store(fixture.url);
-  t.after(() => other.close());
+  other = new Store(fixture.url);
   const session = await fixture.store.create("owner", "bus_stop_2115", "interview", true);
   const results = await Promise.allSettled([
     fixture.store.advance(session.id, "owner", session.version),
@@ -21,10 +22,11 @@ test("concurrent navigation updates serialize and reject a stale version", async
 });
 
 test("concurrent feedback saves once and preserves one confusion record", async (t) => {
+  let other: Store | undefined;
+  t.after(async () => { await other?.close(); });
   const fixture = await testStore(t);
   if (!fixture) return;
-  const other = new Store(fixture.url);
-  t.after(() => other.close());
+  other = new Store(fixture.url);
   let session = await fixture.store.create("owner", "bus_stop_2115", "interview", true);
   while (session.status !== "completed")
     session = await fixture.store.advance(session.id, "owner", session.version);
@@ -42,10 +44,11 @@ test("concurrent feedback saves once and preserves one confusion record", async 
 });
 
 test("rate limiting is atomic across independent server instances", async (t) => {
+  let other: Store | undefined;
+  t.after(async () => { await other?.close(); });
   const fixture = await testStore(t);
   if (!fixture) return;
-  const other = new Store(fixture.url);
-  t.after(() => other.close());
+  other = new Store(fixture.url);
   const results = await Promise.allSettled(Array.from({ length: 6 }, (_, index) =>
     (index % 2 ? other : fixture.store).limit("shared-client", 5, 60_000)));
   assert.equal(results.filter((result) => result.status === "fulfilled").length, 5);
