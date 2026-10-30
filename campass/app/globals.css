@@ -4285,3 +4285,25 @@ progress::-moz-progress-bar {
 .guide-risk-notice .guide-risk-demo-label {
   margin-bottom: 6px;
 }
+.campass-wordmark {
+  display: inline-flex;
+  align-items: baseline;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.campass-wordmark-cam,
+.campass-wordmark-pass {
+  color: transparent;
+  background-clip: text;
+  -webkit-background-clip: text;
+}
+
+.campass-wordmark-cam {
+  background-image: linear-gradient(180deg, #24406f, #10223f);
+}
+
+.campass-wordmark-pass {
+  background-image: linear-gradient(180deg, #2a7dff, #0060fc);
+}
