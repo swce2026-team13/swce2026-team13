@@ -19,6 +19,7 @@ export function RouteModal({
   const visible = modalPaths.has(usePathname());
   const { error, setError, busy } = useCampus();
   const dialog = useRef<HTMLDialogElement>(null);
+  const titleRef = useRef<HTMLElement>(null);
   const titleId = useId();
 
   useEffect(() => {
@@ -27,6 +28,7 @@ export function RouteModal({
     const previous = document.activeElement as HTMLElement | null;
     const overflow = document.body.style.overflow;
     element.showModal();
+    titleRef.current?.focus({ preventScroll: true });
     document.body.style.overflow = "hidden";
     return () => {
       element.close();
@@ -59,12 +61,18 @@ export function RouteModal({
       }}
     >
       <header className="app-header">
-        <strong id={titleId}>{title}</strong>
+        <strong
+          ref={titleRef}
+          id={titleId}
+          className="route-modal-title"
+          tabIndex={-1}
+        >
+          {title}
+        </strong>
         <button
           className="icon-button"
           aria-label="모달 닫기"
           onClick={() => router.back()}
-          autoFocus
         >
           <CloseIcon size={21} />
         </button>
