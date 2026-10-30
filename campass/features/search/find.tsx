@@ -19,7 +19,7 @@ export default function Screen({
   facilities: Place[];
 }) {
   const params = useSearchParams();
-  const { busy, choose, go } = useCampus();
+  const { busy, choose } = useCampus();
   const visibleFacilities = facilities.filter(
     (place) => place.id !== "eunju1_5f_front",
   );
@@ -120,7 +120,6 @@ export default function Screen({
               );
               if (destination) choose(destination);
             }}
-            onPlaces={() => go("places", { building: buildingInfo.name })}
           />
         )
       ) : (
