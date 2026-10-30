@@ -6,12 +6,7 @@ import { CloseIcon } from "./icons";
 import { useCampus } from "../../features/navigation/campus-provider";
 import { routes } from "@/shared/utils/navigation";
 
-const modalPaths = new Set<string>([
-  routes.map,
-  routes.places,
-  routes["guide-map"],
-  routes.help,
-]);
+const modalPaths = new Set<string>([routes.help]);
 
 export function RouteModal({
   title,
