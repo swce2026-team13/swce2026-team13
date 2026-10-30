@@ -21,8 +21,18 @@ export const mapEntrances = entranceLabels.map((pin) => {
   };
 });
 
-export type MapLabelBox = { left: number; right: number; top: number; bottom: number };
-export type EntranceProjection = { id: string; x: number; y: number; visible: boolean };
+export type MapLabelBox = {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+};
+export type EntranceProjection = {
+  id: string;
+  x: number;
+  y: number;
+  visible: boolean;
+};
 export type PlacedEntrancePin = EntranceProjection & {
   left: number;
   top: number;
@@ -36,37 +46,78 @@ export function layoutEntrancePins(
   width: number,
   height: number,
   labels: MapLabelBox[],
+  denseLabels = false,
 ): PlacedEntrancePin[] {
-  const occupied = [...labels,
+  const occupied = [
+    ...labels,
     { left: width - 110, right: width, top: 0, bottom: 60 },
     { left: width - 55, right: width, top: 60, bottom: 110 },
     { left: width - 60, right: width, top: height - 105, bottom: height },
   ];
-  return points.filter((p) => p.visible && p.x >= 0 && p.x <= width && p.y >= 0 && p.y <= height).map((p) => {
-    const pin = mapEntrances.find((item) => item.id === p.id)!;
-    const w = [...pin.label].reduce((sum, c) => sum + (c.charCodeAt(0) > 255 ? 11 : 6), 30);
-    let best: PlacedEntrancePin | undefined;
-    let bestScore = Infinity;
-    for (const gap of [10, 24, 40]) {
-      for (const side of ["above", "below", "left", "right"] as const) {
-        const rawLeft = side === "left" ? p.x - w - gap : side === "right" ? p.x + gap : p.x - w / 2;
-        const rawTop = side === "above" ? p.y - 22 - gap : side === "below" ? p.y + gap : p.y - 11;
-        const left = Math.max(6, Math.min(rawLeft, width - w - 6));
-        const top = Math.max(11, Math.min(rawTop, height - 33));
-        const box = { left, right: left + w, top, bottom: top + 22 };
-        const outside = Math.abs(rawLeft - left) + Math.abs(rawTop - top);
-        const overlap = occupied.reduce((sum, r) => sum
-          + Math.max(0, Math.min(box.right + 3, r.right) - Math.max(box.left - 3, r.left))
-          * Math.max(0, Math.min(box.bottom + 3, r.bottom) - Math.max(box.top - 3, r.top)), 0);
-        const score = outside * 10 + overlap * 100 + gap;
-        if (score < bestScore) {
-          bestScore = score;
-          best = { ...p, left, top, width: w, side };
+  return points
+    .filter(
+      (p) => p.visible && p.x >= 0 && p.x <= width && p.y >= 0 && p.y <= height,
+    )
+    .map((p) => {
+      const pin = mapEntrances.find((item) => item.id === p.id)!;
+      const w = [...pin.label].reduce(
+        (sum, c) => sum + (c.charCodeAt(0) > 255 ? 11 : 6),
+        30,
+      );
+      let best: PlacedEntrancePin | undefined;
+      let bestScore = Infinity;
+      for (const gap of denseLabels ? [10, 24, 40, 64] : [10, 24, 40]) {
+        for (const side of ["above", "below", "left", "right"] as const) {
+          for (const slide of denseLabels ? [0, -24, 24, -48, 48] : [0]) {
+            const rawLeft =
+              (side === "left"
+                ? p.x - w - gap
+                : side === "right"
+                  ? p.x + gap
+                  : p.x - w / 2) +
+              (side === "above" || side === "below" ? slide : 0);
+            const rawTop =
+              (side === "above"
+                ? p.y - 22 - gap
+                : side === "below"
+                  ? p.y + gap
+                  : p.y - 11) +
+              (side === "left" || side === "right" ? slide : 0);
+            const left = Math.max(6, Math.min(rawLeft, width - w - 6));
+            const top = Math.max(11, Math.min(rawTop, height - 33));
+            const box = { left, right: left + w, top, bottom: top + 22 };
+            const outside = Math.abs(rawLeft - left) + Math.abs(rawTop - top);
+            const overlap = occupied.reduce(
+              (sum, r) =>
+                sum +
+                Math.max(
+                  0,
+                  Math.min(box.right + 3, r.right) -
+                    Math.max(box.left - 3, r.left),
+                ) *
+                  Math.max(
+                    0,
+                    Math.min(box.bottom + 3, r.bottom) -
+                      Math.max(box.top - 3, r.top),
+                  ),
+              0,
+            );
+            const score =
+              outside * 10 + overlap * 100 + gap + Math.abs(slide) * 0.5;
+            if (score < bestScore) {
+              bestScore = score;
+              best = { ...p, left, top, width: w, side };
+            }
+          }
         }
       }
-    }
-    const result = best!;
-    occupied.push({ left: result.left - 6, right: result.left + w + 6, top: result.top - 11, bottom: result.top + 33 });
-    return result;
-  });
+      const result = best!;
+      occupied.push({
+        left: result.left - 6,
+        right: result.left + w + 6,
+        top: result.top - 11,
+        bottom: result.top + 33,
+      });
+      return result;
+    });
 }

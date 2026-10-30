@@ -15,6 +15,11 @@ export const MAP_WIDTH = 360;
 export const MAP_HEIGHT = 381;
 const PADDING = 18;
 
+// 대표 학과색 45% + 흰색 55%. 범례와 건물에 같은 색을 쓴다.
+const pastel = (hex: string) => "#" + [1, 3, 5].map((i) =>
+  Math.round(parseInt(hex.slice(i, i + 2), 16) * 0.45 + 255 * 0.55).toString(16).padStart(2, "0"),
+).join("");
+
 export const LEGEND = [
   { label: "컴퓨터·전자 등 공학", color: "#C4DBFF" },
   { label: "토목·도시공학", color: "#BAE5E0" },
@@ -25,33 +30,30 @@ export const LEGEND = [
   { label: "어학·경영·공공·광고", color: "#FAF2B2" },
   { label: "군사학", color: "#D6DEB8" },
   { label: "공용·행정", color: "#E3E8ED" },
-];
+].map((item) => ({ ...item, color: pastel(item.color) }));
 
 // 광장·운동장 녹지와 학과가 정해지지 않은 건물 색. 범례에는 넣지 않음
-export const GROUND_COLORS = ["#D1EBC7", "#C2E3B8", "#E4E8EE"];
+export const GROUND_COLORS = ["#d6ebcf", pastel("#E4E8EE")];
 
 type BuildingStyle = {
   colors: string[];
   label?: string;
-  sub?: string;
-  bold?: boolean;
-  text?: string;
 };
 
 const styles: Record<string, BuildingStyle> = {
-  bukak: { colors: ["#C4DBFF", "#FCC7CC"], sub: "B1 식당·편의점", bold: true },
+  bukak: { colors: ["#C4DBFF", "#FCC7CC"] },
   munye: { colors: ["#D9C9FC", "#FCC7CC"] },
   daeil: { colors: ["#D9C9FC", "#BAE5E0"] },
-  bon: { colors: ["#E3E8ED", "#D6DEB8"], sub: "대학본부", bold: true },
+  bon: { colors: ["#E3E8ED", "#D6DEB8"] },
   eunju1: { colors: ["#FCC7CC", "#C4DBFF"] },
-  hyein: { colors: ["#FFDBAD", "#FAF2B2"], sub: "2–5층", bold: true },
+  hyein: { colors: ["#FFDBAD", "#FAF2B2"] },
   sangseung: { colors: ["#E3E8ED"] },
-  chungwoon: { colors: ["#E3E8ED"], sub: "보건진료소", bold: true },
+  chungwoon: { colors: ["#E3E8ED"] },
   hallim: { colors: ["#FAF2B2"] },
   yudam: { colors: ["#FACCED"] },
   eunju2: { colors: ["#BAE5E0"] },
   suin: { colors: ["#D1EBC7", "#C2E3B8"], label: "수인관·체육관" },
-  creative: { colors: ["#E4E8EE"], text: "#4B5568" },
+  creative: { colors: ["#E4E8EE"] },
 };
 
 const plaza = campusExtraNodes().find((n) => n.kind === "plaza")!;
@@ -59,7 +61,6 @@ const entrance = (id: string) => campusEntrances().find((e) => e.id === id)!;
 
 export type MarkerKind = "bus" | "parking" | "gate";
 const markerList: { id: string; label: string; kind: MarkerKind }[] = [
-  { id: "bus_stop_1164", label: "1164번", kind: "bus" },
   { id: "bus_stop_2115", label: "2115번", kind: "bus" },
   { id: "parking_entrance_1", label: "1주차장", kind: "parking" },
   { id: "parking_entrance_2", label: "2주차장", kind: "parking" },
@@ -71,6 +72,8 @@ const allPoints: LocalPoint[] = [
   ...campusBuildings().flatMap((b) => b.footprint.polygon),
   ...(plaza.polygon ?? []),
   ...markerList.map((m) => entrance(m.id).local),
+  // 표시만 합치고 기존 투영 좌표는 그대로 유지한다.
+  entrance("bus_stop_1164").local,
 ];
 const minEast = Math.min(...allPoints.map((p) => p[0]));
 const maxEast = Math.max(...allPoints.map((p) => p[0]));
@@ -99,9 +102,6 @@ export type OverviewBuilding = {
   id: string;
   name: string;
   label: string;
-  sub?: string;
-  bold: boolean;
-  text: string;
   colors: string[];
   points: string;
   center: [number, number];
@@ -114,10 +114,7 @@ export const overviewBuildings: OverviewBuilding[] = campusBuildings().map(
       id: b.id,
       name: b.name,
       label: style?.label ?? b.name,
-      sub: style?.sub,
-      bold: Boolean(style?.bold),
-      text: style?.text ?? "#334054",
-      colors: style?.colors ?? [],
+      colors: [b.id === "suin" ? "#d6ebcf" : pastel(style?.colors[0] ?? "#E4E8EE")],
       points: pointsAttr(b.footprint.polygon),
       center: project(b.footprint.center),
     };
