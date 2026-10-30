@@ -949,6 +949,34 @@ progress::-moz-progress-bar {
 .building-name-scroll::-webkit-scrollbar { display: none; }
 .building-name-scroll button { flex: 0 0 auto; min-height: 44px; }
 .overview-labels .overview-building-label-pick { pointer-events: auto; cursor: pointer; }
+.building-detail-map { position: relative; }
+.building-map-back {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.92);
+  color: #36547b;
+  font-size: 12px;
+  box-shadow: 0 2px 8px #19365a0d;
+}
+.building-detail-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
+.building-detail-heading h1 { font-size: 22px; font-weight: 700; }
+.building-detail-heading span { font-size: 12px; color: var(--muted); }
+.building-detail-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 18px 0 22px; }
+.building-detail-actions .button { min-height: 48px; padding: 10px 8px; font-size: 12px; word-break: keep-all; }
+.building-detail-card h2 { font-size: 15px; margin-bottom: 10px; }
+.building-floor-summary { margin: 0; }
+.building-floor-summary > div { display: flex; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--line); }
+.building-floor-summary dt { flex: 0 0 40px; color: #36547b; font-size: 13px; font-weight: 650; }
+.building-floor-summary dd { margin: 0; font-size: 13px; color: #4a5361; overflow-wrap: anywhere; }
+.building-facility-summary { margin-top: 16px; padding-bottom: 4px; white-space: nowrap; overflow-x: auto; scrollbar-width: none; font-size: 12px; color: var(--muted); }
+.building-facility-summary::-webkit-scrollbar { display: none; }
 .find-floor .between {
   padding-bottom: 0;
 }

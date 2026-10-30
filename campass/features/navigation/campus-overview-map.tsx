@@ -2,7 +2,8 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { EntrancePins } from "./entrance-pins";
 import { layoutEntrancePins, mapEntrances } from "./map-entrances";
-import { Maximize, Minus, Plus } from "lucide-react";
+import { DoorOpen, ArrowUpDown, Maximize, Minus, Plus } from "lucide-react";
+import type { BuildingDetailData } from "@/shared/types/building-detail";
 import {
   MAP_HEIGHT,
   MAP_WIDTH,
@@ -72,6 +73,7 @@ export function CampusOverviewMap({
   onResetView,
   buildingPicker = false,
   height: requestedHeight,
+  focusBuilding,
 }: {
   selected?: string[];
   // 출발로 고를 수 있는 지도 표시 id
@@ -88,8 +90,12 @@ export function CampusOverviewMap({
   // 건물·강의실 탭에서만 입구를 숨기고 이름표도 건물 선택 영역으로 쓴다.
   buildingPicker?: boolean;
   height?: number;
+  focusBuilding?: Pick<
+    BuildingDetailData,
+    "id" | "name" | "entrances" | "elevator"
+  >;
 }) {
-  const viewOnly = Boolean(pins || highlight);
+  const viewOnly = Boolean(pins || highlight || focusBuilding);
   const state = (area: string) =>
     highlight?.currentArea === area
       ? "current"
@@ -108,12 +114,51 @@ export function CampusOverviewMap({
   const [zoom, setZoom] = useState(0);
   const [size, setSize] = useState({ width: 0, height: 0 });
   const scale = ZOOMS[zoom];
-  const aspect = requestedHeight ? (size.width || MAP_WIDTH) / requestedHeight : MAP_WIDTH / MAP_HEIGHT;
-  const frameWidth = Math.max(overviewFrame.width, overviewFrame.height * aspect);
+  const aspect = requestedHeight
+    ? (size.width || MAP_WIDTH) / requestedHeight
+    : MAP_WIDTH / MAP_HEIGHT;
+  const focusedIndex = overviewBuildings.findIndex(
+    (b) => b.id === focusBuilding?.id,
+  );
+  const focused = overviewBuildings[focusedIndex];
+  const focusPoints = focused
+    ? [
+        ...focused.points
+          .split(" ")
+          .map((p) => p.split(",").map(Number) as [number, number]),
+        ...(focusBuilding?.entrances ?? []).map((entrance) =>
+          project(entrance.local),
+        ),
+      ]
+    : [];
+  const bounds = focused
+    ? {
+        left: Math.min(...focusPoints.map(([x]) => x)),
+        right: Math.max(...focusPoints.map(([x]) => x)),
+        top: Math.min(...focusPoints.map(([, y]) => y)),
+        bottom: Math.max(...focusPoints.map(([, y]) => y)),
+      }
+    : null;
+  const focusScale = bounds
+    ? Math.min(
+        ((size.width || MAP_WIDTH) - 64) /
+          Math.max(1, bounds.right - bounds.left),
+        ((requestedHeight || MAP_HEIGHT) - 88) /
+          Math.max(1, bounds.bottom - bounds.top),
+      )
+    : 1;
+  const frameWidth = bounds
+    ? (size.width || MAP_WIDTH) / focusScale
+    : Math.max(overviewFrame.width, overviewFrame.height * aspect);
   const width = frameWidth / scale;
   const height = frameWidth / aspect / scale;
-  const viewLeft = overviewFrame.cx - width / 2;
-  const viewTop = overviewFrame.cy - height / 2;
+  const viewLeft =
+    (bounds ? (bounds.left + bounds.right) / 2 : overviewFrame.cx) - width / 2;
+  const viewTop =
+    (bounds
+      ? (bounds.top + bounds.bottom) / 2 - 14 / focusScale
+      : overviewFrame.cy) -
+    height / 2;
   const viewBox = `${viewLeft} ${viewTop} ${width} ${height}`;
   const svgRef = useRef<SVGSVGElement>(null);
   useEffect(() => {
@@ -132,6 +177,33 @@ export function CampusOverviewMap({
     ((y - viewTop) * size.height) / height,
   ];
   const labelScale = width / (size.width || MAP_WIDTH);
+  const focusLabel = focused
+    ? ((
+        [
+          [0, 0],
+          [0, -26],
+          [26, 0],
+          [-26, 0],
+          [0, 26],
+        ] as [number, number][]
+      )
+        .map(([x, y]): [number, number] => [
+          focused.center[0] + x * labelScale,
+          focused.center[1] + y * labelScale,
+        ])
+        .find(([x, y]) =>
+          (focusBuilding?.entrances ?? []).every((entrance) => {
+            const [ex, ey] = project(entrance.local);
+            const dx = (ex - x) / labelScale,
+              dy = (ey - y) / labelScale;
+            return (
+              (Math.abs(dx) > (focused.name.length * 11 + 10) / 2 + 14 ||
+                Math.abs(dy) > 24) &&
+              (!focusBuilding?.elevator || Math.hypot(dx, dy - 30) > 26)
+            );
+          }),
+        ) ?? focused.center)
+    : undefined;
   const entrancePositions = size.width
     ? layoutEntrancePins(
         mapEntrances.map((pin) => {
@@ -176,7 +248,9 @@ export function CampusOverviewMap({
     },
   });
   const press = (target: string, building: boolean) =>
-    viewOnly || (buildingPicker && target === "스콘스퀘어") ? {} : button(() => onSelect?.(target, building));
+    viewOnly || (buildingPicker && target === "스콘스퀘어")
+      ? {}
+      : button(() => onSelect?.(target, building));
   const pressable = viewOnly ? undefined : "overview-building";
 
   return (
@@ -188,11 +262,15 @@ export function CampusOverviewMap({
         height={MAP_HEIGHT}
         style={requestedHeight ? { height: requestedHeight } : undefined}
         aria-label={
-          highlight
-            ? "캠퍼스 개요도. 선택한 경로와 현재 위치"
-            : viewOnly
-              ? "캠퍼스 개요도. 편의시설 핀을 눌러 보세요"
-              : buildingPicker ? "캠퍼스 지도. 건물을 눌러 상세 안내를 보세요" : "캠퍼스 개요도. 건물을 눌러 출발과 도착을 고르세요"
+          focused
+            ? `${focused.name} 건물과 입구 지도`
+            : highlight
+              ? "캠퍼스 개요도. 선택한 경로와 현재 위치"
+              : viewOnly
+                ? "캠퍼스 개요도. 편의시설 핀을 눌러 보세요"
+                : buildingPicker
+                  ? "캠퍼스 지도. 건물을 눌러 상세 안내를 보세요"
+                  : "캠퍼스 개요도. 건물을 눌러 출발과 도착을 고르세요"
         }
       >
         <defs>
@@ -382,25 +460,66 @@ export function CampusOverviewMap({
           );
         })}
 
+        {focused && (
+          <g pointerEvents="none" aria-hidden="true">
+            <rect
+              x={viewLeft}
+              y={viewTop}
+              width={width}
+              height={height}
+              fill="rgba(241,244,248,0.66)"
+            />
+            <path
+              d={buildingPaths[focusedIndex]}
+              transform={`translate(0 ${2 * labelScale})`}
+              fill="rgba(32,45,70,0.18)"
+            />
+            <path
+              d={buildingPaths[focusedIndex]}
+              fill="none"
+              stroke="rgba(40,96,237,0.22)"
+              strokeWidth={10}
+              vectorEffect="non-scaling-stroke"
+            />
+            <path
+              d={buildingPaths[focusedIndex]}
+              fill="#5c8cf1"
+              stroke="#2860ed"
+              strokeWidth={1.8}
+              vectorEffect="non-scaling-stroke"
+            />
+          </g>
+        )}
         <g
           className="overview-labels"
           textAnchor="middle"
           fontSize={11}
           fontWeight={500}
         >
-          {[
-            ...overviewBuildings.map((b, i) => ({
-              id: b.id,
-              label: b.label,
-              at: buildingLabelPositions[i],
-            })),
-            { id: "스콘스퀘어", label: "스콘스퀘어", at: plazaLabel },
-          ].map((label) => (
+          {(focused
+            ? [{ id: focused.id, label: focused.name, at: focusLabel! }]
+            : [
+                ...overviewBuildings.map((b, i) => ({
+                  id: b.id,
+                  label: b.label,
+                  at: buildingLabelPositions[i],
+                })),
+                { id: "스콘스퀘어", label: "스콘스퀘어", at: plazaLabel },
+              ]
+          ).map((label) => (
             <g
               key={label.id}
               transform={`translate(${label.at.join(" ")}) scale(${labelScale})`}
-              className={buildingPicker && label.id !== "스콘스퀘어" ? "overview-building-label-pick" : undefined}
-              onClick={buildingPicker && label.id !== "스콘스퀘어" ? () => onSelect?.(label.id, true) : undefined}
+              className={
+                buildingPicker && label.id !== "스콘스퀘어"
+                  ? "overview-building-label-pick"
+                  : undefined
+              }
+              onClick={
+                buildingPicker && label.id !== "스콘스퀘어"
+                  ? () => onSelect?.(label.id, true)
+                  : undefined
+              }
             >
               <rect
                 x={-(label.label.length * 11 + 10) / 2}
@@ -409,17 +528,64 @@ export function CampusOverviewMap({
                 height={20}
                 rx={6}
                 fill={
-                  state(label.id) === "current"
+                  focused || state(label.id) === "current"
                     ? "#2563EB"
                     : "rgba(255,255,255,0.7)"
                 }
               />
-              <text y={4} fill={labelFill(label.id, "#4a5361")}>
+              <text
+                y={4}
+                fill={focused ? "white" : labelFill(label.id, "#4a5361")}
+              >
                 {label.label}
               </text>
             </g>
           ))}
         </g>
+
+        {focused && focusBuilding && (
+          <g pointerEvents="none">
+            {focusBuilding.entrances.map((entrance, i) => (
+              <g
+                key={`${entrance.name}-${i}`}
+                transform={`translate(${project(entrance.local).join(" ")}) scale(${labelScale})`}
+                role="img"
+                aria-label={`${focusBuilding.name} 입구`}
+              >
+                <circle r={12} fill="#2860ed" stroke="white" strokeWidth={2} />
+                <DoorOpen
+                  x={-7}
+                  y={-7}
+                  size={14}
+                  color="white"
+                  aria-hidden="true"
+                />
+              </g>
+            ))}
+            {focusBuilding.elevator && (
+              <g
+                // TODO: 엘리베이터 위치 좌표가 등록되면 이름표 아래 대신 해당 좌표로 투영한다.
+                transform={`translate(${focusLabel![0]} ${focusLabel![1] + 30 * labelScale}) scale(${labelScale})`}
+                role="img"
+                aria-label={`${focusBuilding.name} 엘리베이터`}
+              >
+                <circle
+                  r={12}
+                  fill="white"
+                  stroke="#2860ed"
+                  strokeWidth={1.5}
+                />
+                <ArrowUpDown
+                  x={-7}
+                  y={-7}
+                  size={14}
+                  color="#2860ed"
+                  aria-hidden="true"
+                />
+              </g>
+            )}
+          </g>
+        )}
 
         {!highlight &&
           pins?.map((pin) => {
@@ -505,17 +671,19 @@ export function CampusOverviewMap({
           ))}
         </g>
       </svg>
-      {!buildingPicker && <EntrancePins
-        pins={entrancePositions}
-        selected={selected}
-        highlighted={highlight ? [...highlight.markers] : []}
-        current={highlight?.currentMarker}
-        selectable={onEntrance ? undefined : viewOnly ? [] : startable}
-        onSelect={
-          onEntrance ??
-          (onSelect && !viewOnly ? (id) => onSelect(id, false) : undefined)
-        }
-      />}
+      {!buildingPicker && !focused && (
+        <EntrancePins
+          pins={entrancePositions}
+          selected={selected}
+          highlighted={highlight ? [...highlight.markers] : []}
+          current={highlight?.currentMarker}
+          selectable={onEntrance ? undefined : viewOnly ? [] : startable}
+          onSelect={
+            onEntrance ??
+            (onSelect && !viewOnly ? (id) => onSelect(id, false) : undefined)
+          }
+        />
+      )}
       {pickerMode && (
         <button
           type="button"
@@ -541,22 +709,24 @@ export function CampusOverviewMap({
           N
         </text>
       </svg>
-      <div className="zoom">
-        <button
-          aria-label="지도 확대"
-          disabled={zoom >= ZOOMS.length - 1}
-          onClick={() => setZoom(zoom + 1)}
-        >
-          <Plus size={18} strokeWidth={1.65} />
-        </button>
-        <button
-          aria-label="지도 축소"
-          disabled={zoom <= 0}
-          onClick={() => setZoom(zoom - 1)}
-        >
-          <Minus size={18} strokeWidth={1.65} />
-        </button>
-      </div>
+      {!focused && (
+        <div className="zoom">
+          <button
+            aria-label="지도 확대"
+            disabled={zoom >= ZOOMS.length - 1}
+            onClick={() => setZoom(zoom + 1)}
+          >
+            <Plus size={18} strokeWidth={1.65} />
+          </button>
+          <button
+            aria-label="지도 축소"
+            disabled={zoom <= 0}
+            onClick={() => setZoom(zoom - 1)}
+          >
+            <Minus size={18} strokeWidth={1.65} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
