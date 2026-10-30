@@ -58,6 +58,8 @@ export function createCampusScene(THREE, container, events) {
   const buildingBounds = new Map();
   const floors = [];
   const labels = [];
+  const routeLabels = [];
+  let previewBounds = null;
   let selectedId = null;
   let routeIds = [];
   let currentId;
@@ -104,6 +106,14 @@ export function createCampusScene(THREE, container, events) {
     const occupied = [];
     const width = container.clientWidth;
     const height = container.clientHeight;
+    for (const label of routeLabels) {
+      const p = label.position.clone().project(camera);
+      const x = (p.x + 1) * width / 2;
+      const y = (1 - p.y) * height / 2;
+      label.element.hidden = p.z < -1 || p.z > 1 || x < 0 || x > width || y < 0 || y > height;
+      label.element.style.transform = `translate(${x}px, ${y}px) translate(-50%, -100%)`;
+      if (!label.element.hidden) occupied.push({ left:x-label.element.offsetWidth/2, right:x+label.element.offsetWidth/2, top:y-label.element.offsetHeight, bottom:y });
+    }
     // 작은 화면에서는 현재 건물 이름을 우선하고 겹치는 이름은 숨겨요.
     const ordered = [...labels].sort(
       (a, b) =>
@@ -209,14 +219,39 @@ export function createCampusScene(THREE, container, events) {
     }
     scheduleRender();
   }
-  function showRoute(nodes) {
+  function showRoute(nodes, annotation) {
+    for (const label of routeLabels) label.element.remove();
+    routeLabels.length = 0;
+    previewBounds = null;
+    const segments = routeSegments(nodes);
+    if (annotation && segments.length) {
+      previewBounds = new THREE.Box3();
+      const lengths = segments.map(([a,b]) => Math.hypot(b.east-a.east,b.north-a.north,b.elevation-a.elevation));
+      let remaining = lengths.reduce((a,b) => a+b,0)/2;
+      let middle = segments[0][0];
+      for (let i=0; i<segments.length; i++) {
+        if (remaining <= lengths[i]) { const [a,b]=segments[i]; const t=lengths[i] ? remaining/lengths[i] : 0; middle={east:a.east+(b.east-a.east)*t,north:a.north+(b.north-a.north)*t,elevation:a.elevation+(b.elevation-a.elevation)*t}; break; }
+        remaining -= lengths[i];
+      }
+      for (const p of segments.flat()) previewBounds.expandByPoint(point(p.east,p.north,p.elevation+5));
+      previewBounds.expandByScalar(22);
+      for (const [p,text,color] of [[middle,annotation.name,annotation.color],[segments.at(-1)[1],"도착","#2860ed"]]) {
+        const element=document.createElement("span");
+        element.className=styles.routePill;
+        element.textContent=text;
+        element.style.background=color;
+        labelLayer.appendChild(element);
+        routeLabels.push({element,position:point(p.east,p.north,p.elevation+5)});
+      }
+      fitBox(previewBounds);
+    }
     for (const child of [...routeLayer.children]) {
       child.geometry.dispose();
       child.material.dispose();
       routeLayer.remove(child);
     }
     const joints = new Map();
-    for (const [from, to] of routeSegments(nodes)) {
+    for (const [from, to] of segments) {
       const a = point(from.east, from.north, from.elevation + 1.2);
       const b = point(to.east, to.north, to.elevation + 1.2);
       const delta = b.clone().sub(a);
@@ -225,7 +260,7 @@ export function createCampusScene(THREE, container, events) {
       // 흰 외곽선과 굵은 빨간 선을 건물 위에 겹쳐 실내 구간도 보이게 한다.
       for (const [radius, color, order] of [
         [1.5, "#ffffff", 5],
-        [0.95, "#dc2626", 6],
+        [0.95, annotation ? "#2860ed" : "#dc2626", 6],
       ]) {
         const mesh = new THREE.Mesh(
           new THREE.CylinderGeometry(radius, radius, delta.length(), 16),
@@ -249,7 +284,7 @@ export function createCampusScene(THREE, container, events) {
     for (const position of joints.values()) {
       for (const [radius, color, order] of [
         [1.5, "#ffffff", 5],
-        [0.95, "#dc2626", 6],
+        [0.95, annotation ? "#2860ed" : "#dc2626", 6],
       ]) {
         const cap = new THREE.Mesh(
           new THREE.SphereGeometry(radius, 16, 12),
@@ -279,7 +314,7 @@ export function createCampusScene(THREE, container, events) {
     renderer.setSize(width, height);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
-    fitBox(selectedId ? buildingBounds.get(selectedId) : bounds);
+    fitBox(selectedId ? buildingBounds.get(selectedId) : previewBounds ?? bounds);
   }
 
   const raycaster = new THREE.Raycaster();

@@ -78,7 +78,7 @@ export type CampusMapController = {
   zoom: (factor: number) => void;
   selectBuilding: (id: string) => void;
   highlightBuildings: (ids: string[], currentId?: string) => void;
-  showRoute: (nodes: string[]) => void;
+  showRoute: (nodes: string[], annotation?: { name: string; color: string }) => void;
   dispose: () => void;
 };
 

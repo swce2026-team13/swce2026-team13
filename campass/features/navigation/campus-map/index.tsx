@@ -37,6 +37,7 @@ export type CampusMapProps = {
   selectedBuildings?: string[];
   currentBuilding?: string;
   routeNodes?: string[];
+  routeAnnotation?: { name: string; color: string };
   fallback: ReactNode;
 };
 

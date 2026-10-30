@@ -15,6 +15,7 @@ export default function MapView({
   selectedBuildings,
   currentBuilding,
   routeNodes,
+  routeAnnotation,
   fallback,
   embedded,
   controllerRef,
@@ -29,10 +30,12 @@ export default function MapView({
   const [selection, setSelection] = useState("");
   const [entrancePins, setEntrancePins] = useState<PlacedEntrancePin[]>([]);
   const routeRef = useRef(routeNodes);
+  const annotationRef = useRef(routeAnnotation);
   useEffect(() => {
     routeRef.current = routeNodes;
-    controller.current?.showRoute(routeNodes ?? []);
-  }, [routeNodes]);
+    annotationRef.current = routeAnnotation;
+    controller.current?.showRoute(routeNodes ?? [], routeAnnotation);
+  }, [routeNodes, routeAnnotation]);
   const onBuildingRef = useRef(onBuilding);
   const onFocusChangeRef = useRef(onFocusChange);
   const highlightRef = useRef({
@@ -80,7 +83,7 @@ export default function MapView({
           highlightRef.current.ids ?? [],
           highlightRef.current.current,
         );
-        controller.current.showRoute(routeRef.current ?? []);
+        controller.current.showRoute(routeRef.current ?? [], annotationRef.current);
         if (controllerRef) controllerRef.current = controller.current;
         setStatus("ready");
       })

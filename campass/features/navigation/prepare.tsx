@@ -17,8 +17,7 @@ import {
 } from "@/shared/utils/route-start";
 import { RouteModePicker } from "./route-mode-picker";
 import { MapPicker } from "./map-picker";
-import { GuideMapViewport } from "@/features/navigation/guide-map-viewport";
-import { toGuideMapData } from "@/shared/utils/guide-view";
+import { RoutePreview } from "./route-preview";
 import { Tag } from "@/components/ui";
 import { api, useCampus } from "@/features/navigation/campus-provider";
 
@@ -207,27 +206,7 @@ export default function Screen() {
           {hasDestination && destination.category === "building" && <button className="button secondary" onClick={() => go("places", { building: destination.name })}>{destination.name} 층별 장소 보기</button>}
         </div>}
 
-         {routeOption && hasDestination && !pickingOnMap && (
-  <div className="overview-card route-preview">
-    <div className="overview-heading">
-      <b>경로 미리보기</b>
-
-      <button
-        type="button"
-        className="text-button"
-        onClick={() => setPicking("start")}
-      >
-        지도에서 출발지 바꾸기
-      </button>
-    </div>
-
-    <GuideMapViewport
-      map={toGuideMapData(routeOption)}
-      currentStep={null}
-      nextStep={null}
-    />
-  </div>
-)}
+        {routeOption && hasDestination && !pickingOnMap && <RoutePreview option={routeOption} />}
 
         <button
           className="button secondary"

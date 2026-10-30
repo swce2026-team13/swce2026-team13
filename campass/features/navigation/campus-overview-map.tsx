@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import { routeSegments, type CampusCoordinate } from "@/shared/utils/campus-map";
 import { EntrancePins } from "./entrance-pins";
 import { layoutEntrancePins, mapEntrances } from "./map-entrances";
 import { DoorOpen, ArrowUpDown, Maximize, Minus, Plus } from "lucide-react";
@@ -75,6 +76,7 @@ export function CampusOverviewMap({
   height: requestedHeight,
   focusBuilding,
   backgroundOnly = false,
+  routePreview,
 }: {
   selected?: string[];
   // 출발로 고를 수 있는 지도 표시 id
@@ -96,9 +98,12 @@ export function CampusOverviewMap({
     "id" | "name" | "entrances" | "elevator"
   >;
     backgroundOnly?: boolean;
+  routePreview?: { nodes: string[]; name: string; color: string };
 }) {
-  const viewOnly = Boolean(pins || highlight || focusBuilding);
+  const viewOnly = Boolean(pins || highlight || focusBuilding || routePreview);
+  const destinationArea = routePreview?.nodes.at(-1)?.split("|")[0];
   const state = (area: string) =>
+    destinationArea === area ? "current" :
     highlight?.currentArea === area
       ? "current"
       : highlight?.areas.has(area)
@@ -133,14 +138,22 @@ export function CampusOverviewMap({
         ),
       ]
     : [];
-  const bounds = focused
+  const previewSegments = routePreview ? routeSegments(routePreview.nodes) : [];
+  const previewPoints = previewSegments.flat().map((p) => project([p.east, p.north]));
+  const previewBounds = previewPoints.length ? {
+    left: Math.min(...previewPoints.map(([x]) => x)) - 28,
+    right: Math.max(...previewPoints.map(([x]) => x)) + 28,
+    top: Math.min(...previewPoints.map(([, y]) => y)) - 35,
+    bottom: Math.max(...previewPoints.map(([, y]) => y)) + 28,
+  } : null;
+  const bounds = previewBounds ?? (focused
     ? {
         left: Math.min(...focusPoints.map(([x]) => x)),
         right: Math.max(...focusPoints.map(([x]) => x)),
         top: Math.min(...focusPoints.map(([, y]) => y)),
         bottom: Math.max(...focusPoints.map(([, y]) => y)),
       }
-    : null;
+    : null);
   const focusScale = bounds
     ? Math.min(
         ((size.width || MAP_WIDTH) - 64) /
@@ -679,6 +692,31 @@ export function CampusOverviewMap({
             </g>
           ))}
         </g>
+        {routePreview && previewSegments.length > 0 && (() => {
+          const toPoint = (p: CampusCoordinate) => project([p.east, p.north]);
+          const path = previewSegments.map(([a, b]) => `M${toPoint(a).join(" ")} L${toPoint(b).join(" ")}`).join(" ");
+          const start = toPoint(previewSegments[0][0]);
+          const end = toPoint(previewSegments.at(-1)![1]);
+          const lengths = previewSegments.map(([a, b]) => Math.hypot(b.east-a.east, b.north-a.north, b.elevation-a.elevation));
+          let remaining = lengths.reduce((a,b) => a+b,0)/2;
+          let middle = start;
+          for (let i=0; i<lengths.length; i++) {
+            if (remaining <= lengths[i]) { const [a,b]=previewSegments[i]; const t=lengths[i] ? remaining/lengths[i] : 0; middle=toPoint({ east:a.east+(b.east-a.east)*t, north:a.north+(b.north-a.north)*t, elevation:0 }); break; }
+            remaining -= lengths[i];
+          }
+          const pill = (at: number[], text: string, color: string, dy: number) => <g transform={`translate(${at.join(" ")}) scale(${labelScale})`}>
+            <rect x={-(text.length*12+24)/2} y={dy-14} width={text.length*12+24} height={28} rx={14} fill={color} stroke="white" strokeWidth={2} />
+            <text textAnchor="middle" y={dy+4} fontSize={12} fontWeight={700} fill="white">{text}</text>
+          </g>;
+          return <g pointerEvents="none" aria-label={`${routePreview.name} 경로, 초록 출발점과 파란 도착점`}>
+            <path d={path} fill="none" stroke="white" strokeWidth={9} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+            <path d={path} fill="none" stroke="#2860ed" strokeWidth={5} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+            <circle cx={start[0]} cy={start[1]} r={7*labelScale} fill="#3f8a48" stroke="white" strokeWidth={2} vectorEffect="non-scaling-stroke" />
+            <circle cx={end[0]} cy={end[1]} r={7*labelScale} fill="#2860ed" stroke="white" strokeWidth={2} vectorEffect="non-scaling-stroke" />
+            {pill(middle, routePreview.name, routePreview.color, -19)}
+            {pill(end, "도착", "#2860ed", -24)}
+          </g>;
+        })()}
       </svg>
       {!backgroundOnly && !buildingPicker && !focused && (
         <EntrancePins

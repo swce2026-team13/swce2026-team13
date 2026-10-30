@@ -4496,3 +4496,6 @@ progress::-moz-progress-bar {
 .route-elevator-control .switch::after { content:""; position:absolute; inset:-8px 0; }
 .route-mode-reason { font-size:11px; color:#737f90; margin:5px 0 0; }
 .route-mode-reason:empty { display:none; }
+
+.route-preview-card { background:white; border:1px solid #edf0f4; border-radius:20px; overflow:hidden; }
+.route-preview-heading { display:flex; align-items:center; justify-content:space-between; gap:8px; min-height:52px; padding:8px 14px; border-bottom:1px solid #edf0f4; font-size:13px; }
