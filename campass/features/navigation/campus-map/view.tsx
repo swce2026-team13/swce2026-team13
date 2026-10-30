@@ -7,6 +7,8 @@ import type { CampusMapProps } from "./";
 import { loadCampusThree } from "./three-loader.js";
 import { createCampusScene } from "./scene.js";
 import styles from "../../../styles/campus-map.module.css";
+import { EntrancePins } from "../entrance-pins";
+import type { PlacedEntrancePin } from "../map-entrances";
 
 export default function MapView({
   onBuilding,
@@ -16,6 +18,8 @@ export default function MapView({
   fallback,
   embedded,
   controllerRef,
+  onEntrance,
+  onFocusChange,
 }: CampusMapProps) {
   const container = useRef<HTMLDivElement>(null);
   const controller = useRef<CampusMapController | null>(null);
@@ -23,19 +27,22 @@ export default function MapView({
     "loading",
   );
   const [selection, setSelection] = useState("");
+  const [entrancePins, setEntrancePins] = useState<PlacedEntrancePin[]>([]);
   const routeRef = useRef(routeNodes);
   useEffect(() => {
     routeRef.current = routeNodes;
     controller.current?.showRoute(routeNodes ?? []);
   }, [routeNodes]);
   const onBuildingRef = useRef(onBuilding);
+  const onFocusChangeRef = useRef(onFocusChange);
   const highlightRef = useRef({
     ids: selectedBuildings,
     current: currentBuilding,
   });
   useEffect(() => {
     onBuildingRef.current = onBuilding;
-  }, [onBuilding]);
+    onFocusChangeRef.current = onFocusChange;
+  }, [onBuilding, onFocusChange]);
   useEffect(() => {
     highlightRef.current = { ids: selectedBuildings, current: currentBuilding };
     controller.current?.highlightBuildings(
@@ -59,9 +66,12 @@ export default function MapView({
         if (cancelled) return;
         controller.current = createCampusScene(three, host, {
           interactive: Boolean(onBuildingRef.current),
+          showEntrances: Boolean(onEntrance),
+          onEntrances: (pins) => { if (!cancelled) setEntrancePins(pins); },
           onSelect: (next) => {
             if (cancelled) return;
             setSelection(next?.buildingId ?? "");
+            onFocusChangeRef.current?.(next?.buildingId ?? "");
             if (next) onBuildingRef.current?.(next.buildingId);
           },
           onError: fail,
@@ -97,6 +107,9 @@ export default function MapView({
     <>
       <div className={styles.stage} aria-busy={status === "loading"}>
         <div className={styles.canvas} ref={container} />
+        {status === "ready" && onEntrance && (
+          <EntrancePins pins={entrancePins} selected={selectedBuildings ?? []} onSelect={onEntrance} />
+        )}
         {status === "loading" ? (
           <div className={styles.overlay} role="status">
             3D 지도를 불러오고 있어요…

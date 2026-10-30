@@ -1,9 +1,12 @@
 "use client";
-import { useId, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import { EntrancePins } from "./entrance-pins";
+import { layoutEntrancePins, mapEntrances } from "./map-entrances";
 import { Maximize, Minus, Plus } from "lucide-react";
 import {
   MAP_HEIGHT,
   MAP_WIDTH,
+  project,
   overviewBuildings,
   overviewLinks,
   overviewMarkers,
@@ -104,6 +107,8 @@ export function CampusOverviewMap({
   onPin,
   highlight,
   pickerMode = false,
+  onEntrance,
+  onResetView,
 }: {
   selected?: string[];
   // 출발로 고를 수 있는 지도 표시 id
@@ -115,6 +120,8 @@ export function CampusOverviewMap({
   onPin?: (id: string) => void;
   highlight?: OverviewRouteHighlight;
   pickerMode?: boolean;
+  onEntrance?: (id: string) => void;
+  onResetView?: () => void;
 }) {
   const viewOnly = Boolean(pins || highlight);
   const state = (area: string) =>
@@ -137,6 +144,31 @@ export function CampusOverviewMap({
   const width = MAP_WIDTH / scale;
   const height = MAP_HEIGHT / scale;
   const viewBox = `${(MAP_WIDTH - width) / 2} ${(MAP_HEIGHT - height) / 2} ${width} ${height}`;
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [size, setSize] = useState({ width: 0, height: 0 });
+  useEffect(() => {
+    if (!onEntrance || !svgRef.current) return;
+    const observer = new ResizeObserver(([entry]) => {
+      setSize({ width: entry.contentRect.width, height: entry.contentRect.height });
+    });
+    observer.observe(svgRef.current);
+    return () => observer.disconnect();
+  }, [Boolean(onEntrance)]);
+  const screenPoint = ([x, y]: [number, number]) => [
+    (x - (MAP_WIDTH - width) / 2) * size.width / width,
+    (y - (MAP_HEIGHT - height) / 2) * size.height / height,
+  ];
+  const entrancePositions = onEntrance && size.width ? layoutEntrancePins(
+    mapEntrances.map((pin) => {
+      const [x, y] = screenPoint(project(pin.local));
+      return { id: pin.id, x, y, visible: true };
+    }), size.width, size.height,
+    overviewBuildings.map((b) => {
+      const [x, y] = screenPoint(b.center);
+      const w = b.label.length * 9 * size.width / width;
+      return { left: x - w / 2, right: x + w / 2, top: y - 10, bottom: y + (b.sub ? 10 : 4) };
+    }),
+  ) : [];
 
   const button = (action: () => void) => ({
     role: "button",
@@ -155,6 +187,7 @@ export function CampusOverviewMap({
   return (
     <div className={`overview-map${pickerMode ? " map-picker-surface" : ""}`}>
       <svg
+        ref={svgRef}
         viewBox={viewBox}
         width={MAP_WIDTH}
         height={MAP_HEIGHT}
@@ -323,7 +356,7 @@ export function CampusOverviewMap({
           </text>
         </g>
 
-        {overviewMarkers.map((m) => {
+        {!onEntrance && overviewMarkers.map((m) => {
           const [x, y] = m.position;
           const canStart = !viewOnly && startable.includes(m.id);
           const current = highlight?.currentMarker === m.id;
@@ -464,8 +497,9 @@ export function CampusOverviewMap({
           ))}
         </g>
       </svg>
+      {onEntrance && <EntrancePins pins={entrancePositions} selected={selected} onSelect={onEntrance} />}
       {pickerMode && (
-        <button type="button" className="map-fit-all" onClick={() => setZoom(0)}>
+        <button type="button" className="map-fit-all" onClick={() => { setZoom(0); onResetView?.(); }}>
           <Maximize size={14} /> 전체 보기
         </button>
       )}

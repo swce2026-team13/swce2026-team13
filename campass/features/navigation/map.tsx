@@ -2,41 +2,43 @@
 import { useId, useRef, useState } from "react";
 import { campusMap, type CampusMapController } from "@/shared/utils/campus-map";
 import { places } from "@/shared/utils/catalog";
-import { LEGEND, overviewMarkers } from "@/shared/utils/campus-overview";
+import { LEGEND } from "@/shared/utils/campus-overview";
 import { emptyPick, markerStarts, pickOnMap, pickStatus } from "@/shared/utils/map-pick";
 import { CampusOverviewMap } from "@/features/navigation/campus-overview-map";
 import { CampusMap } from "@/features/navigation/campus-map";
 import { CheckIcon } from "@/components/ui/icons";
 import { useCampus } from "@/features/navigation/campus-provider";
-
-const startMarkers = overviewMarkers
-  .filter((m) => markerStarts[m.id])
-  .map((m) => m.id);
-
-const markerNames: Record<string, string> = {
-  bus_stop_2115: "2115번 정류장",
-  gate_main: "정문",
-  parking_entrance_1: "1주차장",
-};
+import { mapEntrances } from "./map-entrances";
 
 const pickName = (id: string) =>
-  markerNames[id] ?? places.find((p) => p.id === id)?.name ?? id;
+  mapEntrances.find((pin) => pin.id === id)?.label ?? places.find((p) => p.id === id)?.name ?? id;
 
 export default function Screen() {
   const { busy, ready, go } = useCampus();
   const [pick, setPick] = useState(emptyPick);
   const [flat, setFlat] = useState(false);
   const [buildingFocus, setBuildingFocus] = useState("");
+  const [overviewReset, setOverviewReset] = useState(0);
   const [legendOpen, setLegendOpen] = useState(false);
   const legendId = useId();
   const mapController = useRef<CampusMapController | null>(null);
+  const [entranceNotice, setEntranceNotice] = useState("");
+  const selectEntrance = (id: string) => {
+    if (!markerStarts[id]) {
+      setEntranceNotice("아직 길안내가 준비되지 않은 입구예요");
+      return;
+    }
+    setEntranceNotice("");
+    setPick((previous) => pickOnMap(previous, id, false));
+  };
   const selectBuilding = (id: string) => {
+    setEntranceNotice("");
     setBuildingFocus(id);
     setPick((previous) => pickOnMap(previous, id, true));
   };
   const selected = [pick.start, pick.destination].filter((id): id is string => Boolean(id));
   const detailBuilding = places.find((place) => place.id === (pick.destination ?? pick.start) && place.category === "building");
-  const overview = <CampusOverviewMap pickerMode selected={selected} startable={startMarkers} onSelect={(id, building) => building ? selectBuilding(id) : setPick((previous) => pickOnMap(previous, id, false))} />;
+  const overview = <CampusOverviewMap key={overviewReset} pickerMode selected={selected} onEntrance={selectEntrance} onSelect={(id) => selectBuilding(id)} onResetView={() => setBuildingFocus("")} />;
   const status = pickStatus(pick);
   const turn = !pick.start ? "start" : !pick.destination ? "destination" : "";
   const rows = [
@@ -102,6 +104,7 @@ export default function Screen() {
                 const id = event.target.value;
                 if (!id) {
                   setBuildingFocus("");
+                  setOverviewReset((value) => value + 1);
                   mapController.current?.fitAll();
                 } else if (!flat && mapController.current) {
                   mapController.current.selectBuilding(id);
@@ -114,10 +117,8 @@ export default function Screen() {
               </select>
             </label>
           </div>
-          {flat ? overview : <CampusMap embedded controllerRef={mapController} selectedBuildings={selected} onBuilding={selectBuilding} fallback={overview} />}
-          <div className="chips filters" aria-label="입구에서 출발">
-            {startMarkers.map((id) => <button key={id} className={pick.start === id ? "active" : ""} aria-pressed={pick.start === id} onClick={() => setPick((previous) => pickOnMap(previous, id, false))}>{markerNames[id]}</button>)}
-          </div>
+          {flat ? overview : <CampusMap embedded controllerRef={mapController} selectedBuildings={selected} onBuilding={selectBuilding} onFocusChange={setBuildingFocus} onEntrance={selectEntrance} fallback={overview} />}
+          {entranceNotice && <p className="map-entrance-notice" role="status">{entranceNotice}</p>}
           <button type="button" className="map-legend-toggle" aria-expanded={legendOpen} aria-controls={legendId} onClick={() => setLegendOpen(!legendOpen)}>
             학과 색 범례 보기 <span aria-hidden="true">{legendOpen ? "▴" : "▾"}</span>
           </button>

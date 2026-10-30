@@ -10,6 +10,7 @@
 .embedded .north { left: auto; right: 16px; top: 62px; }
 .embedded .overview { min-height: 44px; }
 .embedded .zoom button { width: 44px; height: 44px; }
+.embedded .overview, .embedded .north, .embedded .zoom { z-index: 2; }
 
 .heading {
   display: flex;

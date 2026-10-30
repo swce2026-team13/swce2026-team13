@@ -31,6 +31,8 @@ class MapBoundary extends Component<
 export type CampusMapProps = {
   embedded?: boolean;
   controllerRef?: RefObject<CampusMapController | null>;
+  onEntrance?: (id: string) => void;
+  onFocusChange?: (id: string) => void;
   onBuilding?: (id: string) => void;
   selectedBuildings?: string[];
   currentBuilding?: string;
