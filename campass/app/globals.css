@@ -189,7 +189,7 @@ progress::-moz-progress-bar {
 .stack > p + h3 {
   margin-top: 3px;
 }
-.stack > h1 + p {
+.stack > h1:not(.sr-only) + p {
   margin-top: -12px;
 }
 .hero {

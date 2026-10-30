@@ -164,7 +164,7 @@ export function FacilityFinder({ facilities }: { facilities: Place[] }) {
 
   return (
     <>
-      <h1>편의시설 위치와 운영 시간</h1>
+      <h1 className="sr-only">편의시설 위치와 운영 시간</h1>
       <p>핀을 누르면 자세한 운영 시간을 볼 수 있어요</p>
       <div className="chips filters facility-filters">
         {filters.map((f) => (
