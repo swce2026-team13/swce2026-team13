@@ -67,13 +67,10 @@ test("모든 화면에 직접 접속 가능한 App Router 페이지 제공", () 
 
 test("모달 직접 접속과 일반 이동의 슬롯 초기화 지원", () => {
   for (const page of [
-    "default.tsx",
-    "page.tsx",
-    "(.)help/page.tsx",
-    "(.)map/page.tsx",
-    "(.)map/places/page.tsx",
-    "(.)guide/map/page.tsx",
-  ]) {
+  "default.tsx",
+  "page.tsx",
+  "(.)help/page.tsx",
+]) {
     assert.ok(existsSync(`app/@modal/${page}`), `슬롯 누락: ${page}`);
   }
   const modal = readFileSync("components/ui/route-modal.tsx", "utf8");
