@@ -2,6 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { CircleHelp, Navigation } from "lucide-react";
+import {
+  CampassLogo,
+  CampassWordmark,
+} from "@/components/ui/campass-logo";
 
 import {
   ArrowRightIcon,
@@ -66,18 +70,17 @@ export default function Screen() {
     <div className="home-screen">
       <header className="home-topbar">
         <div className="home-brand">
-          <span className="home-brand-icon">
-            <img
-               src="/images/campass-logo.png"
-                alt="CAMPASS 로고"
-                className="home-brand-logo"
-            />
-          </span>
+          <CampassLogo
+           size={36}
+            ariaHidden
+           className="home-brand-mark"
+         />
 
-          <strong>
-            CAM<span>PASS</span>
-          </strong>
-        </div>
+    <CampassWordmark
+     size={25}
+      className="home-brand-wordmark"
+    />
+  </div>
 
         <button
           className="home-help"
