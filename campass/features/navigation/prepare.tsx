@@ -1,12 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { CameraIcon, ElevatorIcon } from "@/components/ui/icons";
+import { CameraIcon } from "@/components/ui/icons";
 import { type RouteOption } from "@/shared/utils/routing";
 import {
   legRows,
   hillDescription,
-  optionSummary,
   optionTitle,
   stepFreeText,
 } from "@/shared/utils/route-cards";
@@ -16,6 +15,7 @@ import {
   startLabel,
   startMapIds,
 } from "@/shared/utils/route-start";
+import { RouteModePicker } from "./route-mode-picker";
 import { MapPicker } from "./map-picker";
 import { GuideMapViewport } from "@/features/navigation/guide-map-viewport";
 import { toGuideMapData } from "@/shared/utils/guide-view";
@@ -125,7 +125,6 @@ export default function Screen() {
       pick: picking === "start" && !hasDestination ? "destination" : "none",
     });
   };
-  const options = route?.options ?? [];
   // 헤매는 구간 주의 카드는 고른 길에 혼란 기록이 있을 때만
   const [risky, setRisky] = useState<{
     key: string;
@@ -198,6 +197,7 @@ export default function Screen() {
             </div>;
           })}
         </div>
+        {!pickingOnMap && hasDestination && <RouteModePicker start={start} destination={destination.id} elevator={elevator} route={route} selected={routeOption} busy={busy} onOption={chooseOption} onElevator={(value) => void updateRoute(start, value)} />}
         {(!routeOption || pickingOnMap || !hasDestination) && <div className="route-start-picker">
           <MapPicker selected={[...startMapIds(start, registeredPlaces), ...(hasDestination ? [destination.id] : [])]} target={picking ?? (!start ? "start" : "destination")} onSelect={(id, building) => {
             if (!picking) { setPicking(!start ? "start" : "destination"); return; }
@@ -240,60 +240,7 @@ export default function Screen() {
           <CameraIcon size={24} />
           사진으로 현재 위치 찾기
         </button>
-        <div className="card">
-          <div className="between">
-            <strong className="row">
-              <ElevatorIcon size={20} />
-              엘리베이터로 이동
-            </strong>
-            <button
-              className={`switch ${elevator ? "on" : ""}`}
-              role="switch"
-              aria-checked={elevator}
-              aria-label="엘리베이터로 이동"
-              disabled={busy}
-              onClick={() => updateRoute(start, !elevator)}
-            >
-              <span />
-            </button>
-          </div>
-          <small className="muted">
-            {elevator
-              ? "켜 두면 계단 없는 길만 보여 드려요"
-              : "끄면 언덕 · 계단 · 엘리베이터 길을 함께 비교해요"}
-          </small>
-        </div>
-        {routeOption && options.length === 1 && (
-          <OptionCard option={routeOption} selected={false} />
-        )}
-        {routeOption && options.length > 1 && (
-          <div className="route-options" role="radiogroup" aria-label="가는 길">
-            <div className="between">
-              <h3>가는 길 {options.length}개</h3>
-              <small>눌러서 고른 길로 안내해요</small>
-            </div>
-            {options.map((option) => (
-                <button
-                  key={option.id}
-                  className={`choice ${option.id === routeOption.id ? "selected" : ""}`}
-                  role="radio"
-                  aria-checked={option.id === routeOption.id}
-                  disabled={busy}
-                  onClick={() => chooseOption(option.id)}
-                >
-                  <span className="radio" />
-                  <span>
-                    <b>{optionTitle(option)}</b>
-                    <small>
-                      {hillDescription(option) || optionSummary(option)}
-                      {option.unverified && " · 현장 확인 전 길"}
-                    </small>
-                  </span>
-                </button>
-            ))}
-            <OptionCard key={routeOption.id} option={routeOption} selected />
-          </div>
-        )}
+        {routeOption && hasDestination && !pickingOnMap && <OptionCard option={routeOption} selected />}
         {route && riskyPoint && (
           <div className="prepare-warning">
             <b>헤매는 사람이 많은 구간이 있어요</b>

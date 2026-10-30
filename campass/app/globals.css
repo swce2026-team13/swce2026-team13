@@ -4484,3 +4484,15 @@ progress::-moz-progress-bar {
 .prepare-screen .map-view-switch button::after { content:""; position:absolute; inset:-8px 0; }
 .prepare-screen .map-building-select { height:32px; padding:0 8px; background:#f3f5f9; border-radius:9px; color:#818894; }
 .prepare-screen .map-building-select select { height:32px; min-height:32px; padding:0 4px; border:0; background:transparent; font-weight:700; color:#26354c; }
+
+.route-mode-row, .route-elevator-control { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.route-mode-tabs { display:flex; border-radius:10px; background:#eef1f6; padding:0 2px; }
+.route-mode-tabs button { width:52px; min-height:44px; display:grid; place-items:center; }
+.route-mode-tabs button span { display:grid; place-items:center; width:52px; height:36px; border-radius:8px; color:#748198; }
+.route-mode-tabs button[aria-checked="true"] span { background:#2860ed; color:white; }
+.route-mode-tabs button:disabled { opacity:.4; cursor:default; }
+.route-elevator-control { font-size:13px; font-weight:600; }
+.route-elevator-control .switch { position:relative; }
+.route-elevator-control .switch::after { content:""; position:absolute; inset:-8px 0; }
+.route-mode-reason { font-size:11px; color:#737f90; margin:5px 0 0; }
+.route-mode-reason:empty { display:none; }
