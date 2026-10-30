@@ -16,7 +16,8 @@ export function EntrancePins({ pins, selected, onSelect }: {
           <div key={pin.id}>
             <svg className="map-entrance-tail" aria-hidden="true">
               <line x1={position.x} y1={position.y}
-                x2={position.left + position.width / 2} y2={position.top + 11} />
+                x2={Math.max(position.left, Math.min(position.x, position.left + position.width))}
+                y2={Math.max(position.top, Math.min(position.y, position.top + 22))} />
             </svg>
             <i className="map-entrance-dot" aria-hidden="true" style={{ left: position.x, top: position.y }} />
             <button type="button" className="map-entrance-button"

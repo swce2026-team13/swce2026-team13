@@ -44,7 +44,7 @@ export function layoutEntrancePins(
   ];
   return points.filter((p) => p.visible && p.x >= 0 && p.x <= width && p.y >= 0 && p.y <= height).map((p) => {
     const pin = mapEntrances.find((item) => item.id === p.id)!;
-    const w = [...pin.label].reduce((sum, c) => sum + (c.charCodeAt(0) > 255 ? 11 : 6), 28);
+    const w = [...pin.label].reduce((sum, c) => sum + (c.charCodeAt(0) > 255 ? 11 : 6), 30);
     let best: PlacedEntrancePin | undefined;
     let bestScore = Infinity;
     for (const gap of [10, 24, 40]) {

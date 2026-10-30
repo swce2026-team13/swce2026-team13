@@ -18,6 +18,19 @@ import {
 
 const ZOOMS = [1, 1.5, 2];
 const MARKER = 16;
+const entrancePoints = mapEntrances.map((pin) => project(pin.local));
+const entranceBounds = {
+  left: Math.min(0, ...entrancePoints.map(([x]) => x - 36)),
+  right: Math.max(MAP_WIDTH, ...entrancePoints.map(([x]) => x + 36)),
+  top: Math.min(0, ...entrancePoints.map(([, y]) => y - 36)),
+  bottom: Math.max(MAP_HEIGHT, ...entrancePoints.map(([, y]) => y + 36)),
+};
+// 입구를 표시하는 선택 지도만 범위를 넓힌다. 경로 미리보기의 축척은 유지한다.
+const entranceViewWidth = Math.max(
+  entranceBounds.right - entranceBounds.left,
+  (entranceBounds.bottom - entranceBounds.top) * MAP_WIDTH / MAP_HEIGHT,
+);
+const entranceViewHeight = entranceViewWidth * MAP_HEIGHT / MAP_WIDTH;
 
 // 지도 표시 아이콘(18×18 원본)의 그림 부분
 function MarkerGlyph({ kind }: { kind: MarkerKind }) {
@@ -141,22 +154,27 @@ export function CampusOverviewMap({
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const [zoom, setZoom] = useState(0);
   const scale = ZOOMS[zoom];
-  const width = MAP_WIDTH / scale;
-  const height = MAP_HEIGHT / scale;
-  const viewBox = `${(MAP_WIDTH - width) / 2} ${(MAP_HEIGHT - height) / 2} ${width} ${height}`;
+  const hasEntrances = Boolean(onEntrance);
+  const width = (hasEntrances ? entranceViewWidth : MAP_WIDTH) / scale;
+  const height = (hasEntrances ? entranceViewHeight : MAP_HEIGHT) / scale;
+  const centerX = hasEntrances ? (entranceBounds.left + entranceBounds.right) / 2 : MAP_WIDTH / 2;
+  const centerY = hasEntrances ? (entranceBounds.top + entranceBounds.bottom) / 2 : MAP_HEIGHT / 2;
+  const viewLeft = centerX - width / 2;
+  const viewTop = centerY - height / 2;
+  const viewBox = `${viewLeft} ${viewTop} ${width} ${height}`;
   const svgRef = useRef<SVGSVGElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
   useEffect(() => {
-    if (!onEntrance || !svgRef.current) return;
+    if (!hasEntrances || !svgRef.current) return;
     const observer = new ResizeObserver(([entry]) => {
       setSize({ width: entry.contentRect.width, height: entry.contentRect.height });
     });
     observer.observe(svgRef.current);
     return () => observer.disconnect();
-  }, [Boolean(onEntrance)]);
+  }, [hasEntrances]);
   const screenPoint = ([x, y]: [number, number]) => [
-    (x - (MAP_WIDTH - width) / 2) * size.width / width,
-    (y - (MAP_HEIGHT - height) / 2) * size.height / height,
+    (x - viewLeft) * size.width / width,
+    (y - viewTop) * size.height / height,
   ];
   const entrancePositions = onEntrance && size.width ? layoutEntrancePins(
     mapEntrances.map((pin) => {
@@ -225,7 +243,8 @@ export function CampusOverviewMap({
             ))}
         </defs>
 
-        <rect width={MAP_WIDTH} height={MAP_HEIGHT} fill={`url(#${id}-bg)`} />
+        <rect x={hasEntrances ? viewLeft : 0} y={hasEntrances ? viewTop : 0}
+          width={hasEntrances ? width : MAP_WIDTH} height={hasEntrances ? height : MAP_HEIGHT} fill={`url(#${id}-bg)`} />
 
         <g
           className={pressable}
