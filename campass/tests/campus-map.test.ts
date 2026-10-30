@@ -7,6 +7,13 @@ import {
   routeSegments,
   routeCoordinate,
   getFloorElevations,
+  MAP_MARKERS,
+  markerCoordinate,
+  currentPosition,
+  campusTerrain,
+  terrainHeight,
+  terrainDisc,
+  undergroundFloors,
   toScenePosition,
 } from "../shared/utils/campus-map.ts";
 import { campusBuildings, campusEntrances } from "../shared/utils/campus3d/types.ts";
@@ -265,4 +272,38 @@ test("안내 중 내 위치 점은 지금 지점에, 연결통로 단계는 다�
   assert.notDeepEqual(middle, routeCoordinate("hallim|3"));
   // 마지막 지점에서 link가 있어도 다음 지점이 없으면 그 지점에 둔다
   assert.deepEqual(currentPosition(nodes, { node: "hyein|1", link: "x" }), routeCoordinate("hyein|1"));
+});
+
+test("등고선 지형은 실외 입구 높이와 맞고 건물·출발 지점이 모두 지형 판 안에 든다", () => {
+  const terrain = campusTerrain();
+  assert.ok(terrain.heights.every(Number.isFinite));
+  assert.ok(terrain.min >= 70 && terrain.max <= 170);
+  // 정류장·정문·1주차장: 기존 높이(연결 층 또는 가장 가까운 등고선)와 2m 안에서 맞는다
+  for (const id of ["bus_stop_2115", "gate_main", "parking_entrance_1"]) {
+    const at = routeCoordinate(id)!;
+    assert.ok(Math.abs(terrainHeight(at.east, at.north) - at.elevation) < 2, id);
+  }
+  // 스콘스퀘어 안은 광장 높이로 평평하다
+  const [px, py] = campusMap.plaza.center;
+  assert.ok(Math.abs(terrainHeight(px, py) - 149) < 0.5);
+  const disc = terrainDisc();
+  const inside = ([e, n]: number[]) => Math.hypot(e - disc.center[0], n - disc.center[1]) <= disc.radius;
+  assert.ok(campusMap.buildings.every((b) => b.poly.every(inside)));
+  assert.ok(MAP_MARKERS.every((m) => inside(campusEntrances().find((e) => e.id === m.id)!.local)));
+});
+
+test("지하층(B로 시작하는 층)은 점선 표시 대상이고 지상층은 아니다", () => {
+  for (const building of campusMap.buildings) {
+    const underground = undergroundFloors(building);
+    building.floors.forEach((floor, i) => {
+      if (floor.floor.startsWith("B")) assert.ok(underground[i], `${building.id} ${floor.floor}`);
+    });
+    // 맨 위층은 항상 지상
+    assert.equal(underground.at(-1), false, building.id);
+  }
+  const yudam = campusMap.buildings.find((b) => b.id === "yudam")!;
+  assert.deepEqual(
+    yudam.floors.filter((_, i) => undergroundFloors(yudam)[i]).map((f) => f.floor),
+    ["B2", "B1"],
+  );
 });

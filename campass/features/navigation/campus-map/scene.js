@@ -5,6 +5,10 @@ import {
   markerCoordinate,
   getFloorElevations,
   toScenePosition,
+  terrainDisc,
+  terrainHeight,
+  buildingGround,
+  undergroundFloors,
   MAP_HEIGHT_SCALE,
   PLAZA_ELEVATION,
 } from "../../../shared/utils/campus-map.ts";
@@ -123,6 +127,24 @@ export function createCampusScene(THREE, container, events) {
   const wallMaterial = new THREE.MeshLambertMaterial({ color: "#ffffff", map: wallTexture });
   const baseMaterials = [roofMaterial, wallMaterial];
   const plinthMaterial = new THREE.MeshLambertMaterial({ color: "#d6d1c6" });
+  // 지하층: 면 없이 점선 테두리만. 땅을 뚫고 보이도록 깊이 검사 없이 지형 다음·건물 전에 그린다.
+  const dashedMaterials = new Map();
+  function dashed(color) {
+    if (!dashedMaterials.has(color))
+      dashedMaterials.set(
+        color,
+        new THREE.LineDashedMaterial({
+          color,
+          dashSize: 1.6,
+          gapSize: 1.1,
+          depthTest: false,
+          depthWrite: false,
+          fog: false,
+        }),
+      );
+    return dashedMaterials.get(color);
+  }
+  const UNDERGROUND_COLOR = "#6b7280";
   const edgeMaterial = new THREE.LineBasicMaterial({
     color: "#8b8f98",
     transparent: true,
@@ -276,20 +298,21 @@ export function createCampusScene(THREE, container, events) {
       const role = routeIds.indexOf(id);
       const active = id === (currentId ?? selectedId);
       const on = role >= 0 || active;
+      const color = !events.interactive && active
+        ? "#1747b5"
+        : role === 0
+          ? "#2563eb"
+          : events.interactive && role === 1
+            ? "#ef4444"
+            : "#5c8cf1";
+      // 지하층은 면을 그리지 않고 점선 색만 바꾼다.
+      if (floor.underground) {
+        floor.edge.material = dashed(on ? color : UNDERGROUND_COLOR);
+        continue;
+      }
       floor.mesh.material = on ? floor.highlight : baseMaterials;
       floor.mesh.renderOrder = on ? 1 : 0;
-      if (!on) continue;
-      floor.highlight.color.set(
-        !events.interactive && active
-          ? "#1747b5"
-          : role === 0
-            ? "#2563eb"
-            : events.interactive && role === 1
-              ? "#ef4444"
-              : role >= 0 || active
-                ? "#5c8cf1"
-                : "#d3def7",
-      );
+      if (on) floor.highlight.color.set(color);
     }
     for (const marker of markers) {
       const on = markerActive(marker);
@@ -469,6 +492,7 @@ export function createCampusScene(THREE, container, events) {
       }
     });
     for (const floor of floors) floor.highlight.dispose();
+    for (const material of dashedMaterials.values()) material.dispose();
     wallTexture.dispose();
     renderer.dispose();
     renderer.forceContextLoss();
@@ -478,36 +502,93 @@ export function createCampusScene(THREE, container, events) {
   }
 
   try {
+    const inDisc = (p) => {
+      const d = terrainDisc();
+      return Math.hypot(p[0] - d.center[0], p[1] - d.center[1]) <= d.radius;
+    };
     for (const contour of campusMap.contours) {
-      const geometry = new THREE.BufferGeometry().setFromPoints(
-        contour.p.map((p) => point(p[0], p[1], contour.e)),
-      );
-      world.add(
-        new THREE.Line(
-          geometry,
-          new THREE.LineBasicMaterial({
-            color: "#b39a74",
-            transparent: true,
-            opacity: contour.m ? 0.35 : 0.14,
-          }),
-        ),
-      );
+      // 등고선은 지형 표면에 얹고(다듬은 지형과 높이가 조금 달라 묻히지 않게), 판 밖은 자른다.
+      const runs = [[]];
+      for (const p of contour.p) {
+        if (inDisc(p)) runs.at(-1).push(point(p[0], p[1], terrainHeight(p[0], p[1]) + 0.5));
+        else if (runs.at(-1).length) runs.push([]);
+      }
+      for (const run of runs) {
+        if (run.length < 2) continue;
+        world.add(
+          new THREE.Line(
+            new THREE.BufferGeometry().setFromPoints(run),
+            new THREE.LineBasicMaterial({
+              color: "#b39a74",
+              transparent: true,
+              opacity: contour.m ? 0.35 : 0.14,
+            }),
+          ),
+        );
+      }
     }
-    // 바닥: 가장 낮은 건물 바닥 바로 아래에 연한 녹회색 판. 깊이를 쓰지 않고 먼저 그려
-    // 바닥보다 낮은 등고선도 그대로 보이게 하고, 그림자만 받는다.
-    const groundElevation =
-      Math.min(...campusMap.buildings.map((b) => getFloorElevations(b)[0])) - 0.5;
-    const groundY = point(0, 0, groundElevation).y;
-    const groundGeometry = new THREE.CircleGeometry(1800, 64);
-    groundGeometry.rotateX(-Math.PI / 2);
-    const ground = new THREE.Mesh(
-      groundGeometry,
-      new THREE.MeshLambertMaterial({ color: litAs("#cfd8c4"), depthWrite: false }),
-    );
-    ground.position.y = groundY;
-    ground.renderOrder = -1;
+    // 바닥: 등고선으로 만든 지형을 둥근 판(디오라마)으로. 가장자리는 지형을 따라 8m 두께로 잘라
+    // 흙색 옆면을 붙인다. 판 밖은 배경이 보인다.
+    const disc = terrainDisc();
+    const groundMaterial = new THREE.MeshLambertMaterial({
+      color: litAs("#cfd8c4"),
+      // 등고선·광장이 지형과 겹쳐 깜빡이지 않게 지형을 살짝 뒤로 민다.
+      polygonOffset: true,
+      polygonOffsetFactor: 1,
+      polygonOffsetUnits: 1,
+    });
+    const RING_STEP = 6;
+    const SEGMENTS = 112;
+    const rings = Math.ceil(disc.radius / RING_STEP);
+    const surface = [];
+    const at = (radius, angle) => {
+      const east = disc.center[0] + Math.cos(angle) * radius;
+      const north = disc.center[1] + Math.sin(angle) * radius;
+      return point(east, north, terrainHeight(east, north));
+    };
+    surface.push(...at(0, 0).toArray());
+    for (let ring = 1; ring <= rings; ring++)
+      for (let k = 0; k < SEGMENTS; k++)
+        surface.push(...at(Math.min(disc.radius, ring * RING_STEP), (k / SEGMENTS) * Math.PI * 2).toArray());
+    const index = (ring, k) => (ring ? 1 + (ring - 1) * SEGMENTS + (k % SEGMENTS) : 0);
+    const faces = [];
+    for (let k = 0; k < SEGMENTS; k++) faces.push(0, index(1, k), index(1, k + 1));
+    for (let ring = 1; ring < rings; ring++)
+      for (let k = 0; k < SEGMENTS; k++) {
+        const a = index(ring, k);
+        const b = index(ring, k + 1);
+        const c = index(ring + 1, k);
+        const d = index(ring + 1, k + 1);
+        faces.push(a, c, b, b, c, d);
+      }
+    const groundGeometry = new THREE.BufferGeometry();
+    groundGeometry.setAttribute("position", new THREE.Float32BufferAttribute(surface, 3));
+    groundGeometry.setIndex(faces);
+    groundGeometry.computeVertexNormals();
+    const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+    ground.renderOrder = -2;
     ground.receiveShadow = true;
-    world.add(ground);
+    // 옆면: 가장 바깥 고리에서 8m 아래까지
+    const wall = [];
+    const wallFaces = [];
+    for (let k = 0; k <= SEGMENTS; k++) {
+      const top = at(disc.radius, (k / SEGMENTS) * Math.PI * 2);
+      wall.push(...top.toArray(), top.x, top.y - 8 * MAP_HEIGHT_SCALE, top.z);
+      if (k < SEGMENTS) {
+        const a = k * 2;
+        wallFaces.push(a, a + 1, a + 2, a + 2, a + 1, a + 3);
+      }
+    }
+    const wallGeometry = new THREE.BufferGeometry();
+    wallGeometry.setAttribute("position", new THREE.Float32BufferAttribute(wall, 3));
+    wallGeometry.setIndex(wallFaces);
+    wallGeometry.computeVertexNormals();
+    const side = new THREE.Mesh(
+      wallGeometry,
+      new THREE.MeshLambertMaterial({ color: "#c2b8a3", side: THREE.DoubleSide }),
+    );
+    side.renderOrder = -2;
+    world.add(ground, side);
     const plazaGeometry = new THREE.ShapeGeometry(
       shape(campusMap.plaza.polygon),
     );
@@ -539,8 +620,9 @@ export function createCampusScene(THREE, container, events) {
       }
       buildingBounds.set(building.id, box);
       bounds.union(box);
-      // 받침: 건물 바닥에서 바닥판까지. 벽 아래쪽과 비슷한 색으로 덜 튀게 한다.
+      // 받침: 건물 바닥에서 건물 둘레의 가장 낮은 땅까지. 벽 아래쪽과 비슷한 색으로 덜 튀게 한다.
       const baseY = point(0, 0, elevations[0]).y;
+      const groundY = point(0, 0, buildingGround(building)).y;
       if (baseY - groundY > 0.3) {
         const plinthGeometry = new THREE.ExtrudeGeometry(shape(building.poly), {
           depth: baseY - groundY,
@@ -552,6 +634,7 @@ export function createCampusScene(THREE, container, events) {
         plinth.castShadow = plinth.receiveShadow = true;
         world.add(plinth);
       }
+      const underground = undergroundFloors(building);
       building.floors.forEach((floor, i) => {
         const top = elevations[i + 1] ?? roof;
         const depth = Math.max(0.6, (top - elevations[i]) * MAP_HEIGHT_SCALE);
@@ -574,11 +657,23 @@ export function createCampusScene(THREE, container, events) {
         mesh.castShadow = mesh.receiveShadow = true;
         const edge = new THREE.LineSegments(
           new THREE.EdgesGeometry(geometry, 25),
-          edgeMaterial,
+          underground[i] ? dashed(UNDERGROUND_COLOR) : edgeMaterial,
         );
         edge.position.copy(mesh.position);
+        if (underground[i]) {
+          // 지하층은 면을 숨기고(누르기 판정은 그대로) 점선 테두리만 남긴다.
+          mesh.visible = false;
+          edge.computeLineDistances();
+          edge.renderOrder = -1;
+        }
         world.add(mesh, edge);
-        floors.push({ mesh, edge, opacity, highlight: highlightMaterial });
+        floors.push({
+          mesh,
+          edge,
+          opacity,
+          highlight: highlightMaterial,
+          underground: underground[i],
+        });
       });
       addLabel(building.name, point(...building.center, roof + 3), building.id);
     }

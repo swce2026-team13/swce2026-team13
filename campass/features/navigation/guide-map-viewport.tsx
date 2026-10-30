@@ -5,6 +5,7 @@ import { Photo, Tag } from "@/components/ui";
 import { CampusOverviewMap } from "@/features/navigation/campus-overview-map";
 import { CampusMap } from "@/features/navigation/campus-map";
 import { mapRouteBuildings } from "@/shared/utils/map-route";
+import { currentPosition } from "@/shared/utils/campus-map";
 import {
   guideLegLabel,
   type GuideMapData,
@@ -23,6 +24,8 @@ function RouteMap({ map }: { map: GuideMapData }) {
   const [flat, setFlat] = useState(false);
   const highlight = overviewRouteHighlight(map);
   const buildings = mapRouteBuildings(map);
+  // 안내 중일 때만(지금 단계가 있을 때) 내 위치 점을 찍어요. 미리보기는 경로만 보여요.
+  const position = currentPosition(map.nodes, map.current);
   if (!map.nodes.length) {
     return (
       <div className="guide-map-viewport-placeholder">
@@ -34,11 +37,11 @@ function RouteMap({ map }: { map: GuideMapData }) {
   const overview = <CampusOverviewMap highlight={highlight} />;
   return (
     <>
-      {flat ? overview : <CampusMap routeNodes={map.nodes} selectedBuildings={buildings.ids} currentBuilding={buildings.currentId} fallback={overview} />}
+      {flat ? overview : <CampusMap routeNodes={map.nodes} selectedBuildings={buildings.ids} currentBuilding={buildings.currentId} position={position} fallback={overview} />}
       <button type="button" className="button secondary guide-map-toggle" onClick={() => setFlat(!flat)}>
         {flat ? "3D 지도 보기" : "2D 경로 보기"}
       </button>
-      <p className="guide-map-viewport-next">빨간 선이 선택한 경로예요. 건물 내부와 실외 선형은 대략적으로 표시해요.</p>
+      <p className="guide-map-viewport-next">빨간 선이 선택한 경로예요{position ? ", 파란 점이 지금 위치예요" : ""}. 건물 내부와 실외 선형은 대략적으로 표시해요.</p>
     </>
   );
 }

@@ -86,7 +86,7 @@ export default function Screen() {
             <b>캠퍼스 지도</b>
             <button type="button" className="text-button" onClick={() => setFlat(!flat)}>{flat ? "3D 지도 보기" : "2D 지도 보기"}</button>
           </div>
-          {flat ? overview : <CampusMap selectedBuildings={selected} onBuilding={(id) => setPick((previous) => pickOnMap(previous, id, true))} fallback={overview} />}
+          {flat ? overview : <CampusMap selectedBuildings={selected} onBuilding={(id) => setPick((previous) => pickOnMap(previous, id, true))} onMarker={(id) => setPick((previous) => pickOnMap(previous, id, false))} fallback={overview} />}
           <div className="chips filters" aria-label="입구에서 출발">
             {startMarkers.map((id) => <button key={id} className={pick.start === id ? "active" : ""} aria-pressed={pick.start === id} onClick={() => setPick((previous) => pickOnMap(previous, id, false))}>{markerNames[id]}</button>)}
           </div>
