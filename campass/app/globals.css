@@ -939,6 +939,16 @@ progress::-moz-progress-bar {
   font-weight: 650;
   color: var(--blue);
 }
+.building-name-picker h2 { margin-bottom: 10px; font-size: 14px; }
+.building-name-scroll {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding: 3px 2px 6px;
+  scrollbar-width: none;
+}
+.building-name-scroll::-webkit-scrollbar { display: none; }
+.building-name-scroll button { flex: 0 0 auto; min-height: 44px; }
+.overview-labels .overview-building-label-pick { pointer-events: auto; cursor: pointer; }
 .find-floor .between {
   padding-bottom: 0;
 }

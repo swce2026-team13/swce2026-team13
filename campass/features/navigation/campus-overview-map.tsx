@@ -70,6 +70,8 @@ export function CampusOverviewMap({
   pickerMode = false,
   onEntrance,
   onResetView,
+  buildingPicker = false,
+  height: requestedHeight,
 }: {
   selected?: string[];
   // 출발로 고를 수 있는 지도 표시 id
@@ -83,6 +85,9 @@ export function CampusOverviewMap({
   pickerMode?: boolean;
   onEntrance?: (id: string) => void;
   onResetView?: () => void;
+  // 건물·강의실 탭에서만 입구를 숨기고 이름표도 건물 선택 영역으로 쓴다.
+  buildingPicker?: boolean;
+  height?: number;
 }) {
   const viewOnly = Boolean(pins || highlight);
   const state = (area: string) =>
@@ -101,14 +106,16 @@ export function CampusOverviewMap({
     state(area) === "current" ? "white" : fallback;
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const [zoom, setZoom] = useState(0);
+  const [size, setSize] = useState({ width: 0, height: 0 });
   const scale = ZOOMS[zoom];
-  const width = overviewFrame.width / scale;
-  const height = overviewFrame.height / scale;
+  const aspect = requestedHeight ? (size.width || MAP_WIDTH) / requestedHeight : MAP_WIDTH / MAP_HEIGHT;
+  const frameWidth = Math.max(overviewFrame.width, overviewFrame.height * aspect);
+  const width = frameWidth / scale;
+  const height = frameWidth / aspect / scale;
   const viewLeft = overviewFrame.cx - width / 2;
   const viewTop = overviewFrame.cy - height / 2;
   const viewBox = `${viewLeft} ${viewTop} ${width} ${height}`;
   const svgRef = useRef<SVGSVGElement>(null);
-  const [size, setSize] = useState({ width: 0, height: 0 });
   useEffect(() => {
     if (!svgRef.current) return;
     const observer = new ResizeObserver(([entry]) => {
@@ -169,7 +176,7 @@ export function CampusOverviewMap({
     },
   });
   const press = (target: string, building: boolean) =>
-    viewOnly ? {} : button(() => onSelect?.(target, building));
+    viewOnly || (buildingPicker && target === "스콘스퀘어") ? {} : button(() => onSelect?.(target, building));
   const pressable = viewOnly ? undefined : "overview-building";
 
   return (
@@ -179,12 +186,13 @@ export function CampusOverviewMap({
         viewBox={viewBox}
         width={MAP_WIDTH}
         height={MAP_HEIGHT}
+        style={requestedHeight ? { height: requestedHeight } : undefined}
         aria-label={
           highlight
             ? "캠퍼스 개요도. 선택한 경로와 현재 위치"
             : viewOnly
               ? "캠퍼스 개요도. 편의시설 핀을 눌러 보세요"
-              : "캠퍼스 개요도. 건물을 눌러 출발과 도착을 고르세요"
+              : buildingPicker ? "캠퍼스 지도. 건물을 눌러 상세 안내를 보세요" : "캠퍼스 개요도. 건물을 눌러 출발과 도착을 고르세요"
         }
       >
         <defs>
@@ -391,6 +399,8 @@ export function CampusOverviewMap({
             <g
               key={label.id}
               transform={`translate(${label.at.join(" ")}) scale(${labelScale})`}
+              className={buildingPicker && label.id !== "스콘스퀘어" ? "overview-building-label-pick" : undefined}
+              onClick={buildingPicker && label.id !== "스콘스퀘어" ? () => onSelect?.(label.id, true) : undefined}
             >
               <rect
                 x={-(label.label.length * 11 + 10) / 2}
@@ -495,7 +505,7 @@ export function CampusOverviewMap({
           ))}
         </g>
       </svg>
-      <EntrancePins
+      {!buildingPicker && <EntrancePins
         pins={entrancePositions}
         selected={selected}
         highlighted={highlight ? [...highlight.markers] : []}
@@ -505,7 +515,7 @@ export function CampusOverviewMap({
           onEntrance ??
           (onSelect && !viewOnly ? (id) => onSelect(id, false) : undefined)
         }
-      />
+      />}
       {pickerMode && (
         <button
           type="button"

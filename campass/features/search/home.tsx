@@ -220,7 +220,7 @@ export default function Screen() {
             <button
               className="home-quick-card card"
               disabled={busy || !ready}
-              onClick={() => go("find", { tab: "classroom" })}
+              onClick={() => go("find", { tab: "classroom", building: "" })}
             >
               <span className="home-quick-icon">
                 <BuildingIcon size={22} />
