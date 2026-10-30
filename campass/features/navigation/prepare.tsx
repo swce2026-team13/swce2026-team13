@@ -205,8 +205,9 @@ export default function Screen() {
             </button>
           </div>
         </div>
-        <div className="route-start-picker">
-          <h3>
+        {(!routeOption || pickingOnMap) && (
+          <div className="route-start-picker">
+           <h3>
             <label htmlFor="route-start-input">출발지</label>
           </h3>
           <div className="route-start-input">
@@ -259,40 +260,46 @@ export default function Screen() {
               ))}
             </div>
           )}
-          {routeOption && !pickingOnMap ? (
-            <div className="overview-card route-preview">
-              <div className="overview-heading">
-                <b>경로 미리보기</b>
-                <button
-                  type="button"
-                  className="text-button"
-                  onClick={() => setPickingOnMap(true)}
-                >
-                  지도에서 출발지 바꾸기
-                </button>
-              </div>
-              <GuideMapViewport
-                map={toGuideMapData(routeOption)}
-                currentStep={null}
-                nextStep={null}
-              />
-            </div>
-          ) : (
+          
             <div className="overview-card">
-              <div className="overview-heading">
-                <b>캠퍼스 지도</b>
-                <span>출발할 곳을 눌러 주세요</span>
-              </div>
-              <CampusOverviewMap
+            <div className="overview-heading">
+             <b>캠퍼스 지도</b>
+             <span>출발할 곳을 눌러 주세요</span>
+           </div>
+
+            <CampusOverviewMap
                 selected={startMapIds(start, registeredPlaces)}
-                startable={Object.keys(markerStarts)}
-                onSelect={(id, building) =>
-                  selectStart(building ? id : markerStarts[id])
-                }
-              />
-            </div>
-          )}
+               startable={Object.keys(markerStarts)}
+             onSelect={(id, building) =>
+                selectStart(building ? id : markerStarts[id])
+           }
+          />
         </div>
+          </div>
+        )}
+         
+         {routeOption && !pickingOnMap && (
+  <div className="overview-card route-preview">
+    <div className="overview-heading">
+      <b>경로 미리보기</b>
+
+      <button
+        type="button"
+        className="text-button"
+        onClick={() => setPickingOnMap(true)}
+      >
+        지도에서 출발지 바꾸기
+      </button>
+    </div>
+
+    <GuideMapViewport
+      map={toGuideMapData(routeOption)}
+      currentStep={null}
+      nextStep={null}
+    />
+  </div>
+)}
+
         <button
           className="button secondary"
           onClick={() => {

@@ -3681,8 +3681,18 @@ progress::-moz-progress-bar {
   font-size: 14px;
 }
 
+.guide-map-controls {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(120, 145, 190, 0.14);
+}
+
 .guide-map-toggle {
   width: 100%;
+  margin-top: 0;
+}
+
+.guide-map-controls .guide-map-viewport-next {
   margin-top: 10px;
 }
 
