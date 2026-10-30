@@ -73,12 +73,37 @@ export function getFloorElevations(building: MapBuilding): number[] {
 
 export type MapSelection = { buildingId: string };
 
+export type MapMarkerKind = "bus" | "parking" | "gate";
+
+export type MapMarker = {
+  /** entrances.json 의 입구 id (2D 지도 표시 id와 같음) */
+  id: string;
+  label: string;
+  kind: MapMarkerKind;
+  /** 길찾기 그래프에서 이 표시를 가리키는 노드 id */
+  routeId: string;
+};
+
+// 지도에서 출발로 고를 수 있는 실외 지점. 2D 지도의 출발 버튼(정류장·정문·주차장)과 같다.
+export const MAP_MARKERS: MapMarker[] = [
+  { id: "bus_stop_2115", label: "2115번 정류장", kind: "bus", routeId: "bus_stop_2115" },
+  { id: "gate_main", label: "정문", kind: "gate", routeId: "gate" },
+  { id: "parking_entrance_1", label: "1주차장", kind: "parking", routeId: "parking" },
+];
+
+/** 3D 지도에 표시할 지점의 좌표. 높이는 연결 층 또는 가장 가까운 등고선으로 정한다. */
+export function markerCoordinate(id: string): CampusCoordinate | undefined {
+  return routeCoordinate(id);
+}
+
 export type CampusMapController = {
   fitAll: () => void;
   zoom: (factor: number) => void;
   selectBuilding: (id: string) => void;
   highlightBuildings: (ids: string[], currentId?: string) => void;
   showRoute: (nodes: string[]) => void;
+  /** 안내 중 내 위치 점. undefined면 숨긴다. */
+  showPosition: (position?: CampusCoordinate) => void;
   dispose: () => void;
 };
 
@@ -343,3 +368,37 @@ function dropEmpty(segments: [CampusCoordinate, CampusCoordinate][]) {
     Math.hypot(a.east - b.east, a.north - b.north, a.elevation - b.elevation) > 0.001,
   );
 }
+
+/**
+ * 안내 중 지금 단계의 위치(내 위치 점). 연결통로처럼 다음 지점으로 이동 중인 단계는
+ * 지금 지점과 다음 지점 사이 길의 가운데, 그 밖에는 지금 지점에 둔다.
+ */
+export function currentPosition(
+  nodes: string[],
+  current: { node?: string; link?: string },
+): CampusCoordinate | undefined {
+  const node = current.node;
+  if (!node) return;
+  const next = nodes[nodes.indexOf(node) + 1];
+  if (current.link && next && nodes.includes(node)) {
+    const path = routeSegments([node, next]);
+    const total = path.reduce((sum, [a, b]) => sum + span(a, b), 0);
+    let left = total / 2;
+    for (const [a, b] of path) {
+      const length = span(a, b);
+      if (length && left <= length) {
+        const t = left / length;
+        return {
+          east: a.east + (b.east - a.east) * t,
+          north: a.north + (b.north - a.north) * t,
+          elevation: a.elevation + (b.elevation - a.elevation) * t,
+        };
+      }
+      left -= length;
+    }
+  }
+  return routeCoordinate(node);
+}
+
+const span = (a: CampusCoordinate, b: CampusCoordinate) =>
+  Math.hypot(a.east - b.east, a.north - b.north, a.elevation - b.elevation);

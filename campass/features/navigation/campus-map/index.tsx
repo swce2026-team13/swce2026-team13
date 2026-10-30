@@ -2,6 +2,7 @@
 
 import { Component, type ReactNode } from "react";
 import dynamic from "next/dynamic";
+import type { CampusCoordinate } from "@/shared/utils/campus-map";
 import styles from "../../../styles/campus-map.module.css";
 
 const MapView = dynamic(() => import("./view"), {

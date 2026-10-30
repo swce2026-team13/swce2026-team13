@@ -231,3 +231,38 @@ test("본관은 정류장 쪽 공통 표시점으로 연결하고 겹친 선분�
   assert.deepEqual(routeSegments(["yudam|8","bon|1","bus_stop_2115"]),route.toReversed().map(([a,b])=>[b,a]));
   assert.equal(routeSegments(["bon|1","bon|1","bon|5"]).length,1);
 });
+
+test("3D 지도에 정류장·정문·1주차장 출발 지점을 실제 입구 좌표에 표시한다", () => {
+  assert.deepEqual(MAP_MARKERS.map((m) => m.id), ["bus_stop_2115", "gate_main", "parking_entrance_1"]);
+  for (const marker of MAP_MARKERS) {
+    const entrance = campusEntrances().find((e) => e.id === marker.id)!;
+    const at = markerCoordinate(marker.id)!;
+    assert.deepEqual([at.east, at.north], entrance.local);
+    assert.ok(Number.isFinite(at.elevation));
+  }
+  // 2115 정류장은 본관 1층과 같은 높이, 정문은 언덕 아래(등고선 높이)라 정류장보다 낮다.
+  assert.equal(markerCoordinate("bus_stop_2115")!.elevation, 127.3);
+  assert.ok(markerCoordinate("gate_main")!.elevation < markerCoordinate("bus_stop_2115")!.elevation);
+});
+
+test("안내 중 내 위치 점은 지금 지점에, 연결통로 단계는 다음 지점까지 길의 가운데에 둔다", () => {
+  const nodes = ["bus_stop_2115", "bon|1", "bon|5", "hallim|3", "hallim|6", "eunju1|5", "스콘스퀘어", "hyein|1"];
+  assert.equal(currentPosition(nodes, {}), undefined);
+  assert.deepEqual(currentPosition(nodes, { node: "gate_main" }), routeCoordinate("gate_main"));
+  assert.deepEqual(currentPosition(nodes, { node: "hallim|3" }), routeCoordinate("hallim|3"));
+  // 본관 5층 → 한림관 3층 연결통로: 본관 입구·연결통로를 지나는 길의 가운데, 같은 높이
+  const middle = currentPosition(nodes, { node: "bon|5", link: "bon-5__hallim-3" })!;
+  assert.equal(middle.elevation, 140);
+  // 길 위의 한 점: 어느 한 선분 위에 놓인다
+  const onPath = routeSegments(["bon|5", "hallim|3"]).some(([a, b]) => {
+    const ab = Math.hypot(a.east - b.east, a.north - b.north);
+    const am = Math.hypot(a.east - middle.east, a.north - middle.north);
+    const mb = Math.hypot(middle.east - b.east, middle.north - b.north);
+    return Math.abs(am + mb - ab) < 1e-6;
+  });
+  assert.ok(onPath);
+  assert.notDeepEqual(middle, routeCoordinate("bon|5"));
+  assert.notDeepEqual(middle, routeCoordinate("hallim|3"));
+  // 마지막 지점에서 link가 있어도 다음 지점이 없으면 그 지점에 둔다
+  assert.deepEqual(currentPosition(nodes, { node: "hyein|1", link: "x" }), routeCoordinate("hyein|1"));
+});

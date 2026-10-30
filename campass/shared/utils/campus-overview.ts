@@ -1,4 +1,4 @@
-import { routeSegments } from "./campus-map.ts";
+import { currentPosition, routeSegments } from "./campus-map.ts";
 import {
   campusBuildings,
   campusEntrances,
@@ -191,7 +191,10 @@ export function overviewLinkPair(id: string): string | undefined {
 export function overviewRouteHighlight(map: GuideMapData) {
   const marker = (node: string) =>
     node === PARKING ? "parking_entrance_1" : node;
+  const here = currentPosition(map.nodes, map.current);
   return {
+    // 안내 중 내 위치 점(지금 단계). 미리보기처럼 지금 단계가 없으면 undefined
+    position: here ? project([here.east, here.north]) : undefined,
     segments: routeSegments(map.nodes).map(([a, b]) => [project([a.east, a.north]), project([b.east, b.north])]),
     areas: new Set(map.nodes.map((node) => area(nodeArea(node)))),
     currentArea: map.current.node

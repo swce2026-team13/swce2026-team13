@@ -10,9 +10,11 @@ import styles from "../../../styles/campus-map.module.css";
 
 export default function MapView({
   onBuilding,
+  onMarker,
   selectedBuildings,
   currentBuilding,
   routeNodes,
+  position,
   fallback,
 }: CampusMapProps) {
   const container = useRef<HTMLDivElement>(null);
@@ -26,7 +28,18 @@ export default function MapView({
     routeRef.current = routeNodes;
     controller.current?.showRoute(routeNodes ?? []);
   }, [routeNodes]);
+  const positionRef = useRef(position);
+  useEffect(() => {
+    positionRef.current = position;
+    controller.current?.showPosition(position);
+    // 좌표 값이 바뀔 때만 다시 그려요(같은 단계에서 새 객체가 와도 무시).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [position?.east, position?.north, position?.elevation]);
   const onBuildingRef = useRef(onBuilding);
+  const onMarkerRef = useRef(onMarker);
+  useEffect(() => {
+    onMarkerRef.current = onMarker;
+  }, [onMarker]);
   const highlightRef = useRef({
     ids: selectedBuildings,
     current: currentBuilding,
@@ -61,6 +74,9 @@ export default function MapView({
             setSelection(next?.buildingId ?? "");
             if (next) onBuildingRef.current?.(next.buildingId);
           },
+          onMarker: (id) => {
+            if (!cancelled) onMarkerRef.current?.(id);
+          },
           onError: fail,
         });
         controller.current.highlightBuildings(
@@ -68,6 +84,7 @@ export default function MapView({
           highlightRef.current.current,
         );
         controller.current.showRoute(routeRef.current ?? []);
+        controller.current.showPosition(positionRef.current);
         setStatus("ready");
       })
       .catch(fail);
@@ -125,7 +142,10 @@ export default function MapView({
         )}
       </div>
       <div className={styles.details}>
-        <p className={styles.hint}>드래그로 회전 · 두 손가락으로 이동·확대</p>
+        <p className={styles.hint}>
+          드래그로 회전 · 두 손가락으로 이동·확대
+          {onMarker ? " · 정류장·정문·주차장 표시를 누르면 출발로 골라요" : ""}
+        </p>
         {onBuilding && (
           <label className={styles.picker}>
             <span>건물 선택</span>
