@@ -40,12 +40,10 @@ test("건물과 지도 표시가 모두 지도 안에 들어오고 북쪽이 위
   assert.ok(project([0, 10])[1] < project([0, 0])[1]);
 });
 
-test("가까운 두 정류장은 이름표만 겹치지 않게 옮김", () => {
-  const stop1164 = overviewMarkers.find((m) => m.id === "bus_stop_1164")!;
-  const stop2115 = overviewMarkers.find((m) => m.id === "bus_stop_2115")!;
-  assert.equal(stop1164.labelAt, "left");
-  assert.equal(stop2115.labelAt, "below");
-  assert.equal(overviewMarkers.find((m) => m.id === "gate_main")!.labelAt, "right");
+test("정류장 표시는 2115번 하나로 합치고 원본 좌표는 유지", () => {
+  assert.deepEqual(overviewMarkers.filter((m) => m.kind === "bus").map((m) => m.id), ["bus_stop_2115"]);
+  const stop = overviewMarkers.find((m) => m.id === "bus_stop_2115")!;
+  assert.deepEqual(stop.position, project([-80.57, 25.64]));
 });
 
 test("삭제된 연결은 그리지 않음", () => {
