@@ -85,3 +85,11 @@ test("공통 레이아웃에서 페이지와 모달 연결", () => {
   assert.match(layout, /\{modal\}/);
   assert.match(layout, /CampusProvider/);
 });
+
+
+test("이전 지도 주소는 조건을 보존하여 길찾기 출발 선택으로 연결", () => {
+  const page = readFileSync("app/map/page.tsx", "utf8");
+  assert.match(page, /params.set\("pick", "start"\)/);
+  assert.match(page, /redirect\(`\/directions\?\$\{params\}`\)/);
+  assert.ok(existsSync("app/map/places/page.tsx"));
+});

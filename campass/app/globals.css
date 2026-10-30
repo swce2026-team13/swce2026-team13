@@ -4472,3 +4472,15 @@ progress::-moz-progress-bar {
   opacity: 1;
   transform: translateY(0);
 }
+/* 통합 길찾기: 선택 중인 줄과 기존 지도 카드 */
+.endpoint-picking { display:flex; align-items:center; gap:8px; padding:10px; min-height:44px; background:#f1f6ff; border:1.5px dashed #9dbaf7; border-radius:12px; color:#416ba8; font-size:12px; }
+.endpoint-picking i { flex:none; width:7px; height:7px; border-radius:50%; background:#568cf0; box-shadow:0 0 0 5px #568cf01a,0 0 13px 7px #568cf016; }
+.route-endpoint .endpoint-cancel { color:#818894; }
+.endpoint-map-surface { position:relative; }
+.endpoint-map-hint { position:absolute; z-index:5; top:12px; left:12px; max-width:calc(100% - 130px); margin:0; padding:7px 11px; border-radius:20px; background:#fffffff0; box-shadow:0 2px 8px #10223f12; color:#45618a; font-size:11px; pointer-events:none; }
+.prepare-screen .map-picker-toolbar { height:46px; padding:0 10px; border-bottom:1px solid #edf0f4; background:white; }
+.prepare-screen .map-view-switch { background:#eef1f6; border-radius:9px; padding:2px; }
+.prepare-screen .map-view-switch button { position:relative; min-height:28px; height:28px; padding:0 13px; font-size:12.5px; }
+.prepare-screen .map-view-switch button::after { content:""; position:absolute; inset:-8px 0; }
+.prepare-screen .map-building-select { height:32px; padding:0 8px; background:#f3f5f9; border-radius:9px; color:#818894; }
+.prepare-screen .map-building-select select { height:32px; min-height:32px; padding:0 4px; border:0; background:transparent; font-weight:700; color:#26354c; }

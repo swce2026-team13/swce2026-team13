@@ -249,7 +249,7 @@ export default function Screen() {
 
           <button
             className="button secondary home-map-button"
-            onClick={() => go("map")}
+            onClick={() => go("prepare", { pick: "start", start: "", destination: "", elevator: "false" })}
           >
             <MapIcon size={20} />
             지도에서 고르기

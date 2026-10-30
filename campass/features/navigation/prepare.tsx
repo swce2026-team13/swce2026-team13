@@ -16,7 +16,7 @@ import {
   startLabel,
   startMapIds,
 } from "@/shared/utils/route-start";
-import { CampusOverviewMap } from "@/features/navigation/campus-overview-map";
+import { MapPicker } from "./map-picker";
 import { GuideMapViewport } from "@/features/navigation/guide-map-viewport";
 import { toGuideMapData } from "@/shared/utils/guide-view";
 import { Tag } from "@/components/ui";
@@ -99,20 +99,31 @@ export default function Screen() {
     begin,
     registeredPlaces,
   } = useCampus();
-  // 사진 화면에서 '직접 고르기'로 오면 출발지 선택 지도를 보여 줌.
-  const pickStart = useSearchParams().get("pick") === "start";
-  // 경로 미리보기에서 두 출발 변경 버튼 모두 같은 선택 지도를 엶.
-  const [pickingOnMap, setPickingOnMap] = useState(pickStart);
-  useEffect(() => {
-    if (pickStart || pickingOnMap)
-      document
-        .querySelector(".route-start-picker")
-        ?.scrollIntoView({ block: "start" });
-  }, [pickStart, pickingOnMap]);
-  const selectStart = (id: string) => {
-    if (busy) return;
-    setPickingOnMap(false);
-    void updateRoute(id);
+  const params = useSearchParams();
+  const hasDestination = Boolean(params.get("destination"));
+  const pick = params.get("pick");
+  const picking = pick === "start" || pick === "destination" ? pick : !start && pick !== "none" ? "start" : null;
+  const pickingOnMap = Boolean(picking);
+  const [pickNotice, setPickNotice] = useState("");
+  const setPicking = (target: "start" | "destination" | null) => {
+    setPickNotice("");
+    const url = new URL(window.location.href);
+    url.searchParams.set("pick", target ?? "none");
+    window.history.replaceState(null, "", `${url.pathname}${url.search}`);
+  };
+  const selectPlace = (id: string, building: boolean) => {
+    if (busy || !picking) return;
+    const value = building ? id : markerStarts[id];
+    if (!value || (picking === "destination" && !registeredPlaces.some((place) => place.id === value))) {
+      setPickNotice("이 입구는 아직 " + (picking === "start" ? "출발지" : "도착지") + "로 안내할 수 없어요. 다른 건물을 골라 주세요.");
+      return;
+    }
+    setPickNotice("");
+    go("prepare", {
+      start: picking === "start" ? value : start,
+      destination: picking === "destination" ? value : hasDestination ? destination.id : "",
+      pick: picking === "start" && !hasDestination ? "destination" : "none",
+    });
   };
   const options = route?.options ?? [];
   // 헤매는 구간 주의 카드는 고른 길에 혼란 기록이 있을 때만
@@ -172,53 +183,31 @@ export default function Screen() {
     <>
       <section className="content stack prepare-screen">
         <div className="card route-endpoints" aria-label="선택한 출발과 도착">
-          <div className="route-endpoint">
-            <span className="map-pick-tag start">출발</span>
-            <strong aria-live="polite">
-              {startLabel(start, registeredPlaces)}
-            </strong>
-            <button
-              className="text-button"
-              onClick={() => setPickingOnMap(true)}
-            >
-              출발 변경
-            </button>
-          </div>
-          <div className="route-endpoint">
-            <span className="map-pick-tag destination">도착</span>
-            <div>
-              <strong>{placeLabel(destination)}</strong>
-              {destination.description && <small>{destination.description}</small>}
-            </div>
-            <button
-              className="text-button"
-              disabled={busy}
-              onClick={() => go("search", { q: "", category: "" })}
-            >
-              도착 변경
-            </button>
-          </div>
+          {(["start", "destination"] as const).map((target) => {
+            const isStart = target === "start";
+            const description = isStart ? registeredPlaces.find((p) => p.id === start)?.description : destination.description;
+            return <div className="route-endpoint" key={target}>
+              <span className={`map-pick-tag ${target}`}>{isStart ? "출발" : "도착"}</span>
+              {picking === target ? <div className="endpoint-picking" role="status"><i />지도에서 {isStart ? "출발지" : "도착지"}를 눌러 주세요</div> :
+                <div><strong>{isStart ? startLabel(start, registeredPlaces) : hasDestination ? placeLabel(destination) : "도착지를 선택해 주세요"}</strong>
+                  {description && (isStart ? Boolean(start) : hasDestination) && <small>{description}</small>}
+                </div>}
+              <button className={`text-button ${picking === target ? "endpoint-cancel" : ""}`} disabled={busy} onClick={() => setPicking(picking === target ? null : target)}>
+                {picking === target ? "취소" : isStart ? "출발 변경" : "도착 변경"}
+              </button>
+            </div>;
+          })}
         </div>
-        {(!routeOption || pickingOnMap) && (
-          <div className="route-start-picker">
-            <h3>출발지</h3>
-            <div className="overview-card">
-              <div className="overview-heading">
-                <b>캠퍼스 지도</b>
-                <span>출발할 곳을 눌러 주세요</span>
-              </div>
-              <CampusOverviewMap
-                selected={startMapIds(start, registeredPlaces)}
-                startable={Object.keys(markerStarts)}
-                onSelect={(id, building) =>
-                  selectStart(building ? id : markerStarts[id])
-                }
-              />
-            </div>
-          </div>
-        )}
+        {(!routeOption || pickingOnMap || !hasDestination) && <div className="route-start-picker">
+          <MapPicker selected={[...startMapIds(start, registeredPlaces), ...(hasDestination ? [destination.id] : [])]} target={picking ?? (!start ? "start" : "destination")} onSelect={(id, building) => {
+            if (!picking) { setPicking(!start ? "start" : "destination"); return; }
+            selectPlace(id, building);
+          }} />
+          {pickNotice && <p role="status">{pickNotice}</p>}
+          {hasDestination && destination.category === "building" && <button className="button secondary" onClick={() => go("places", { building: destination.name })}>{destination.name} 층별 장소 보기</button>}
+        </div>}
 
-         {routeOption && !pickingOnMap && (
+         {routeOption && hasDestination && !pickingOnMap && (
   <div className="overview-card route-preview">
     <div className="overview-heading">
       <b>경로 미리보기</b>
@@ -226,7 +215,7 @@ export default function Screen() {
       <button
         type="button"
         className="text-button"
-        onClick={() => setPickingOnMap(true)}
+        onClick={() => setPicking("start")}
       >
         지도에서 출발지 바꾸기
       </button>
@@ -330,7 +319,7 @@ export default function Screen() {
         {!start && <p role="status">출발지를 선택해 주세요.</p>}
         <button
           className="button primary"
-          disabled={!start || !route || busy || !ready}
+          disabled={!start || !hasDestination || pickingOnMap || !route || busy || !ready}
           onClick={begin}
         >
           안내 시작
