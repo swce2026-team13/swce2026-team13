@@ -1762,7 +1762,8 @@ progress::-moz-progress-bar {
   color: #8995a7;
 }
 
-.home-map-button {
+.home-map-button,
+.home-resume-button {
   margin-top: 12px;
 }
 

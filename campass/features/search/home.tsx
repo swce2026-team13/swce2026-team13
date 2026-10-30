@@ -251,7 +251,7 @@ export default function Screen() {
 
           {session && (
             <button
-              className="button secondary"
+              className="button secondary home-resume-button"
               onClick={() =>
                 go(session.status === "completed" ? "arrival" : "guide")
               }
