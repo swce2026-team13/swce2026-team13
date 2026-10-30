@@ -723,11 +723,11 @@ function cancelRecognition() {
       </div>
       <div className="divider" />
       <div className="between">
-        <span className="muted small">
+        {(displayDestination.category === "event" || displayDestination.description) && <span className="muted small">
           {displayDestination.category === "event"
             ? "공모전 시연용 면접 안내"
             : displayDestination.description}
-        </span>
+        </span>}
         <Tag tone={displayDestination.verified ? "green" : "amber"}>
           {displayDestination.verified ? "공식 자료" : "예시 장소"}
         </Tag>

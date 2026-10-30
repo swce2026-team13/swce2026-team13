@@ -188,7 +188,7 @@ export default function Screen() {
             <span className="map-pick-tag destination">도착</span>
             <div>
               <strong>{placeLabel(destination)}</strong>
-              <small>{destination.description}</small>
+              {destination.description && <small>{destination.description}</small>}
             </div>
             <button
               className="text-button"
@@ -249,7 +249,7 @@ export default function Screen() {
           }}
         >
           <CameraIcon size={24} />
-          사진으로 위치 찾기
+          사진으로 현재 위치 찾기
         </button>
         <div className="card">
           <div className="between">

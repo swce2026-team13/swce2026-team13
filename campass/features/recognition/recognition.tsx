@@ -61,7 +61,7 @@ const alternativeCandidates = candidateViews.slice(1);
       )}
 
       <div className="recognition-status-row">
-        <Tag>사진으로 위치 확인</Tag>
+        <Tag>사진으로 현재 위치 찾기</Tag>
         <Tag tone="green">{recovering ? "다시 확인했어요" : "확인했어요"}</Tag>
       </div>
 
