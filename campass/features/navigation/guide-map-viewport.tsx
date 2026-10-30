@@ -34,11 +34,30 @@ function RouteMap({ map }: { map: GuideMapData }) {
   const overview = <CampusOverviewMap highlight={highlight} />;
   return (
     <>
-      {flat ? overview : <CampusMap routeNodes={map.nodes} selectedBuildings={buildings.ids} currentBuilding={buildings.currentId} fallback={overview} />}
-      <button type="button" className="button secondary guide-map-toggle" onClick={() => setFlat(!flat)}>
-        {flat ? "3D 지도 보기" : "2D 경로 보기"}
-      </button>
-      <p className="guide-map-viewport-next">빨간 선이 선택한 경로예요. 건물 내부와 실외 선형은 대략적으로 표시해요.</p>
+      {flat ? (
+  overview
+) : (
+  <CampusMap
+    routeNodes={map.nodes}
+    selectedBuildings={buildings.ids}
+    currentBuilding={buildings.currentId}
+    fallback={overview}
+  />
+)}
+
+<div className="guide-map-controls">
+  <button
+    type="button"
+    className="button secondary guide-map-toggle"
+    onClick={() => setFlat(!flat)}
+  >
+    {flat ? "3D 지도 보기" : "2D 경로 보기"}
+  </button>
+
+  <p className="guide-map-viewport-next">
+    빨간 선이 선택한 경로예요. 건물 내부 이동 유형은 추상적으로 표시해요.
+  </p>
+</div>
     </>
   );
 }
