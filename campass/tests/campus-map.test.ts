@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  HILL_ROAD,
   campusMap,
   routeSegments,
   routeCoordinate,
@@ -109,7 +110,8 @@ test("지도 좌표의 동·북·해발 방향을 동일한 3D 축으로 변환�
 
 test("route segments retain floor heights and break at unknown nodes", () => {
   const segments = routeSegments(["bus_stop_2115", "bon|1", "bon|5", "hallim|3", "hallim|6", "eunju1|5"]);
-  assert.equal(segments.length, 4);
+  // 본관 5층 → 한림관 3층은 본관 입구(2)·입구(3)·연결통로를 거쳐 4개 선분이 된다.
+  assert.equal(segments.length, 7);
   assert.equal(segments[0][0].east, segments[0][1].east);
   assert.ok(segments[0][1].elevation > segments[0][0].elevation);
   assert.equal(segments[1][0].elevation, segments[1][1].elevation);
@@ -142,6 +144,35 @@ test("유담관 입구 3 좌표를 수정하면 연결선도 그 좌표를 사�
   } finally {
     entrance.local = saved;
   }
+});
+
+test("본관 → 한림관은 본관 오른쪽 입구와 연결통로를 따라 한림관 중심으로 이어진다", () => {
+  const at = (id: string) => campusEntrances().find(e => e.id === id)!.local;
+  const segments = routeSegments(["bon|5", "hallim|3"]);
+  const via = segments.slice(1).map(([a]) => [a.east, a.north]);
+  assert.deepEqual(via, [at("bon_entrance_2"), at("bon_entrance_3"), at("passage_bon_hallim")]);
+  assert.deepEqual(segments.at(-1)![1], routeCoordinate("hallim|3"));
+  assert.ok(segments.every(([a, b]) => a.elevation === 140 && b.elevation === 140));
+  assert.deepEqual(
+    routeSegments(["hallim|3", "bon|5"]),
+    segments.toReversed().map(([a, b]) => [b, a]),
+  );
+  const start = routeCoordinate("to_hallim")!;
+  assert.deepEqual([start.east, start.north], at("passage_bon_hallim"));
+});
+
+test("언덕길은 한림관·대일관·문예관 사이 길을 따라 광장으로 오르고 높이가 계속 오른다", () => {
+  const segments = routeSegments(["bus_stop_2115", "스콘스퀘어", "hyein|1"]);
+  assert.equal(segments.length, HILL_ROAD.length + 2);
+  assert.deepEqual(segments.slice(1, HILL_ROAD.length + 1).map(([a]) => [a.east, a.north]), HILL_ROAD);
+  assert.deepEqual(segments[0][0], routeCoordinate("bus_stop_2115"));
+  assert.deepEqual(segments[HILL_ROAD.length][1], routeCoordinate("스콘스퀘어"));
+  for (const [a, b] of segments.slice(0, HILL_ROAD.length)) assert.ok(b.elevation > a.elevation);
+  // 광장 진입점부터는 광장 높이 그대로
+  assert.equal(segments[HILL_ROAD.length][0].elevation, 149);
+  assert.equal(segments[HILL_ROAD.length][1].elevation, 149);
+  const back = routeSegments(["스콘스퀘어", "bus_stop_2115"]);
+  assert.deepEqual(back, segments.slice(0, HILL_ROAD.length + 1).toReversed().map(([a, b]) => [b, a]));
 });
 
 test("본관은 정류장 쪽 공통 표시점으로 연결하고 겹친 선분은 생략한다", () => {
