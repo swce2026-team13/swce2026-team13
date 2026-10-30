@@ -69,7 +69,7 @@ test("본관 경로는 바꾸기 전과 같고 예전 id로도 같은 경로", (
   }
   assert.deepEqual(
     calculateRoute("bus_stop_2115", "hyein", false).steps.map((s) => s.id),
-    ["bus_stop_2115", "main", "parking-entry", "parking", "hyein"],
+    ["bus_stop_2115", "스콘스퀘어", "hyein|1"],
   );
 });
 

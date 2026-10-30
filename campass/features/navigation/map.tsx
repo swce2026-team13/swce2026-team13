@@ -102,7 +102,7 @@ export default function Screen() {
         </div>
       </section>
       <div className="actions map-pick-actions route-start-actions">
-        <p>지하 통로나 연결 통로로 갈 수 있으면 그쪽으로 안내해요</p>
+        <p>언덕을 지나는 길은 언덕 · 계단 · 본관 엘리베이터 중에서 골라요</p>
         {status.message && (
           <p className="map-pick-message" role="status">
             {status.message}
@@ -115,11 +115,11 @@ export default function Screen() {
             go("prepare", {
               destination: pick.destination!,
               start: status.start!,
-              elevator: String(status.elevator),
+              elevator: "false",
             })
           }
         >
-          바로 안내 시작
+          경로 선택하기
         </button>
       </div>
     </>

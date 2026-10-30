@@ -1,3 +1,4 @@
+import { routeSegments } from "./campus-map.ts";
 import {
   campusBuildings,
   campusEntrances,
@@ -191,6 +192,7 @@ export function overviewRouteHighlight(map: GuideMapData) {
   const marker = (node: string) =>
     node === PARKING ? "parking_entrance_1" : node;
   return {
+    segments: routeSegments(map.nodes).map(([a, b]) => [project([a.east, a.north]), project([b.east, b.north])]),
     areas: new Set(map.nodes.map((node) => area(nodeArea(node)))),
     currentArea: map.current.node
       ? area(nodeArea(map.current.node))

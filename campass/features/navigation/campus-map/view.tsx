@@ -12,6 +12,7 @@ export default function MapView({
   onBuilding,
   selectedBuildings,
   currentBuilding,
+  routeNodes,
   fallback,
 }: CampusMapProps) {
   const container = useRef<HTMLDivElement>(null);
@@ -20,6 +21,11 @@ export default function MapView({
     "loading",
   );
   const [selection, setSelection] = useState("");
+  const routeRef = useRef(routeNodes);
+  useEffect(() => {
+    routeRef.current = routeNodes;
+    controller.current?.showRoute(routeNodes ?? []);
+  }, [routeNodes]);
   const onBuildingRef = useRef(onBuilding);
   const highlightRef = useRef({
     ids: selectedBuildings,
@@ -61,6 +67,7 @@ export default function MapView({
           highlightRef.current.ids ?? [],
           highlightRef.current.current,
         );
+        controller.current.showRoute(routeRef.current ?? []);
         setStatus("ready");
       })
       .catch(fail);

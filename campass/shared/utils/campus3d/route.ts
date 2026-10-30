@@ -9,6 +9,7 @@ import {
   type LinkStatus,
   type LocalPoint,
 } from "./types.ts";
+import { HILL_ENTRY_BUILDINGS, hillEntry } from "../campus-map.ts";
 
 // 캠퍼스 이동 그래프. 노드는 '건물ID|층', 스콘스퀘어, 지하주차장, 출발 지점(2115 정류장 · 정문)
 export const PLAZA = "스콘스퀘어";
@@ -18,6 +19,8 @@ const STAIRS_COST = 16;
 const ELEVATOR_COST = 50;
 const ELEVATOR_PER_FLOOR = 3;
 const MAX_OPTIONS = 3;
+
+export type HillMode = "hill" | "stairs" | "elevator";
 
 export type EdgeKind = "link" | "start" | "stairs" | "elevator";
 
@@ -31,15 +34,22 @@ export type Edge = {
   status: LinkStatus;
   // '추정' 출발 연결(실외 길 대략)
   approximate: boolean;
+  hillMode?: HillMode;
 };
 
 // 지나간 방향까지 담은 연결
 export type Hop = { edge: Edge; from: string; to: string };
 
-export type GraphPath = { nodes: string[]; hops: Hop[]; cost: number };
+export type GraphPath = {
+  nodes: string[];
+  hops: Hop[];
+  cost: number;
+  hillMode?: HillMode;
+};
 
 export type SearchOptions = {
   elevator: boolean;
+  hillMode?: HillMode;
   // 기본은 '확인'만. '확인 필요' · '추정'을 더할 수 있음
   statuses?: LinkStatus[];
 };
@@ -60,7 +70,8 @@ export function nodeLabel(node: string) {
   if (node === PLAZA) return PLAZA;
   if (node === PARKING) return PARKING;
   const building = buildingById(nodeArea(node));
-  if (!building) return campusEntrances().find((e) => e.id === node)?.name ?? node;
+  if (!building)
+    return campusEntrances().find((e) => e.id === node)?.name ?? node;
   return `${building.name} ${floorLabel(node)}`;
 }
 
@@ -157,12 +168,68 @@ export const graphEdges: Edge[] = [
   }),
 ];
 
+// 사용자 제공 동선. 연결 지점은 기존 좌표를 쓰며 실외 선형은 대략적인 안내다.
+const hillEdges: Edge[] = [
+  { id: "hill-bus-plaza", a: "bus_stop_2115", b: PLAZA, hillMode: "hill" },
+  {
+    id: "stairs-bus-hallim",
+    a: "bus_stop_2115",
+    b: "hallim|3",
+    hillMode: "stairs",
+  },
+  {
+    id: "stairs-hallim-eunju",
+    a: "hallim|3",
+    b: "eunju1|5",
+    hillMode: "stairs",
+  },
+].map((edge) => ({
+  ...edge,
+  hillMode: edge.hillMode as HillMode,
+  cost: distance(edge.a, edge.b),
+  kind: "link",
+  stepFree: false,
+  status: "확인",
+  approximate: true,
+}));
+graphEdges.push(...hillEdges);
+
+// 언덕길 가운데에서 문예관 앞 · 북악관 앞 입구로 바로 들어가는 길. 입구는 언덕과 같은 높이
+for (const id of HILL_ENTRY_BUILDINGS) {
+  const entry = hillEntry(id);
+  if (!entry) continue;
+  graphEdges.push({
+    id: `hill-plaza-${id}`,
+    a: PLAZA,
+    b: nodeKey(id, entry.floor),
+    cost: entry.length,
+    kind: "link",
+    stepFree: false,
+    // 입구 층은 언덕 높이로 정한 값이라 현장 확인 전까지 '추정'
+    status: "추정",
+    approximate: true,
+    hillMode: "hill",
+  });
+}
+
 const adjacency = new Map<string, Edge[]>();
 for (const edge of graphEdges)
   for (const node of [edge.a, edge.b])
     adjacency.set(node, [...(adjacency.get(node) ?? []), edge]);
 
 function usable(edge: Edge, options: SearchOptions) {
+  if (edge.hillMode && edge.hillMode !== options.hillMode) return false;
+  if (
+    options.hillMode === "stairs" &&
+    (edge.kind === "elevator" ||
+      ["hallim-3__eunju1-2", "hallim-6__eunju1-5"].includes(edge.id))
+  )
+    return false;
+  if (options.hillMode === "hill" || options.hillMode === "stairs") {
+    // 실외 방식을 골랐을 때 실내 통로나 지하주차장으로 우회하지 않는다.
+    if (["bon-5__hallim-3", "bon-1__지하주차장-B1"].includes(edge.id))
+      return false;
+  }
   if (options.elevator && edge.stepFree === false) return false;
   if (edge.kind !== "link") return true;
   return (options.statuses ?? []).concat("확인").includes(edge.status);
@@ -194,7 +261,10 @@ function shortest(
   while (!reached) {
     let node: string | undefined;
     for (const [candidate, value] of dist)
-      if (!done.has(candidate) && (node === undefined || value < dist.get(node)!))
+      if (
+        !done.has(candidate) &&
+        (node === undefined || value < dist.get(node)!)
+      )
         node = candidate;
     if (node === undefined) return;
     if (targets.has(node)) {
@@ -214,7 +284,7 @@ function shortest(
     }
   }
   const hops: Hop[] = [];
-  for (let node = reached; node !== start.node; ) {
+  for (let node = reached; node !== start.node;) {
     const hop = previous.get(node)!;
     hops.unshift(hop);
     node = hop.from;
@@ -245,6 +315,7 @@ export function findPaths(
     start,
     [...targets].sort(),
     options.elevator,
+    options.hillMode,
     [...(options.statuses ?? [])].sort(),
   ]);
   const cached = cache.get(key);
@@ -255,7 +326,9 @@ export function findPaths(
   if (best) {
     const candidates = [
       best,
-      ...best.hops.flatMap((hop) => shortest(start, goal, options, hop.edge) ?? []),
+      ...best.hops.flatMap(
+        (hop) => shortest(start, goal, options, hop.edge) ?? [],
+      ),
     ].sort((a, b) => a.cost - b.cost);
     const seen = new Set<string>();
     for (const path of candidates) {
@@ -268,4 +341,37 @@ export function findPaths(
   }
   cache.set(key, found);
   return found;
+}
+
+// 기존 최단 경로가 본관 저층과 상부 캠퍼스를 잇는 경우에만 세 방식을 제시한다.
+export function findHillPaths(
+  start: Start,
+  targets: string[],
+  options: SearchOptions,
+  baseline: GraphPath[],
+): GraphPath[] {
+  if (options.elevator || start.link) return [];
+  const crosses = baseline.some(
+    (path) =>
+      path.nodes.includes("bon|1") &&
+      path.nodes.some((node) =>
+        ["hallim", "eunju1", "hyein", PLAZA].includes(nodeArea(node)),
+      ),
+  );
+  if (!crosses) return [];
+  return (["hill", "stairs", "elevator"] as const).flatMap((hillMode) => {
+    const path = shortest(start, new Set(targets), {
+      ...options,
+      hillMode,
+      elevator: hillMode === "elevator",
+    });
+    if (!path) return [];
+    const usesMode =
+      hillMode === "elevator"
+        ? path.hops.some(
+            (h) => h.edge.kind === "elevator" && nodeArea(h.from) === "bon",
+          )
+        : path.hops.some((h) => h.edge.hillMode === hillMode);
+    return usesMode ? [{ ...path, hillMode }] : [];
+  });
 }

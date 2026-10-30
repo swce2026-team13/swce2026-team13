@@ -5,6 +5,7 @@ import { CameraIcon, ElevatorIcon } from "@/components/ui/icons";
 import { type RouteOption } from "@/shared/utils/routing";
 import {
   legRows,
+  hillDescription,
   optionSummary,
   optionTitle,
   stepFreeText,
@@ -36,6 +37,7 @@ function OptionCard({
     <div className={`card route-option-card ${selected ? "selected" : ""}`}>
       <div className="route-option-head">
         <strong>{optionTitle(option)}</strong>
+        {option.hillMode && <p>{hillDescription(option)}</p>}
         <small>{stepFreeText(option)}</small>
         <b>{option.legs.length}단계</b>
         <span>
@@ -322,7 +324,7 @@ export default function Screen() {
           <small className="muted">
             {elevator
               ? "켜 두면 계단 없는 길만 보여 드려요"
-              : "끄면 계단 · 지하통로 길도 함께 보여 드려요"}
+              : "끄면 언덕 · 계단 · 엘리베이터 길을 함께 비교해요"}
           </small>
         </div>
         {routeOption && options.length === 1 && (
@@ -334,15 +336,12 @@ export default function Screen() {
               <h3>가는 길 {options.length}개</h3>
               <small>눌러서 고른 길로 안내해요</small>
             </div>
-            {options.map((option) =>
-              option.id === routeOption.id ? (
-                <OptionCard key={option.id} option={option} selected />
-              ) : (
+            {options.map((option) => (
                 <button
                   key={option.id}
-                  className="choice"
+                  className={`choice ${option.id === routeOption.id ? "selected" : ""}`}
                   role="radio"
-                  aria-checked={false}
+                  aria-checked={option.id === routeOption.id}
                   disabled={busy}
                   onClick={() => chooseOption(option.id)}
                 >
@@ -350,13 +349,13 @@ export default function Screen() {
                   <span>
                     <b>{optionTitle(option)}</b>
                     <small>
-                      {optionSummary(option)}
+                      {hillDescription(option) || optionSummary(option)}
                       {option.unverified && " · 현장 확인 전 길"}
                     </small>
                   </span>
                 </button>
-              ),
-            )}
+            ))}
+            <OptionCard key={routeOption.id} option={routeOption} selected />
           </div>
         )}
         {route && riskyPoint && (

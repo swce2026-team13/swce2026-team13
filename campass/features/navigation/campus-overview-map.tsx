@@ -451,6 +451,16 @@ export function CampusOverviewMap({
               </g>
             );
           })}
+        {/* Draw all outlines first so white caps never interrupt the red route. */}
+        <g pointerEvents="none" aria-hidden="true" strokeLinecap="round" strokeLinejoin="round" fill="none">
+          {[{ color: "white", width: 7 }, { color: "#dc2626", width: 4 }].map(({ color, width }) => (
+            <g key={color} stroke={color} strokeWidth={width}>
+              {highlight?.segments.map(([from, to], index) => (
+                <line key={index} x1={from[0]} y1={from[1]} x2={to[0]} y2={to[1]} />
+              ))}
+            </g>
+          ))}
+        </g>
       </svg>
       <svg className="overview-north" viewBox="0 0 7 18" aria-hidden="true">
         <path d="M0 9L3.5 0L7 9L3.5 7Z" fill="#192334" />
