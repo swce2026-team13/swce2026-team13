@@ -6,7 +6,7 @@ import { calculateRoute } from "../shared/utils/routing.ts";
 import { allPlaces, facilityPlaces, findPlace, roomPlaces } from "../server/services/rooms.ts";
 import { loadRooms } from "../shared/utils/campus3d/types.ts";
 import { geminiCatalog } from "../server/integrations/gemini.ts";
-import { Store } from "../server/db/store.ts";
+import { testStore } from "./postgres-helper.ts";
 
 const rooms = roomPlaces();
 const search = (query: string) =>
@@ -98,16 +98,17 @@ test("검색 화면은 호실 이름으로 그 호실을 고름", () => {
   );
 });
 
-test("호실 id로 경로를 요청하면 장소로 인정하고 유담관 8층 연결로 길을 찾음", () => {
+test("호실 id로 경로를 요청하면 장소로 인정하고 유담관 8층 연결로 길을 찾음", async (t) => {
   const route = calculateRoute("bus_stop_2115", "room-yudam-541", true, allPlaces());
   // 10/24 팀 확인: 본관 1층 ↔ 유담관 8층이 확인돼 현장 확인 전 길이 아님
   assert.equal(route.options[0].unverified, undefined);
   assert.ok(route.options[0].nodes.includes("yudam|8"));
   assert.equal(route.options[0].nodes.at(-1), "yudam|5");
-  const store = new Store(":memory:");
-  const session = store.create("owner", "bus_stop_2115", "room-yudam-541", true);
+  const fixture = await testStore(t);
+  if (!fixture) return;
+  const { store } = fixture;
+  const session = await store.create("owner", "bus_stop_2115", "room-yudam-541", true);
   assert.equal(session.destination, "room-yudam-541");
-  store.close();
 });
 
 test("고른 호실은 id로 다시 찾아도 같은 이름", () => {

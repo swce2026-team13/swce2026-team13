@@ -43,7 +43,7 @@ async function handle(request: NextRequest) {
       assertRequestOrigin(request, process.env.APP_ORIGIN);
     }
     const db = database();
-    db.limit(`request:${owner}`, 180, 60000);
+    await db.limit(`request:${owner}`, 180, 60000);
     const adminSession = request.cookies.get("campass_admin")?.value;
     const adminCookieOptions = {
       httpOnly: true,
@@ -57,8 +57,8 @@ async function handle(request: NextRequest) {
       const address =
         request.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim() ||
         "unknown";
-      const session = loginAdmin(db, body, address);
-      if (adminSession) db.deleteAdminSession(adminSession);
+      const session = await loginAdmin(db, body, address);
+      if (adminSession) await db.deleteAdminSession(adminSession);
       const result = response({ ok: true });
       result.cookies.set("campass_admin", session.id, {
         ...adminCookieOptions,
@@ -68,7 +68,7 @@ async function handle(request: NextRequest) {
       return result;
     }
     if (method === "POST" && parts.join("/") === "admin/logout") {
-      if (adminSession) db.deleteAdminSession(adminSession);
+      if (adminSession) await db.deleteAdminSession(adminSession);
       const result = response({ ok: true });
       result.cookies.set("campass_admin", "", {
         ...adminCookieOptions,
@@ -77,7 +77,7 @@ async function handle(request: NextRequest) {
       });
       return result;
     }
-    if (parts[0] === "admin") requireAdmin(adminSession, db);
+    if (parts[0] === "admin") await requireAdmin(adminSession, db);
     if (method === "GET" && parts.join("/") === "health")
       return response({ ok: true, service: "campass", schema: 1 });
     if (method === "GET" && parts.join("/") === "catalog")
@@ -131,7 +131,7 @@ async function handle(request: NextRequest) {
   );
 
   const routeIds = new Set(route.steps.map((step) => step.id));
-  const insight = db.insights();
+  const insight = await db.insights();
 
   const points = insight.points.filter((point) =>
     routeIds.has(point.id),
@@ -145,7 +145,7 @@ async function handle(request: NextRequest) {
 }
     if (method === "GET" && parts.join("/") === "admin/insights") {
       const params = request.nextUrl.searchParams;
-      return response(db.insights({
+      return response(await db.insights({
         period: params.get("period") ?? undefined,
         building: params.get("building") ?? undefined,
         reason: params.get("reason") ?? undefined,
@@ -153,10 +153,10 @@ async function handle(request: NextRequest) {
       }));
     }
     if (method === "GET" && parts[0] === "sessions" && parts.length === 2)
-      return response(db.get(parts[1], owner));
+      return response(await db.get(parts[1], owner));
     if (method === "POST" && parts.join("/") === "recognize") {
-      db.limit(`vision:${owner}`, 10, 60000);
-      db.limit("vision-global", 100, 3600000);
+      await db.limit(`vision:${owner}`, 10, 60000);
+      await db.limit("vision-global", 100, 3600000);
       if (
         !request.headers.get("content-type")?.startsWith("multipart/form-data")
       )
@@ -218,7 +218,7 @@ async function handle(request: NextRequest) {
   }
 
   return response(
-    db.recognitionFeedback({
+    await db.recognitionFeedback({
       predictedWaypointId,
       confidence,
       direction,
@@ -232,8 +232,8 @@ async function handle(request: NextRequest) {
     if (method === "POST") {
       const body = await readJson(request);
       if (parts.join("/") === "intent") {
-        db.limit(`intent:${owner}`, 20, 60000);
-        db.limit("intent-global", 300, 3600000);
+        await db.limit(`intent:${owner}`, 20, 60000);
+        await db.limit("intent-global", 300, 3600000);
         return response(await interpretIntent(textField(body.query)));
       }
       if (parts.join("/") === "routes" || parts.join("/") === "sessions") {
@@ -250,9 +250,9 @@ async function handle(request: NextRequest) {
               option,
             }),
           );
-        db.limit(`create:${owner}`, 20, 60000);
+        await db.limit(`create:${owner}`, 20, 60000);
         return response(
-          db.create(owner, start, destination, body.elevator, option),
+          await db.create(owner, start, destination, body.elevator, option),
           201,
         );
       }
@@ -260,13 +260,13 @@ async function handle(request: NextRequest) {
         const id = parts[1];
         switch (parts[2]) {
           case "advance":
-            return response(db.advance(id, owner, versionField(body.version)));
+            return response(await db.advance(id, owner, versionField(body.version)));
           case "previous":
             return response(
-             db.previous(id, owner, versionField(body.version))
+             await db.previous(id, owner, versionField(body.version))
             );
           case "confusion":
-            return response(db.confusion(id, owner));
+            return response(await db.confusion(id, owner));
           case "recover": {
             const direction = body.direction ?? "unknown";
             if (
@@ -276,7 +276,7 @@ async function handle(request: NextRequest) {
             )
               throw new AppError("위치 방향을 확인해 주세요.");
             return response(
-              db.recover(
+              await db.recover(
                 id,
                 owner,
                 textField(body.waypointId),
@@ -293,7 +293,7 @@ async function handle(request: NextRequest) {
             )
               throw new AppError("피드백 내용을 확인해 주세요.");
             return response(
-              db.feedback(id, owner, {
+              await db.feedback(id, owner, {
                 confused: body.confused,
                 waypointId:
                   body.waypointId === undefined
@@ -317,10 +317,7 @@ async function handle(request: NextRequest) {
         { error: { code: error.code, message: error.message } },
         error.status,
       );
-    console.error(
-      "Campass request failed:",
-      error instanceof Error ? error.message : "unknown",
-    );
+    console.error("Campass request failed:", error instanceof Error ? error.name : "unknown");
     return response(
       {
         error: {

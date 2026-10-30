@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { calculateRoute } from "../shared/utils/routing.ts";
 import { graphEdges, PARKING } from "../shared/utils/campus3d/route.ts";
 import { allPlaces } from "../server/services/rooms.ts";
-import { Store } from "../server/db/store.ts";
+import { testStore } from "./postgres-helper.ts";
 
 test("엘리베이터를 켜면 2115 정류장에서 면접 대기실까지 엘리베이터 길 하나", () => {
   const route = calculateRoute("bus_stop_2115", "interview", true);
@@ -117,10 +117,12 @@ test("정문 출발은 대략적인 길로 표시하고, 엘리베이터로만 �
   assert.ok(calculateRoute("bus_stop_2115", bookstore, false, allPlaces()).options.length);
 });
 
-test("세션은 고른 후보로 만들고 복구도 같은 그래프로 다시 계산", () => {
-  const store = new Store(":memory:");
+test("세션은 고른 후보로 만들고 복구도 같은 그래프로 다시 계산", async (t) => {
+  const fixture = await testStore(t);
+  if (!fixture) return;
+  const { store } = fixture;
   const route = calculateRoute("bus_stop_2115", "interview", false);
-  const session = store.create(
+  const session = await store.create(
     "owner",
     "bus_stop_2115",
     "interview",
@@ -129,8 +131,7 @@ test("세션은 고른 후보로 만들고 복구도 같은 그래프로 다시 
   );
   assert.equal(session.route.option, route.options[1].id);
   assert.deepEqual(session.route.steps, route.options[1].steps);
-  const recovered = store.recover(session.id, "owner", "hallim_6f_corridor", session.version);
+  const recovered = await store.recover(session.id, "owner", "hallim_6f_corridor", session.version);
   assert.equal(recovered.route.steps[0].id, "hallim_6f_corridor");
   assert.ok(!recovered.route.options[0].nodes.includes("bus_stop_2115"));
-  store.close();
 });

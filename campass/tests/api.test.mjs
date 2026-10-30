@@ -1,22 +1,20 @@
 import test, { before, after } from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdtempSync, readFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { readFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { createServer } from "node:net";
-import { DatabaseSync } from "node:sqlite";
+import { createTestDatabase, testDatabaseAvailable } from "./postgres-helper.ts";
 let server,
   origin,
   cookie,
-  output = "";
+  output = "",
+  fixture;
 const admin = { id: "test-admin", password: randomUUID() + randomUUID() };
-const databasePath = join(
-  mkdtempSync(join(tmpdir(), "campass-api-")),
-  "test.sqlite",
-);
+if (!testDatabaseAvailable())
+  throw new Error("Set TEST_DATABASE_URL to a local campass_test PostgreSQL database before test:api");
 before(async () => {
+  fixture = await createTestDatabase();
   const socket = createServer();
   await new Promise((resolve) => socket.listen(0, "127.0.0.1", resolve));
   const port = socket.address().port;
@@ -35,7 +33,7 @@ before(async () => {
     {
       env: {
         ...process.env,
-        DATABASE_PATH: databasePath,
+        DATABASE_URL: fixture.url,
         ADMIN_ID: admin.id,
         ADMIN_PASSWORD: admin.password,
         APP_ORIGIN: origin,
@@ -62,7 +60,13 @@ before(async () => {
   }
   throw new Error(`Server did not start: ${output}`);
 });
-after(() => server?.kill());
+after(async () => {
+  server?.kill();
+  if (fixture) {
+    await fixture.store.close();
+    await fixture.cleanup();
+  }
+});
 
 test("HTTP pages support direct navigation and unknown paths return 404", async () => {
   for (const path of [
@@ -319,17 +323,9 @@ test("HTTP admin login sets a private eight-hour production cookie and logout re
       .status,
     401,
   );
-  const db = new DatabaseSync(databasePath);
-  try {
-    assert.equal(
-      db
-        .prepare("SELECT id FROM admin_sessions WHERE id=?")
-        .get(sessionCookie.split("=")[1]),
-      undefined,
-    );
-  } finally {
-    db.close();
-  }
+  assert.equal((await fixture.store.query(
+    "SELECT id FROM admin_sessions WHERE id=$1", [sessionCookie.split("=")[1]],
+  )).length, 0);
 });
 
 test("HTTP admin rejects expired sessions and cross-origin login/logout", async () => {
@@ -358,15 +354,8 @@ test("HTTP admin rejects expired sessions and cross-origin login/logout", async 
       .status,
     200,
   );
-  const db = new DatabaseSync(databasePath);
-  try {
-    db.prepare("UPDATE admin_sessions SET expires=? WHERE id=?").run(
-      Date.now() - 1,
-      sessionCookie.split("=")[1],
-    );
-  } finally {
-    db.close();
-  }
+  await fixture.store.query("UPDATE admin_sessions SET expires=$1 WHERE id=$2",
+    [Date.now() - 1, sessionCookie.split("=")[1]]);
   assert.equal(
     (await request("admin/insights", undefined, { cookie: sessionCookie }))
       .status,
