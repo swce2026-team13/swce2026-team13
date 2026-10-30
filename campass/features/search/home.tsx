@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-
-import { CircleHelp, Compass, Navigation } from "lucide-react";
+import { CircleHelp, Navigation } from "lucide-react";
 
 import {
   ArrowRightIcon,
@@ -68,7 +67,11 @@ export default function Screen() {
       <header className="home-topbar">
         <div className="home-brand">
           <span className="home-brand-icon">
-            <Compass size={20} strokeWidth={1.65} />
+            <img
+               src="/images/campass-logo.png"
+                alt="CAMPASS 로고"
+                className="home-brand-logo"
+            />
           </span>
 
           <strong>

@@ -1424,6 +1424,13 @@ progress::-moz-progress-bar {
   color: var(--blue);
 }
 
+.splash-logo-image {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  display: block;
+}
+
 .splash-logo svg {
   width: 43px;
   height: 43px;
@@ -1544,6 +1551,13 @@ progress::-moz-progress-bar {
   box-shadow:
     0 3px 10px rgba(40, 70, 120, 0.05),
     inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+.home-brand-logo {
+  width: 3px;
+  height: 34px;
+  object-fit: contain;
+  display: block;
 }
 
 .home-help {
