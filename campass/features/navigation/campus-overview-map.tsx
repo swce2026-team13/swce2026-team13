@@ -74,6 +74,7 @@ export function CampusOverviewMap({
   buildingPicker = false,
   height: requestedHeight,
   focusBuilding,
+  backgroundOnly = false,
 }: {
   selected?: string[];
   // 출발로 고를 수 있는 지도 표시 id
@@ -94,6 +95,7 @@ export function CampusOverviewMap({
     BuildingDetailData,
     "id" | "name" | "entrances" | "elevator"
   >;
+    backgroundOnly?: boolean;
 }) {
   const viewOnly = Boolean(pins || highlight || focusBuilding);
   const state = (area: string) =>
@@ -254,7 +256,11 @@ export function CampusOverviewMap({
   const pressable = viewOnly ? undefined : "overview-building";
 
   return (
-    <div className={`overview-map${pickerMode ? " map-picker-surface" : ""}`}>
+    <div
+  className={`overview-map${pickerMode ? " map-picker-surface" : ""}${
+    backgroundOnly ? " overview-map-background-only" : ""
+  }`}
+>
       <svg
         ref={svgRef}
         viewBox={viewBox}
@@ -490,8 +496,9 @@ export function CampusOverviewMap({
             />
           </g>
         )}
-        <g
-          className="overview-labels"
+{!backgroundOnly && (
+  <g
+    className="overview-labels"
           textAnchor="middle"
           fontSize={11}
           fontWeight={500}
@@ -540,8 +547,10 @@ export function CampusOverviewMap({
                 {label.label}
               </text>
             </g>
-          ))}
-        </g>
+        ))}
+  </g>
+)}
+        
 
         {focused && focusBuilding && (
           <g pointerEvents="none">
@@ -671,7 +680,7 @@ export function CampusOverviewMap({
           ))}
         </g>
       </svg>
-      {!buildingPicker && !focused && (
+      {!backgroundOnly && !buildingPicker && !focused && (
         <EntrancePins
           pins={entrancePositions}
           selected={selected}
@@ -684,7 +693,7 @@ export function CampusOverviewMap({
           }
         />
       )}
-      {pickerMode && (
+      {!backgroundOnly && pickerMode && (
         <button
           type="button"
           className="map-fit-all"
@@ -696,7 +705,8 @@ export function CampusOverviewMap({
           <Maximize size={14} /> 전체 보기
         </button>
       )}
-      <svg className="overview-north" viewBox="0 0 7 18" aria-hidden="true">
+      {!backgroundOnly && (
+    <svg className="overview-north" viewBox="0 0 7 18" aria-hidden="true">
         <path d="M0 9L3.5 0L7 9L3.5 7Z" fill="#192334" />
         <text
           x="3.5"
@@ -709,8 +719,9 @@ export function CampusOverviewMap({
           N
         </text>
       </svg>
-      {!focused && (
-        <div className="zoom">
+      )}
+      {!backgroundOnly && !focused && (
+       <div className="zoom">
           <button
             aria-label="지도 확대"
             disabled={zoom >= ZOOMS.length - 1}

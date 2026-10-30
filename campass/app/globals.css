@@ -1410,132 +1410,300 @@ progress::-moz-progress-bar {
     0 0 0 3px rgba(40, 96, 237, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.65);
 }
+
 /* 스플래시 */
 
 .splash-screen {
-  /* 틀(.phone) 높이를 채움. PC에서 틀보다 길어지지 않게 100dvh 대신 씀 */
-  flex: 1;
   position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 
   display: flex;
   align-items: center;
   justify-content: center;
 
+  background: #f0f5fc;
+
+  opacity: 1;
+  transition: opacity 0.4s ease;
+}
+
+.splash-screen.is-leaving {
+  opacity: 0;
+}
+
+/* 캠퍼스 지도 배경 */
+.splash-map {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+
+  opacity: 0;
+
+  animation:
+    splash-map-fade 0.5s ease-out forwards;
+}
+
+.splash-map .overview-map {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+.splash-map .overview-map > svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* 지도 위 밝은 흰색/푸른색 레이어 */
+.splash-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+
+  pointer-events: none;
+
   background:
     radial-gradient(
-      circle at 50% 38%,
-      rgba(255, 255, 255, 0.7),
-      transparent 32%
-    ),
-    linear-gradient(180deg, #edf4ff 0%, #f4f8ff 100%);
-
-  overflow: hidden;
+      circle at 50% 50%,
+      rgba(255, 255, 255, 0.86) 0,
+      rgba(247, 250, 255, 0.7) 130px,
+      rgba(240, 245, 252, 0.5) 330px,
+      rgba(240, 245, 252, 0.42) 100%
+    );
 }
 
-.splash-center {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  transform: translateY(-15px);
-}
+/* 경로를 지도와 정확히 겹쳐 그리는 SVG */
+.splash-route-layer {
+  position: absolute;
+  inset: 0;
 
-.splash-logo {
-  width: 76px;
-  height: 76px;
-
-  display: grid;
-  place-items: center;
-
-  border-radius: 24px;
-
-  background: rgba(255, 255, 255, 0.28);
-
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-
-  border: 1px solid rgba(255, 255, 255, 0.55);
-
-  box-shadow:
-    0 4px 14px rgba(50, 90, 160, 0.07),
-    inset 0 1px 0 rgba(255, 255, 255, 0.65),
-    inset 0 0 3px rgba(255, 255, 255, 0.22);
-
-  color: var(--blue);
-}
-
-.splash-logo-image {
-  width: 48px;
-  height: 48px;
-  object-fit: contain;
-  display: block;
-}
-
-.splash-logo svg {
-  width: 43px;
-  height: 43px;
-  stroke-width: 2;
-}
-
-.splash-title {
-  margin-top: 20px;
-
-  font-size: 34px;
-  line-height: 1;
-  font-weight: 750;
-  letter-spacing: -1.5px;
-
-  color: #172238;
-}
-
-.splash-title span {
-  color: var(--blue);
-}
-
-.splash-loading {
-  margin-top: 34px;
-
-  width: 56px;
-  height: 4px;
-
-  border-radius: 999px;
-  overflow: hidden;
-
-  background: rgba(50, 90, 150, 0.1);
-}
-
-.splash-loading span {
-  display: block;
+  z-index: 2;
 
   width: 100%;
   height: 100%;
 
-  border-radius: inherit;
-  background: var(--blue);
-
-  animation: splash-loading 0.8s ease-in-out both;
+  pointer-events: none;
+  overflow: visible;
 }
 
-@keyframes splash-loading {
-  from {
-    width: 0;
-  }
+/* 바깥쪽 옅은 파란 경로 */
+.splash-route-glow {
+  fill: none;
 
-  to {
-    width: 100%;
-  }
+  stroke: rgba(0, 96, 252, 0.16);
+  stroke-width: 12;
+
+  stroke-linecap: round;
+  stroke-linejoin: round;
+
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+
+  animation:
+    splash-route-draw 1.6s cubic-bezier(0.45, 0, 0.3, 1) 0.25s forwards;
 }
 
+/* 실제 파란 경로 */
+.splash-route-line {
+  fill: none;
+
+  stroke: #0060fc;
+  stroke-width: 4;
+
+  stroke-linecap: round;
+  stroke-linejoin: round;
+
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+
+  animation:
+    splash-route-draw 1.6s cubic-bezier(0.45, 0, 0.3, 1) 0.25s forwards;
+}
+
+/* 경로를 따라 움직이는 로고 */
+.splash-moving-logo {
+  pointer-events: none;
+}
+.splash-moving-logo-inner {
+  width: 72px;
+  height: 72px;
+
+  display: grid;
+  place-items: center;
+}
+
+/* 도착 순간 살짝 튀는 효과 */
+.splash-logo-arrival {
+  transform-box: fill-box;
+  transform-origin: center;
+
+  animation:
+    splash-logo-arrive 0.55s cubic-bezier(0.3, 1.4, 0.5, 1) 1.8s both;
+}
+
+.splash-logo-mark {
+  display: block;
+}
+
+/* CAMPASS 글씨 */
+.splash-brand {
+  position: absolute;
+
+  left: 50%;
+  top: 50%;
+
+  z-index: 3;
+
+  transform: translate(-50%, 56px);
+
+  pointer-events: none;
+}
+
+.splash-wordmark {
+  opacity: 0;
+  transform: translateY(8px);
+
+  animation:
+    splash-wordmark-in 0.5s ease-out 2.2s forwards;
+}
+
+/* 하단 저작권 */
 .splash-footer {
   position: absolute;
-  bottom: 38px;
+
   left: 0;
   right: 0;
+  bottom: 30px;
+
+  z-index: 3;
+
+  margin: 0;
 
   text-align: center;
 
-  font-size: 11px;
-  color: #98a8bd;
+  font-size: 13px;
+  line-height: 1;
+
+  color: #6b7480;
 }
+
+/* 나침반 바늘 */
+.campass-logo-needle.animated {
+  transform-box: view-box;
+  transform-origin: 50px 50.5px;
+
+  animation:
+    campass-needle-arrive 0.95s ease-out 1.85s both;
+}
+
+
+/* =========================
+   Splash animations
+   ========================= */
+
+@keyframes splash-map-fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes splash-route-draw {
+  from {
+    stroke-dashoffset: 100;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes splash-logo-arrive {
+  0% {
+    transform: scale(0.8);
+  }
+
+  55% {
+    transform: scale(1.38);
+  }
+
+  100% {
+    transform: scale(1.3);
+  }
+}
+
+@keyframes campass-needle-arrive {
+  0% {
+    transform: rotate(-70deg);
+  }
+
+  35% {
+    transform: rotate(16deg);
+  }
+
+  60% {
+    transform: rotate(-7deg);
+  }
+
+  80% {
+    transform: rotate(3deg);
+  }
+
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes splash-wordmark-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* 움직임 줄이기 접근성 설정 */
+@media (prefers-reduced-motion: reduce) {
+  .splash-map,
+  .splash-route-glow,
+  .splash-route-line,
+  .splash-logo-arrival,
+  .campass-logo-needle.animated,
+  .splash-wordmark {
+    animation: none !important;
+  }
+
+  .splash-map {
+    opacity: 1;
+  }
+
+  .splash-route-glow,
+  .splash-route-line {
+    stroke-dashoffset: 0;
+  }
+
+
+  .splash-wordmark {
+    opacity: 1;
+    transform: none;
+  }
+
+  .splash-logo-arrival {
+    transform: scale(1.3);
+  }
+}
+
 /* 홈 */
 
 .home-screen {
@@ -1557,46 +1725,16 @@ progress::-moz-progress-bar {
 .home-brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
-.home-brand > strong {
-  font-size: 22px;
-  line-height: 1;
-  letter-spacing: 0.3px;
-  color: #172238;
-}
-
-.home-brand > strong span {
-  color: var(--blue);
-}
-
-.home-brand-icon {
-  width: 34px;
-  height: 34px;
-
-  display: grid;
-  place-items: center;
-
-  color: var(--blue);
-
-  background: rgba(255, 255, 255, 0.28);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  border-radius: 12px;
-
-  box-shadow:
-    0 3px 10px rgba(40, 70, 120, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 0.55);
-}
-
-.home-brand-logo {
-  width: 3px;
-  height: 34px;
-  object-fit: contain;
+.home-brand-mark {
+  flex: 0 0 auto;
   display: block;
+}
+
+.home-brand-wordmark {
+  flex: 0 0 auto;
 }
 
 .home-help {
@@ -4285,4 +4423,52 @@ progress::-moz-progress-bar {
 
 .guide-risk-notice .guide-risk-demo-label {
   margin-bottom: 6px;
+}
+.campass-wordmark {
+  display: inline-flex;
+  align-items: baseline;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.campass-wordmark-cam,
+.campass-wordmark-pass {
+  color: transparent;
+  background-clip: text;
+  -webkit-background-clip: text;
+}
+
+.campass-wordmark-cam {
+  background-image: linear-gradient(180deg, #24406f, #10223f);
+}
+
+.campass-wordmark-pass {
+  background-image: linear-gradient(180deg, #2a7dff, #0060fc);
+}
+.overview-map-background-only {
+  pointer-events: none;
+}
+.page-transition-root {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.home-transition {
+  flex: 1;
+  min-height: 0;
+
+  opacity: 0;
+  transform: translateY(8px);
+
+  transition:
+    opacity 0.4s ease,
+    transform 0.4s ease;
+}
+
+.home-transition.is-visible {
+  opacity: 1;
+  transform: translateY(0);
 }
