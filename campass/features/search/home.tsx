@@ -189,7 +189,7 @@ export default function Screen() {
           const place = places.find(
             (p) => p.id === events[eventIndex].placeId,
           );
-          if (place) void choose(place);
+          if (place) void choose(place, "event");
         }}
       >
         길찾기 <ArrowRightIcon size={15} />
