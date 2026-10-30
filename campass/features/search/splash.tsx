@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Compass } from "lucide-react";
 
 // 막대가 다 찬 모습을 잠깐 보여 준 뒤 넘어감
 const HOLD_MS = 150;
@@ -35,9 +34,12 @@ export default function Splash({ onDone }: { onDone: () => void }) {
     <main className="splash-screen">
       <div className="splash-center">
         <div className="splash-logo">
-          <Compass strokeWidth={1.65} />
+         <img
+           src="/images/campass-logo.png"
+            alt="CAMPASS 로고"
+           className="splash-logo-image"
+          />
         </div>
-
         <h1 className="splash-title">
           CAM<span>PASS</span>
         </h1>

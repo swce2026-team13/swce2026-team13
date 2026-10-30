@@ -1,6 +1,7 @@
 "use client";
 
-import { Component, type ReactNode } from "react";
+import { Component, type ReactNode, type RefObject } from "react";
+import type { CampusMapController } from "@/shared/utils/campus-map";
 import dynamic from "next/dynamic";
 import type { CampusCoordinate } from "@/shared/utils/campus-map";
 import styles from "../../../styles/campus-map.module.css";
@@ -29,6 +30,10 @@ class MapBoundary extends Component<
 }
 
 export type CampusMapProps = {
+  embedded?: boolean;
+  controllerRef?: RefObject<CampusMapController | null>;
+  onEntrance?: (id: string) => void;
+  onFocusChange?: (id: string) => void;
   onBuilding?: (id: string) => void;
   /** 정류장·정문·주차장 표시를 눌렀을 때 (지도 표시 id) */
   onMarker?: (id: string) => void;
@@ -41,6 +46,14 @@ export type CampusMapProps = {
 };
 
 export function CampusMap({ fallback, ...props }: CampusMapProps) {
+  if (props.embedded)
+    return (
+      <div className={styles.embedded}>
+        <MapBoundary fallback={fallback}>
+          <MapView {...props} fallback={fallback} />
+        </MapBoundary>
+      </div>
+    );
   return (
     <section className={styles.card} aria-label="캠퍼스 3D 지도">
       <div className={styles.heading}>

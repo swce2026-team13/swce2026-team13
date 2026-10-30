@@ -17,7 +17,6 @@ import { MapIcon } from "@/components/ui/icons";
 import { useCampus } from "@/features/navigation/campus-provider";
 
 const filters = [
-  { kind: "", label: "전체" },
   { kind: "cafe", label: "카페" },
   { kind: "store", label: "편의점" },
   { kind: "dining", label: "식당" },
@@ -165,7 +164,7 @@ export function FacilityFinder({ facilities }: { facilities: Place[] }) {
 
   return (
     <>
-      <h1>편의시설 위치와 운영 시간</h1>
+      <h1 className="sr-only">편의시설 위치와 운영 시간</h1>
       <p>핀을 누르면 자세한 운영 시간을 볼 수 있어요</p>
       <div className="chips filters facility-filters">
         {filters.map((f) => (
@@ -173,7 +172,7 @@ export function FacilityFinder({ facilities }: { facilities: Place[] }) {
             key={f.label}
             className={kind === f.kind ? "active" : ""}
             aria-pressed={kind === f.kind}
-            onClick={() => replace({ kind: f.kind, area: "" })}
+            onClick={() => replace({ kind: kind === f.kind ? "" : f.kind, area: "" })}
           >
             {f.kind && (
               <i style={{ background: pinColors[f.kind] }} aria-hidden="true" />

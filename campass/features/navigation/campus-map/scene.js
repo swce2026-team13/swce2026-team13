@@ -13,6 +13,7 @@ import {
   PLAZA_ELEVATION,
 } from "../../../shared/utils/campus-map.ts";
 import styles from "../../../styles/campus-map.module.css";
+import { mapEntrances, layoutEntrancePins } from "../map-entrances.ts";
 
 /**
  * 팀의 건물 윤곽을 그려요. 경로 계산은 기존 그래프에 맡겨요.
@@ -34,7 +35,7 @@ export function createCampusScene(THREE, container, events) {
   const canvas = renderer.domElement;
   canvas.setAttribute(
     "aria-label",
-    "서경대학교 3D 캠퍼스 지도. 아래 건물 선택 메뉴로도 탐색할 수 있어요.",
+    "서경대학교 3D 캠퍼스 지도. 건물 선택 메뉴로도 탐색할 수 있어요.",
   );
   canvas.setAttribute("role", "img");
   const scene = new THREE.Scene();
@@ -164,6 +165,10 @@ export function createCampusScene(THREE, container, events) {
 
   const point = (east, north, elevation) =>
     new THREE.Vector3(...toScenePosition({ east, north, elevation }));
+  const entrances = events.showEntrances ? mapEntrances.map((pin) => ({
+    id: pin.id,
+    position: point(pin.coordinate.east, pin.coordinate.north, pin.coordinate.elevation + 1),
+  })) : [];
   function shape(polygon) {
     const result = new THREE.Shape();
     // 원본 상승관 윤곽에서 연속으로 반복되는 점을 제외해요.
@@ -265,6 +270,14 @@ export function createCampusScene(THREE, container, events) {
         label.element.style.transform = `translate(${x}px, ${y}px) translate(-50%, -100%)`;
         occupied.push(box);
       }
+    }
+    if (events.showEntrances) {
+      const projectedPins = entrances.map((pin) => {
+        const p = pin.position.clone().project(camera);
+        return { id: pin.id, x: (p.x + 1) * width / 2, y: (1 - p.y) * height / 2,
+          visible: p.z >= -1 && p.z <= 1 };
+      });
+      events.onEntrances?.(layoutEntrancePins(projectedPins, width, height, occupied));
     }
   }
   function fitBox(box) {
