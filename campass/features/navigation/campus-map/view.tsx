@@ -14,6 +14,8 @@ export default function MapView({
   currentBuilding,
   routeNodes,
   fallback,
+  embedded,
+  controllerRef,
 }: CampusMapProps) {
   const container = useRef<HTMLDivElement>(null);
   const controller = useRef<CampusMapController | null>(null);
@@ -49,6 +51,7 @@ export default function MapView({
       if (cancelled) return;
       controller.current?.dispose();
       controller.current = null;
+      if (controllerRef) controllerRef.current = null;
       setStatus("error");
     };
     loadCampusThree()
@@ -68,6 +71,7 @@ export default function MapView({
           highlightRef.current.current,
         );
         controller.current.showRoute(routeRef.current ?? []);
+        if (controllerRef) controllerRef.current = controller.current;
         setStatus("ready");
       })
       .catch(fail);
@@ -75,6 +79,7 @@ export default function MapView({
       cancelled = true;
       controller.current?.dispose();
       controller.current = null;
+      if (controllerRef) controllerRef.current = null;
     };
   }, []);
 
@@ -124,7 +129,7 @@ export default function MapView({
           </>
         )}
       </div>
-      <div className={styles.details}>
+      {!embedded && <div className={styles.details}>
         <p className={styles.hint}>드래그로 회전 · 두 손가락으로 이동·확대</p>
         {onBuilding && (
           <label className={styles.picker}>
@@ -157,7 +162,7 @@ export default function MapView({
             </select>
           </label>
         )}
-      </div>
+      </div>}
     </>
   );
 }

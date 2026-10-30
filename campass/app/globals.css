@@ -3066,6 +3066,83 @@ progress::-moz-progress-bar {
   background: #e9eff8;
 }
 
+.map-picker-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.5);
+}
+.map-view-switch {
+  display: flex;
+  padding: 2px;
+  border-radius: 10px;
+  background: #dfe7f4;
+}
+.map-view-switch button {
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 8px;
+  color: #667389;
+  font-size: 12px;
+}
+.map-view-switch button[aria-pressed="true"] {
+  background: white;
+  color: var(--blue);
+}
+.map-building-select {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 11px;
+  color: #4a5361;
+}
+.map-building-select select {
+  min-width: 0;
+  max-width: 145px;
+  min-height: 44px;
+  padding: 6px;
+  border: 1px solid #ccd6ea;
+  border-radius: 8px;
+  background: #ffffffb3;
+  font: inherit;
+  color: inherit;
+}
+.map-fit-all {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 6px 11px;
+  border: 1px solid #cedaf0;
+  border-radius: 18px;
+  background: #ffffffed;
+  color: #25446d;
+  font-size: 11px;
+}
+.map-picker-surface .overview-north { top: 66px; right: 23px; }
+.map-picker-surface .zoom button { width: 44px; height: 44px; }
+.map-legend-toggle {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 12px;
+  text-align: left;
+  color: #667389;
+  font-size: 11px;
+}
+.overview-legend[hidden] { display: none; }
+.map-picker-caption {
+  margin-top: -10px;
+  color: #667389;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
 .overview-heading {
   display: flex;
   align-items: center;

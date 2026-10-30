@@ -1,6 +1,7 @@
 "use client";
 
-import { Component, type ReactNode } from "react";
+import { Component, type ReactNode, type RefObject } from "react";
+import type { CampusMapController } from "@/shared/utils/campus-map";
 import dynamic from "next/dynamic";
 import styles from "../../../styles/campus-map.module.css";
 
@@ -28,6 +29,8 @@ class MapBoundary extends Component<
 }
 
 export type CampusMapProps = {
+  embedded?: boolean;
+  controllerRef?: RefObject<CampusMapController | null>;
   onBuilding?: (id: string) => void;
   selectedBuildings?: string[];
   currentBuilding?: string;
@@ -36,6 +39,14 @@ export type CampusMapProps = {
 };
 
 export function CampusMap({ fallback, ...props }: CampusMapProps) {
+  if (props.embedded)
+    return (
+      <div className={styles.embedded}>
+        <MapBoundary fallback={fallback}>
+          <MapView {...props} fallback={fallback} />
+        </MapBoundary>
+      </div>
+    );
   return (
     <section className={styles.card} aria-label="캠퍼스 3D 지도">
       <div className={styles.heading}>

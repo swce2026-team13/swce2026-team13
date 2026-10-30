@@ -1,6 +1,6 @@
 "use client";
 import { useId, useState, type KeyboardEvent } from "react";
-import { Minus, Plus } from "lucide-react";
+import { Maximize, Minus, Plus } from "lucide-react";
 import {
   MAP_HEIGHT,
   MAP_WIDTH,
@@ -103,6 +103,7 @@ export function CampusOverviewMap({
   selectedPin,
   onPin,
   highlight,
+  pickerMode = false,
 }: {
   selected?: string[];
   // 출발로 고를 수 있는 지도 표시 id
@@ -113,6 +114,7 @@ export function CampusOverviewMap({
   selectedPin?: string;
   onPin?: (id: string) => void;
   highlight?: OverviewRouteHighlight;
+  pickerMode?: boolean;
 }) {
   const viewOnly = Boolean(pins || highlight);
   const state = (area: string) =>
@@ -151,7 +153,7 @@ export function CampusOverviewMap({
   const pressable = viewOnly ? undefined : "overview-building";
 
   return (
-    <div className="overview-map">
+    <div className={`overview-map${pickerMode ? " map-picker-surface" : ""}`}>
       <svg
         viewBox={viewBox}
         width={MAP_WIDTH}
@@ -462,6 +464,11 @@ export function CampusOverviewMap({
           ))}
         </g>
       </svg>
+      {pickerMode && (
+        <button type="button" className="map-fit-all" onClick={() => setZoom(0)}>
+          <Maximize size={14} /> 전체 보기
+        </button>
+      )}
       <svg className="overview-north" viewBox="0 0 7 18" aria-hidden="true">
         <path d="M0 9L3.5 0L7 9L3.5 7Z" fill="#192334" />
         <text

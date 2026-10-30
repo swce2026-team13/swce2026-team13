@@ -22,7 +22,7 @@ export function createCampusScene(THREE, container, events) {
   const canvas = renderer.domElement;
   canvas.setAttribute(
     "aria-label",
-    "서경대학교 3D 캠퍼스 지도. 아래 건물 선택 메뉴로도 탐색할 수 있어요.",
+    "서경대학교 3D 캠퍼스 지도. 건물 선택 메뉴로도 탐색할 수 있어요.",
   );
   canvas.setAttribute("role", "img");
   const scene = new THREE.Scene();
