@@ -5,7 +5,6 @@ import { allPlaces } from "../server/services/rooms.ts";
 import { calculateRoute } from "../shared/utils/routing.ts";
 import {
   placeLabel,
-  startChoices,
   startLabel,
   startMapIds,
   samePlace,
@@ -13,13 +12,6 @@ import {
 
 test("장소명에 포함된 건물과 층을 요약에 반복하지 않는다", () => {
   assert.equal(placeLabel(places.find((p) => p.id === "eunju1_5f_front")!), "은주1관 5층 앞");
-});
-
-test("출발지 검색은 등록된 건물과 사진 지점만 반환하고 빈 결과를 구분한다", () => {
-  assert.ok(startChoices("본관", places).some((p) => p.id === "bon"));
-  assert.ok(startChoices("2115", places).some((p) => p.id === "bus_stop_2115"));
-  assert.deepEqual(startChoices("없는장소입니다", places), []);
-  assert.deepEqual(startChoices("   ", places), []);
 });
 
 test("호실 출발지의 건물과 층을 표시하고 같은 건물을 지도에서 강조한다", () => {

@@ -1,4 +1,4 @@
-import { currentPlaceId, searchPlaces, type Place } from "./catalog.ts";
+import { currentPlaceId, type Place } from "./catalog.ts";
 import { campusBuildings } from "./campus3d/types.ts";
 import { graphEdges, graphNodes, nodeArea, nodeLabel, PARKING } from "./campus3d/route.ts";
 import { markerStarts } from "./map-pick.ts";
@@ -18,19 +18,6 @@ export function startLabel(id: string, list: Place[]) {
   const place = list.find((item) => item.id === id);
   if (place) return placeLabel(place);
   return graphNodes.includes(id) ? nodeLabel(id) : "출발지를 선택해 주세요";
-}
-
-export function startChoices(query: string, list: Place[]) {
-  const normalized = query.trim().replace(/\s/g, "").toLowerCase();
-  if (!normalized) return [];
-  const ids = new Set(
-    searchPlaces(query, undefined, undefined, list).map((p) => p.id),
-  );
-  for (const point of waypoints) {
-    if (point.name.replace(/\s/g, "").toLowerCase().includes(normalized))
-      ids.add(point.id);
-  }
-  return [...ids].map((id) => ({ id, name: startLabel(id, list) }));
 }
 
 export function startMapIds(id: string, list: Place[]) {

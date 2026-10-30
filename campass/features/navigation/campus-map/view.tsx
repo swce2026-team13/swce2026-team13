@@ -7,6 +7,8 @@ import type { CampusMapProps } from "./";
 import { loadCampusThree } from "./three-loader.js";
 import { createCampusScene } from "./scene.js";
 import styles from "../../../styles/campus-map.module.css";
+import { EntrancePins } from "../entrance-pins";
+import type { PlacedEntrancePin } from "../map-entrances";
 
 export default function MapView({
   onBuilding,
@@ -14,6 +16,10 @@ export default function MapView({
   currentBuilding,
   routeNodes,
   fallback,
+  embedded,
+  controllerRef,
+  onEntrance,
+  onFocusChange,
 }: CampusMapProps) {
   const container = useRef<HTMLDivElement>(null);
   const controller = useRef<CampusMapController | null>(null);
@@ -21,19 +27,22 @@ export default function MapView({
     "loading",
   );
   const [selection, setSelection] = useState("");
+  const [entrancePins, setEntrancePins] = useState<PlacedEntrancePin[]>([]);
   const routeRef = useRef(routeNodes);
   useEffect(() => {
     routeRef.current = routeNodes;
     controller.current?.showRoute(routeNodes ?? []);
   }, [routeNodes]);
   const onBuildingRef = useRef(onBuilding);
+  const onFocusChangeRef = useRef(onFocusChange);
   const highlightRef = useRef({
     ids: selectedBuildings,
     current: currentBuilding,
   });
   useEffect(() => {
     onBuildingRef.current = onBuilding;
-  }, [onBuilding]);
+    onFocusChangeRef.current = onFocusChange;
+  }, [onBuilding, onFocusChange]);
   useEffect(() => {
     highlightRef.current = { ids: selectedBuildings, current: currentBuilding };
     controller.current?.highlightBuildings(
@@ -49,6 +58,7 @@ export default function MapView({
       if (cancelled) return;
       controller.current?.dispose();
       controller.current = null;
+      if (controllerRef) controllerRef.current = null;
       setStatus("error");
     };
     loadCampusThree()
@@ -56,9 +66,12 @@ export default function MapView({
         if (cancelled) return;
         controller.current = createCampusScene(three, host, {
           interactive: Boolean(onBuildingRef.current),
+          showEntrances: Boolean(onEntrance),
+          onEntrances: (pins) => { if (!cancelled) setEntrancePins(pins); },
           onSelect: (next) => {
             if (cancelled) return;
             setSelection(next?.buildingId ?? "");
+            onFocusChangeRef.current?.(next?.buildingId ?? "");
             if (next) onBuildingRef.current?.(next.buildingId);
           },
           onError: fail,
@@ -68,6 +81,7 @@ export default function MapView({
           highlightRef.current.current,
         );
         controller.current.showRoute(routeRef.current ?? []);
+        if (controllerRef) controllerRef.current = controller.current;
         setStatus("ready");
       })
       .catch(fail);
@@ -75,6 +89,7 @@ export default function MapView({
       cancelled = true;
       controller.current?.dispose();
       controller.current = null;
+      if (controllerRef) controllerRef.current = null;
     };
   }, []);
 
@@ -92,6 +107,9 @@ export default function MapView({
     <>
       <div className={styles.stage} aria-busy={status === "loading"}>
         <div className={styles.canvas} ref={container} />
+        {status === "ready" && onEntrance && (
+          <EntrancePins pins={entrancePins} selected={selectedBuildings ?? []} onSelect={onEntrance} />
+        )}
         {status === "loading" ? (
           <div className={styles.overlay} role="status">
             3D 지도를 불러오고 있어요…
@@ -124,7 +142,7 @@ export default function MapView({
           </>
         )}
       </div>
-      <div className={styles.details}>
+      {!embedded && <div className={styles.details}>
         <p className={styles.hint}>드래그로 회전 · 두 손가락으로 이동·확대</p>
         {onBuilding && (
           <label className={styles.picker}>
@@ -157,7 +175,7 @@ export default function MapView({
             </select>
           </label>
         )}
-      </div>
+      </div>}
     </>
   );
 }

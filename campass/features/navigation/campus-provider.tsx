@@ -176,7 +176,7 @@ function useCampusState() {
       ...values,
     });
     router.push(href, {
-      scroll: !["map", "places", "guide-map", "help"].includes(next),
+      scroll: next !== "help",
     });
   }
   useEffect(() => {
@@ -684,6 +684,7 @@ function cancelRecognition() {
   }
   function back() {
     if (view === "guide-map") go("guide");
+    else if (view === "map") router.back();
     else if (["photo", "recognition", "failed", "recovery"].includes(view))
       go(recovering ? "guide" : "prepare");
     else if (view === "places") go("map");

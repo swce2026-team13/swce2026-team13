@@ -228,7 +228,7 @@ const analysisSteps = [
             type="button"
             className="photo-side-action"
             onClick={() =>
-              // 처음 출발이면 출발지 검색 · 지도로, 길을 잃었을 때는 목록에서
+              // 처음 출발이면 지도에서, 길을 잃었을 때는 위치 목록에서 선택
               recovering
                 ? setShowManualPicker((prev) => !prev)
                 : go("prepare", { pick: "start" })
