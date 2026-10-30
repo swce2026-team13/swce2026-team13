@@ -17,7 +17,6 @@ import { MapIcon } from "@/components/ui/icons";
 import { useCampus } from "@/features/navigation/campus-provider";
 
 const filters = [
-  { kind: "", label: "전체" },
   { kind: "cafe", label: "카페" },
   { kind: "store", label: "편의점" },
   { kind: "dining", label: "식당" },
@@ -173,7 +172,7 @@ export function FacilityFinder({ facilities }: { facilities: Place[] }) {
             key={f.label}
             className={kind === f.kind ? "active" : ""}
             aria-pressed={kind === f.kind}
-            onClick={() => replace({ kind: f.kind, area: "" })}
+            onClick={() => replace({ kind: kind === f.kind ? "" : f.kind, area: "" })}
           >
             {f.kind && (
               <i style={{ background: pinColors[f.kind] }} aria-hidden="true" />
