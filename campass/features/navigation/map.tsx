@@ -35,13 +35,13 @@ export default function Screen() {
       key: "start" as const,
       tag: "출발",
       value: pick.start,
-      hint: "출발할 건물을 눌러 주세요",
+      hint: "출발지를 눌러 주세요",
     },
     {
       key: "destination" as const,
       tag: "도착",
       value: pick.destination,
-      hint: "갈 건물을 눌러 주세요",
+      hint: "목적지를 눌러 주세요",
     },
   ];
 
@@ -49,8 +49,8 @@ export default function Screen() {
     <>
       <section className="content stack map-pick-screen">
         <div>
-          <h1>어디로 가세요?</h1>
-          <p>출발할 건물을 먼저 누르고, 갈 건물을 이어서 눌러 주세요.</p>
+          <h1>지도에서 출발지와 목적지를 눌러 주세요</h1>
+          <p>출발지를 먼저 누르고, 이어서 목적지를 눌러 주세요.</p>
         </div>
 
         <div className="card map-pick-card">
