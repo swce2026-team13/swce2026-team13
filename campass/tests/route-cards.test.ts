@@ -62,7 +62,7 @@ test("접힌 카드를 누르면 고른 길이 바뀌고 그 id로 세션이 만
   const fixture = await testStore(t);
   if (!fixture) return;
   const { store } = fixture;
-  const session = store.create("owner", "bus_stop_2115", "interview", false, chosen.id);
+  const session = await store.create("owner", "bus_stop_2115", "interview", false, chosen.id);
 
 
   assert.equal(session.route.option, chosen.id);
