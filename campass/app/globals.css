@@ -3239,35 +3239,6 @@ progress::-moz-progress-bar {
   font-size: 11px;
 }
 
-.route-start-input {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.route-start-input input {
-  width: 100%;
-  min-width: 0;
-  padding: 13px 12px;
-  border: 1px solid #c9d7eb;
-  border-radius: 12px;
-  background: #ffffff80;
-  font-size: 14px;
-}
-
-.route-start-input .text-button {
-  flex-shrink: 0;
-}
-
-.route-start-results {
-  max-height: 240px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  font-size: 13px;
-}
-
 .actions.route-start-actions::before {
   content: none;
 }

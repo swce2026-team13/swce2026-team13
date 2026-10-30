@@ -473,13 +473,13 @@ function useCampusState() {
       ...(value.trim() && !category ? { turn: crypto.randomUUID() } : {}),
       ...(fresh ? { start: "", elevator: "true" } : {}) });
   }
-  async function choose(p: Place, from?: "event") {
+  async function choose(p: Place) {
     conversationPlaces.current.set(p.id, p);
     rememberConversation(selectConversationPlace(conversationRef.current, p, start, elevator));
     routeRevision.current++;
     setDestination(p);
     setRoute(null);
-    go("prepare", { destination: p.id, ...(from ? { from } : {}) });
+    go("prepare", { destination: p.id });
   }
   // 고른 길 id가 새 후보 목록에 있으면 그대로, 없으면 첫 후보
   const routeOption =
@@ -502,9 +502,6 @@ function useCampusState() {
     go("prepare", {
       start: nextStart,
       elevator: String(nextElevator),
-      ...(view === "prepare" && params.get("from") === "event"
-        ? { from: "event" }
-        : {}),
       // 엘리베이터만 바꾸면 고른 길 id를 넘겨, 새 후보에 같은 길이 있을 때만 이어서 고름
       ...(routeOption && nextStart === start ? { option: routeOption.id } : {}),
     });

@@ -13,7 +13,6 @@ import {
 import { markerStarts } from "@/shared/utils/map-pick";
 import {
   placeLabel,
-  startChoices,
   startLabel,
   startMapIds,
 } from "@/shared/utils/route-start";
@@ -100,30 +99,18 @@ export default function Screen() {
     begin,
     registeredPlaces,
   } = useCampus();
-  const [startQuery, setStartQuery] = useState<string | null>(null);
-  const params = useSearchParams();
-  // 명시적으로 출발 변경을 누른 뒤 검색칸을 펼치고 포커스를 옮김.
-  const [startChangeRequest, setStartChangeRequest] = useState(0);
-  // 사진 화면에서 '직접 고르기'로 오면 출발지 검색 · 지도 쪽을 보여 줌
-  const pickStart = params.get("pick") === "start";
-  const showStartSearch =
-    params.get("from") !== "event" || pickStart || startChangeRequest > 0;
+  // 사진 화면에서 '직접 고르기'로 오면 출발지 선택 지도를 보여 줌.
+  const pickStart = useSearchParams().get("pick") === "start";
+  // 경로 미리보기에서 두 출발 변경 버튼 모두 같은 선택 지도를 엶.
+  const [pickingOnMap, setPickingOnMap] = useState(pickStart);
   useEffect(() => {
-    if (startChangeRequest > 0)
-      document.getElementById("route-start-input")?.focus();
-  }, [startChangeRequest]);
-  useEffect(() => {
-    if (pickStart)
+    if (pickStart || pickingOnMap)
       document
         .querySelector(".route-start-picker")
         ?.scrollIntoView({ block: "start" });
-  }, [pickStart]);
-  const candidates = startChoices(startQuery ?? "", registeredPlaces);
-  // 경로가 나오면 지도 자리에 미리보기를 보여 주고, '지도에서 출발지 바꾸기'를 누르면 고르기 지도로
-  const [pickingOnMap, setPickingOnMap] = useState(false);
+  }, [pickStart, pickingOnMap]);
   const selectStart = (id: string) => {
     if (busy) return;
-    setStartQuery(null);
     setPickingOnMap(false);
     void updateRoute(id);
   };
@@ -192,10 +179,7 @@ export default function Screen() {
             </strong>
             <button
               className="text-button"
-              onClick={() => {
-                setPickingOnMap(true);
-                setStartChangeRequest((request) => request + 1);
-              }}
+              onClick={() => setPickingOnMap(true)}
             >
               출발 변경
             </button>
@@ -217,82 +201,23 @@ export default function Screen() {
         </div>
         {(!routeOption || pickingOnMap) && (
           <div className="route-start-picker">
-           <h3>
-            {showStartSearch ? (
-              <label htmlFor="route-start-input">출발지</label>
-            ) : "출발지"}
-          </h3>
-          {showStartSearch && (
-            <>
-              <div className="route-start-input">
-                <input
-                  id="route-start-input"
-                  type="search"
-                  maxLength={200}
-                  autoComplete="off"
-                  placeholder="건물이나 장소를 검색해 주세요"
-                  aria-describedby="route-start-hint"
-                  aria-controls="route-start-results"
-                  value={
-                    startQuery ?? (start ? startLabel(start, registeredPlaces) : "")
-                  }
-                  disabled={busy}
-                  onChange={(event) => {
-                    setStartQuery(event.target.value);
-                    if (start) void updateRoute("");
-                  }}
-                />
-                {start && (
-                  <button
-                    className="text-button"
-                    disabled={busy}
-                    onClick={() => selectStart("")}
-                  >
-                    선택 해제
-                  </button>
-                )}
-              </div>
-              <p id="route-start-hint" className="muted small">
-                지도나 검색 결과에서 출발지를 선택해 주세요.
-              </p>
-              {startQuery?.trim() && (
-                <div id="route-start-results" className="route-start-results">
-                  <p role="status">
-                    {candidates.length
-                      ? `검색 결과 ${candidates.length}곳`
-                      : "검색 결과가 없어요. 다른 장소명을 입력해 주세요."}
-                  </p>
-                  {candidates.map((item) => (
-                    <button
-                      key={item.id}
-                      className="choice"
-                      disabled={busy}
-                      onClick={() => selectStart(item.id)}
-                    >
-                      {item.name}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
+            <h3>출발지</h3>
             <div className="overview-card">
-            <div className="overview-heading">
-             <b>캠퍼스 지도</b>
-             <span>출발할 곳을 눌러 주세요</span>
-           </div>
-
-            <CampusOverviewMap
+              <div className="overview-heading">
+                <b>캠퍼스 지도</b>
+                <span>출발할 곳을 눌러 주세요</span>
+              </div>
+              <CampusOverviewMap
                 selected={startMapIds(start, registeredPlaces)}
-               startable={Object.keys(markerStarts)}
-             onSelect={(id, building) =>
-                selectStart(building ? id : markerStarts[id])
-           }
-          />
-        </div>
+                startable={Object.keys(markerStarts)}
+                onSelect={(id, building) =>
+                  selectStart(building ? id : markerStarts[id])
+                }
+              />
+            </div>
           </div>
         )}
-         
+
          {routeOption && !pickingOnMap && (
   <div className="overview-card route-preview">
     <div className="overview-heading">
