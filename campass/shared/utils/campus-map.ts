@@ -170,41 +170,129 @@ function bonHallimWaypoints(
   });
 }
 
-// 언덕길(2115 정류장 → 스콘스퀘어): 본관 북서쪽 모서리를 돌아 본관과 문예관 사이 길로 올라가
-// 한림관·대일관·문예관 사이 갈림길을 지나 대일관 남쪽에서 광장으로 들어간다. 정류장 쪽부터의 순서.
-// 실외 길의 대략적인 선형이며 높이는 거리 비율로 정류장 → 광장 높이를 잇는다.
+// 언덕길(2115 정류장 ↔ 스콘스퀘어)의 가운데 선. 정류장 쪽부터의 순서.
+// 본관 북서쪽 모서리를 돌아 본관과 문예관 사이 길을 지나 한림관·대일관·문예관 사이
+// 갈림길을 거쳐 대일관 남쪽에서 광장으로 들어간다. 실외 길의 대략적인 선형이며
+// 높이는 거리 비율로 정류장 → 광장 진입점 높이를 잇고, 광장 안은 평지로 둔다.
 export const HILL_ROAD: [number, number][] = [
-  [-72, 54], // 본관 북서쪽 모서리 바깥
-  [-40, 46], // 본관과 문예관 사이 길
-  [-15, 36],
+  [-68.2, 66.1], // 본관 북서쪽 모서리 (정류장까지 끝까지 갈 때만 지남)
+  [-14, 37], // 문예관 앞
   [5, 27], // 한림관·대일관·문예관 사이 갈림길
   [24, 16], // 한림관과 대일관 사이
   [36, 11], // 광장 북쪽 끝 진입
 ];
 
-function hillWaypoints(
-  from: CampusCoordinate,
-  to: CampusCoordinate,
-  fromBus: boolean,
-): CampusCoordinate[] {
-  // 정류장에서 광장 진입점까지 오르막, 광장 안은 평지
-  const bus = fromBus ? from : to;
-  const plaza = fromBus ? to : from;
+// 언덕길 가운데에서 건물로 꺾기만 하는 지점. 정류장까지 가는 길에는 지나지 않는다.
+// from: 광장 쪽에서 내려오다 이 지점으로 갈라지는 HILL_ROAD 꼭짓점
+export const HILL_STOPS: { name: string; xy: [number, number]; from: number }[] = [
+  { name: "북악관 앞", xy: [-67.8, 74.7], from: 1 },
+];
+
+const BUS = "bus_stop_2115";
+const PLAZA_NODE = "스콘스퀘어";
+
+type HillPoint = { point: CampusCoordinate; path: CampusCoordinate[] };
+
+// 꺾을 수 있는 언덕길 지점과, 정류장 쪽 순서로 그 지점부터 광장 진입점까지의 길
+function hillPoints(bus: CampusCoordinate, plaza: CampusCoordinate): HillPoint[] {
   const xy = [[bus.east, bus.north], ...HILL_ROAD];
   const lengths = xy.slice(1).map((p, i) => Math.hypot(p[0] - xy[i][0], p[1] - xy[i][1]));
   const total = lengths.reduce((a, b) => a + b, 0);
   let walked = 0;
-  const points = HILL_ROAD.map(([east, north], i) => {
+  const road = HILL_ROAD.map(([east, north], i) => {
     walked += lengths[i];
     const t = total ? walked / total : 1;
     return { east, north, elevation: bus.elevation + (plaza.elevation - bus.elevation) * t };
   });
-  return fromBus ? points : points.toReversed();
+  const main = road.map((point, i) => ({ point, path: road.slice(i) }));
+  const stops = HILL_STOPS.map(({ xy: [east, north], from }) => {
+    // 높이는 갈라지는 구간(정류장 쪽 이전 꼭짓점 → from)에 투영해 보간
+    const b = road[from];
+    const a = from > 0 ? road[from - 1] : bus;
+    const dx = b.east - a.east, dy = b.north - a.north;
+    const len2 = dx * dx + dy * dy;
+    const t = len2 ? Math.min(1, Math.max(0, ((east - a.east) * dx + (north - a.north) * dy) / len2)) : 1;
+    const point = { east, north, elevation: a.elevation + (b.elevation - a.elevation) * t };
+    return { point, path: [point, ...road.slice(from)] };
+  });
+  return [...main, ...stops];
+}
+
+const pairOf = (path: CampusCoordinate[]) =>
+  path.slice(1).map((p, j) => [path[j], p] as [CampusCoordinate, CampusCoordinate]);
+
+const pathLength = (path: CampusCoordinate[]) =>
+  path.slice(1).reduce((sum, p, i) => sum + Math.hypot(p.east - path[i].east, p.north - path[i].north), 0);
+
+// 언덕길 위에서 건물로 꺾는 곳: 건물 입구마다 가장 가까운 언덕길 지점을 찾고,
+// 광장 진입점에서 그 지점까지 걸은 거리 + 입구까지 거리가 가장 짧은 입구를 쓴다.
+function hillTurn(buildingId: string, points: HillPoint[]) {
+  let best: { at: HillPoint; door: [number, number]; cost: number } | undefined;
+  for (const entrance of campusEntrances()) {
+    if (entrance.building !== buildingId) continue;
+    const gap = points.map(({ point }) =>
+      Math.hypot(point.east - entrance.local[0], point.north - entrance.local[1]),
+    );
+    const index = gap.indexOf(Math.min(...gap));
+    const cost = pathLength(points[index].path) + gap[index];
+    if (!best || cost < best.cost) best = { at: points[index], door: entrance.local, cost };
+  }
+  return best;
+}
+
+// 광장 → 언덕길 → 도착 건물 입구 → 도착 지점. 정류장·본관을 거치지 않는다.
+function hillToBuilding(target: string): CampusCoordinate[] | undefined {
+  const bus = routeCoordinate(BUS);
+  const plaza = routeCoordinate(PLAZA_NODE);
+  const goal = routeCoordinate(target);
+  if (!bus || !plaza || !goal) return;
+  const turn = hillTurn(target.split("|")[0], hillPoints(bus, plaza));
+  if (!turn) return;
+  const door = { east: turn.door[0], north: turn.door[1], elevation: turn.at.point.elevation };
+  return [plaza, ...turn.at.path.toReversed(), door, { ...door, elevation: goal.elevation }];
+}
+
+// 언덕길에서 바로 들어가는 건물. 입구는 언덕길과 같은 높이에 있으므로
+// 꺾는 지점의 언덕 높이와 가장 가까운 층으로 들어간다.
+export const HILL_ENTRY_BUILDINGS = ["munye", "bukak"];
+
+/** 광장에서 언덕길을 따라 건물 입구로 들어갈 때의 층과 걷는 거리 */
+export function hillEntry(buildingId: string): { floor: string; length: number } | undefined {
+  const building = campusMap.buildings.find((b) => b.id === buildingId);
+  const bus = routeCoordinate(BUS);
+  const plaza = routeCoordinate(PLAZA_NODE);
+  if (!building || !bus || !plaza) return;
+  const turn = hillTurn(buildingId, hillPoints(bus, plaza));
+  if (!turn) return;
+  const corner = turn.at.point;
+  const elevations = getFloorElevations(building);
+  const gaps = elevations.map((e) => Math.abs(e - corner.elevation));
+  const floor = building.floors[gaps.indexOf(Math.min(...gaps))].floor;
+  const length = pathLength([plaza, ...turn.at.path.toReversed()]) +
+    Math.hypot(turn.door[0] - corner.east, turn.door[1] - corner.north);
+  return { floor, length: Math.round(length * 10) / 10 };
 }
 
 export function routeSegments(
   nodes: string[],
 ): [CampusCoordinate, CampusCoordinate][] {
+  // 언덕길로 내려가 정류장 뒤 건물(본관 → 북악관 등)로 이어지는 경로는 정류장까지 내려가지 않고
+  // 언덕길 가운데를 따라 내려오다 도착 건물 입구와 가까운 곳(문예관 앞, 북악관 앞 등)에서 꺾는다.
+  // 올라갈 때(출발 건물 → 정류장 → 광장)도 같은 길을 거꾸로 쓴다.
+  const down = nodes.findIndex((n, i) => n === PLAZA_NODE && nodes[i + 1] === BUS);
+  if (down >= 0 && down + 2 < nodes.length) {
+    const tail = hillToBuilding(nodes.at(-1)!);
+    if (tail) return dropEmpty([...routeSegments(nodes.slice(0, down + 1)), ...pairOf(tail)]);
+  }
+  const up = nodes.findIndex((n, i) => n === BUS && nodes[i + 1] === PLAZA_NODE);
+  if (up > 0) {
+    const head = hillToBuilding(nodes[0]);
+    if (head)
+      return dropEmpty([
+        ...pairOf(head.toReversed()),
+        ...routeSegments(nodes.slice(up + 1)),
+      ]);
+  }
   const points = nodes.map(routeCoordinate);
   const segments = points.slice(1).flatMap((point, i) => {
     const previous = points[i];
@@ -218,9 +306,16 @@ export function routeSegments(
       return path.slice(1).map((p, j) => [path[j], p] as [CampusCoordinate, CampusCoordinate]);
     }
     const pair = [nodes[i], nodes[i + 1]];
-    if (pair.includes("bus_stop_2115") && pair.includes("스콘스퀘어")) {
-      const path = [previous, ...hillWaypoints(previous, point, nodes[i] === "bus_stop_2115"), point];
-      return path.slice(1).map((p, j) => [path[j], p] as [CampusCoordinate, CampusCoordinate]);
+    // 광장 ↔ 문예관·북악관: 언덕길 가운데를 따라가다 입구 앞에서 같은 높이로 꺾는다.
+    const entered = pair.find((n) => HILL_ENTRY_BUILDINGS.includes(n.split("|")[0]));
+    if (pair.includes(PLAZA_NODE) && entered) {
+      const path = hillToBuilding(entered);
+      if (path) return pairOf(nodes[i] === PLAZA_NODE ? path : path.toReversed());
+    }
+    if (pair.includes(BUS) && pair.includes(PLAZA_NODE)) {
+      const fromBus = nodes[i] === BUS;
+      const road = hillPoints(fromBus ? previous : point, fromBus ? point : previous)[0].path;
+      return pairOf([previous, ...(fromBus ? road : road.toReversed()), point]);
     }
     const fromYudam = nodes[i].startsWith("yudam|");
     const toYudam = nodes[i + 1].startsWith("yudam|");
@@ -239,7 +334,11 @@ export function routeSegments(
     }
     return [[previous, point] as [CampusCoordinate, CampusCoordinate]];
   });
-  // 동일 좌표의 정류장↔본관 연결은 생략하되 수직 층 이동은 남긴다.
+  return dropEmpty(segments);
+}
+
+// 동일 좌표의 정류장↔본관 연결은 생략하되 수직 층 이동은 남긴다.
+function dropEmpty(segments: [CampusCoordinate, CampusCoordinate][]) {
   return segments.filter(([a, b]) =>
     Math.hypot(a.east - b.east, a.north - b.north, a.elevation - b.elevation) > 0.001,
   );

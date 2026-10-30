@@ -9,6 +9,7 @@ import {
   type LinkStatus,
   type LocalPoint,
 } from "./types.ts";
+import { HILL_ENTRY_BUILDINGS, hillEntry } from "../campus-map.ts";
 
 // 캠퍼스 이동 그래프. 노드는 '건물ID|층', 스콘스퀘어, 지하주차장, 출발 지점(2115 정류장 · 정문)
 export const PLAZA = "스콘스퀘어";
@@ -192,6 +193,24 @@ const hillEdges: Edge[] = [
   approximate: true,
 }));
 graphEdges.push(...hillEdges);
+
+// 언덕길 가운데에서 문예관 앞 · 북악관 앞 입구로 바로 들어가는 길. 입구는 언덕과 같은 높이
+for (const id of HILL_ENTRY_BUILDINGS) {
+  const entry = hillEntry(id);
+  if (!entry) continue;
+  graphEdges.push({
+    id: `hill-plaza-${id}`,
+    a: PLAZA,
+    b: nodeKey(id, entry.floor),
+    cost: entry.length,
+    kind: "link",
+    stepFree: false,
+    // 입구 층은 언덕 높이로 정한 값이라 현장 확인 전까지 '추정'
+    status: "추정",
+    approximate: true,
+    hillMode: "hill",
+  });
+}
 
 const adjacency = new Map<string, Edge[]>();
 for (const edge of graphEdges)

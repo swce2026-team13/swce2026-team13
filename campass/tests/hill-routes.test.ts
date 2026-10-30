@@ -47,3 +47,18 @@ test("step-free and same-level routes retain their constraints", () => {
     ),
   );
 });
+
+test("언덕길로 문예관·북악관에 갈 때는 정류장·본관을 거치지 않고 언덕과 같은 높이 층으로 들어간다", () => {
+  for (const [destination, entry] of [
+    ["munye", "munye|2"],
+    ["bukak", "bukak|1"],
+  ]) {
+    const hill = calculateRoute("hyein", destination, false).options.find(
+      (o) => o.hillMode === "hill",
+    )!;
+    assert.ok(hill.links.includes(`hill-plaza-${destination}`));
+    assert.ok(!hill.nodes.includes("bus_stop_2115"));
+    assert.ok(!hill.nodes.some((n) => n.startsWith("bon|")));
+    assert.ok(hill.nodes.includes(entry));
+  }
+});

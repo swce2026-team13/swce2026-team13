@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   HILL_ROAD,
+  HILL_STOPS,
   campusMap,
   routeSegments,
   routeCoordinate,
@@ -161,6 +162,11 @@ test("본관 → 한림관은 본관 오른쪽 입구와 연결통로를 따라 
   assert.deepEqual([start.east, start.north], at("passage_bon_hallim"));
 });
 
+test("정류장에서 광장까지 갈 때는 북악관 앞(꺾는 지점)을 지나지 않는다", () => {
+  const corners = routeSegments(["bus_stop_2115", "스콘스퀘어"]).map(([a]) => [a.east, a.north]);
+  assert.ok(!corners.some(([e, n]) => e === HILL_STOPS[0].xy[0] && n === HILL_STOPS[0].xy[1]));
+});
+
 test("언덕길은 한림관·대일관·문예관 사이 길을 따라 광장으로 오르고 높이가 계속 오른다", () => {
   const segments = routeSegments(["bus_stop_2115", "스콘스퀘어", "hyein|1"]);
   assert.equal(segments.length, HILL_ROAD.length + 2);
@@ -173,6 +179,39 @@ test("언덕길은 한림관·대일관·문예관 사이 길을 따라 광장�
   assert.equal(segments[HILL_ROAD.length][1].elevation, 149);
   const back = routeSegments(["스콘스퀘어", "bus_stop_2115"]);
   assert.deepEqual(back, segments.slice(0, HILL_ROAD.length + 1).toReversed().map(([a, b]) => [b, a]));
+});
+
+test("언덕길로 내려갈 때는 정류장·본관을 거치지 않고 도착 건물 입구 가까운 언덕길 지점에서 꺾는다", () => {
+  const at = (id: string) => campusEntrances().find(e => e.id === id)!.local;
+  const turnOf = (nodes: string[]) => {
+    const segments = routeSegments(nodes);
+    const corners = segments.map(([a]) => [a.east, a.north]);
+    const last = segments.at(-1)!;
+    return { corners, segments, last };
+  };
+  const bus = routeCoordinate("bus_stop_2115")!;
+  const cases: [string[], [number, number], string][] = [
+    [["hyein|1", "스콘스퀘어", "bus_stop_2115", "bon|1", "bukak|B1", "bukak|7", "munye|6"], HILL_ROAD[1], "munye_entrance_1"],
+    [["hyein|1", "스콘스퀘어", "bus_stop_2115", "bon|1", "bukak|B1", "bukak|3"], HILL_STOPS[0].xy, "bukak_entrance_1"],
+    [["hyein|1", "스콘스퀘어", "bus_stop_2115", "bon|1", "bon|5"], HILL_ROAD[1], "bon_entrance_3"],
+  ];
+  for (const [nodes, corner, door] of cases) {
+    const { corners, segments, last } = turnOf(nodes);
+    assert.ok(corners.every(([e, n]) => e !== bus.east || n !== bus.north));
+    assert.ok(!corners.some(([e, n]) => e === HILL_ROAD[0][0] && n === HILL_ROAD[0][1]));
+    const doorIndex = corners.findIndex(([e, n]) => e === at(door)[0] && n === at(door)[1]);
+    assert.deepEqual(corners[doorIndex - 1], corner);
+    assert.deepEqual([last[1].east, last[1].north], at(door));
+    assert.equal(last[1].elevation, routeCoordinate(nodes.at(-1)!)!.elevation);
+    assert.ok(segments.length > 0);
+  }
+  // 정류장이 도착지이면 언덕길 끝까지 내려간다.
+  const toBus = routeSegments(["hyein|1", "스콘스퀘어", "bus_stop_2115"]);
+  assert.deepEqual(toBus.at(-1)![1], bus);
+  // 올라갈 때는 같은 길을 거꾸로 쓴다.
+  const down = routeSegments(["스콘스퀘어", "bus_stop_2115", "bon|1", "bukak|B1", "bukak|7", "munye|6"]);
+  const up = routeSegments(["munye|6", "bukak|7", "bukak|B1", "bon|1", "bus_stop_2115", "스콘스퀘어"]);
+  assert.deepEqual(up, down.toReversed().map(([a, b]) => [b, a]));
 });
 
 test("본관은 정류장 쪽 공통 표시점으로 연결하고 겹친 선분은 생략한다", () => {
