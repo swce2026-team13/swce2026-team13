@@ -27,7 +27,8 @@ FRONTEND_WAYPOINTS = {
     "bus_stop_2115", "main_bus_stop_passage", "main_corridor",
     "main_elevator_front", "to_hallim", "hallim_to_elevator",
     "hallim_elevator_front", "hallim_6f_elevator", "hallim_6f_corridor",
-    "eunju1_5f_front", "parking",
+    "eunju1_5f_front", "parking", "parking-entry",
+    "hyein", "stairs", "interview",
 }
 
 app = FastAPI()
