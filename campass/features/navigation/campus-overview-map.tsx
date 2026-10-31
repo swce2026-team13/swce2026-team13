@@ -726,6 +726,15 @@ export function CampusOverviewMap({
             {pill(arrivalLabel, "도착", "#2860ed", 0)}
           </g>;
         })()}
+        {highlight?.position && (
+          <g className="overview-me" pointerEvents="none" aria-label="현재 위치">
+            <circle cx={highlight.position[0]} cy={highlight.position[1]} r="7" fill="#2563EB" opacity="0.25">
+              <animate attributeName="r" values="6;13" dur="1.8s" repeatCount="indefinite" />
+              <animate attributeName="opacity" values="0.45;0" dur="1.8s" repeatCount="indefinite" />
+            </circle>
+            <circle cx={highlight.position[0]} cy={highlight.position[1]} r="5.5" fill="#2563EB" stroke="white" strokeWidth="2.5" />
+          </g>
+        )}
       </svg>
       {!backgroundOnly && !buildingPicker && !focused && (
         <EntrancePins

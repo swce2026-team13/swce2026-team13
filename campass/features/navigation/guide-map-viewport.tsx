@@ -5,6 +5,7 @@ import { Photo, Tag } from "@/components/ui";
 import { CampusOverviewMap } from "@/features/navigation/campus-overview-map";
 import { CampusMap } from "@/features/navigation/campus-map";
 import { mapRouteBuildings } from "@/shared/utils/map-route";
+import { currentPosition } from "@/shared/utils/campus-map";
 import {
   guideLegLabel,
   type GuideMapData,
@@ -23,6 +24,8 @@ function RouteMap({ map }: { map: GuideMapData }) {
   const [flat, setFlat] = useState(false);
   const highlight = overviewRouteHighlight(map);
   const buildings = mapRouteBuildings(map);
+  // 안내 중일 때만(지금 단계가 있을 때) 내 위치 점을 찍어요. 미리보기는 경로만 보여요.
+  const position = currentPosition(map.nodes, map.current);
   if (!map.nodes.length) {
     return (
       <div className="guide-map-viewport-placeholder">

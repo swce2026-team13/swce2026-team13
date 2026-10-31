@@ -84,6 +84,69 @@
   background: #2563eb;
   color: white;
 }
+/* 정류장·정문·주차장 표시 이름: 2D 지도 아이콘과 같은 색의 알약 모양 */
+.markerLabel {
+  border-radius: 999px;
+  padding: 2px 7px;
+  color: white;
+  background: #2563eb;
+  border: 1.5px solid white;
+}
+.markerLabel[data-tap="true"] {
+  pointer-events: auto;
+  cursor: pointer;
+}
+.markerLabel[data-kind="gate"] {
+  background: #1b2333;
+}
+.markerLabel[data-selected="true"] {
+  background: white;
+  color: #1747b5;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px #bfdbfe;
+}
+
+/* 안내 중 내 위치: 흰 테두리의 파란 점 + 퍼지는 고리 */
+.me {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #2563eb;
+  border: 3px solid white;
+  box-shadow: 0 1px 4px #0f2a5c66;
+  pointer-events: none;
+}
+.me::before {
+  content: "";
+  position: absolute;
+  inset: -9px;
+  border-radius: 50%;
+  background: #2563eb40;
+  animation: me-pulse 1.8s ease-out infinite;
+}
+.me[hidden] {
+  display: none;
+}
+@keyframes me-pulse {
+  from {
+    transform: scale(0.5);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .me::before {
+    animation: none;
+    opacity: 0.6;
+  }
+}
 
 .north {
   position: absolute;
