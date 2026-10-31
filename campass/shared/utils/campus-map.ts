@@ -73,12 +73,37 @@ export function getFloorElevations(building: MapBuilding): number[] {
 
 export type MapSelection = { buildingId: string };
 
+export type MapMarkerKind = "bus" | "parking" | "gate";
+
+export type MapMarker = {
+  /** entrances.json 의 입구 id (2D 지도 표시 id와 같음) */
+  id: string;
+  label: string;
+  kind: MapMarkerKind;
+  /** 길찾기 그래프에서 이 표시를 가리키는 노드 id */
+  routeId: string;
+};
+
+// 지도에서 출발로 고를 수 있는 실외 지점. 2D 지도의 출발 버튼(정류장·정문·주차장)과 같다.
+export const MAP_MARKERS: MapMarker[] = [
+  { id: "bus_stop_2115", label: "2115번 정류장", kind: "bus", routeId: "bus_stop_2115" },
+  { id: "gate_main", label: "정문", kind: "gate", routeId: "gate" },
+  { id: "parking_entrance_1", label: "1주차장", kind: "parking", routeId: "parking" },
+];
+
+/** 3D 지도에 표시할 지점의 좌표. 높이는 연결 층 또는 가장 가까운 등고선으로 정한다. */
+export function markerCoordinate(id: string): CampusCoordinate | undefined {
+  return routeCoordinate(id);
+}
+
 export type CampusMapController = {
   fitAll: () => void;
   zoom: (factor: number) => void;
   selectBuilding: (id: string) => void;
   highlightBuildings: (ids: string[], currentId?: string) => void;
-  showRoute: (nodes: string[]) => void;
+  showRoute: (nodes: string[], annotation?: { name: string; color: string }) => void;
+  /** 안내 중 내 위치 점. undefined면 숨긴다. */
+  showPosition: (position?: CampusCoordinate) => void;
   dispose: () => void;
 };
 
@@ -342,4 +367,230 @@ function dropEmpty(segments: [CampusCoordinate, CampusCoordinate][]) {
   return segments.filter(([a, b]) =>
     Math.hypot(a.east - b.east, a.north - b.north, a.elevation - b.elevation) > 0.001,
   );
+}
+
+/**
+ * 안내 중 지금 단계의 위치(내 위치 점). 연결통로처럼 다음 지점으로 이동 중인 단계는
+ * 지금 지점과 다음 지점 사이 길의 가운데, 그 밖에는 지금 지점에 둔다.
+ */
+export function currentPosition(
+  nodes: string[],
+  current: { node?: string; link?: string },
+): CampusCoordinate | undefined {
+  const node = current.node;
+  if (!node) return;
+  const next = nodes[nodes.indexOf(node) + 1];
+  if (current.link && next && nodes.includes(node)) {
+    const path = routeSegments([node, next]);
+    const total = path.reduce((sum, [a, b]) => sum + span(a, b), 0);
+    let left = total / 2;
+    for (const [a, b] of path) {
+      const length = span(a, b);
+      if (length && left <= length) {
+        const t = left / length;
+        return {
+          east: a.east + (b.east - a.east) * t,
+          north: a.north + (b.north - a.north) * t,
+          elevation: a.elevation + (b.elevation - a.elevation) * t,
+        };
+      }
+      left -= length;
+    }
+  }
+  return routeCoordinate(node);
+}
+
+const span = (a: CampusCoordinate, b: CampusCoordinate) =>
+  Math.hypot(a.east - b.east, a.north - b.north, a.elevation - b.elevation);
+
+// ── 지형 ─────────────────────────────────────────────────────────────
+// 등고선(5m 간격)으로 격자 높이를 만든다. 격자점마다 가장 가까운 등고선과
+// 높이가 다른 그다음 등고선까지의 거리 비율로 두 높이를 잇고, 두 번 다듬는다.
+// 스콘스퀘어 안은 광장 높이로 평평하게 둔다.
+
+export type CampusTerrain = {
+  /** 서쪽·남쪽 끝 (로컬 미터) */
+  origin: [number, number];
+  step: number;
+  columns: number;
+  rows: number;
+  /** rows × columns, 행은 남→북, 열은 서→동 */
+  heights: Float32Array;
+  min: number;
+  max: number;
+};
+
+const TERRAIN_STEP = 4;
+const TERRAIN_SEARCH = 60;
+let terrainCache: CampusTerrain | undefined;
+
+function insidePolygon([x, y]: number[], polygon: number[][]) {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const [xi, yi] = polygon[i];
+    const [xj, yj] = polygon[j];
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi)
+      inside = !inside;
+  }
+  return inside;
+}
+
+export function campusTerrain(): CampusTerrain {
+  if (terrainCache) return terrainCache;
+  // 등고선을 2m 간격 표본으로 촘촘하게 만들고 10m 칸에 나눠 담는다.
+  const samples: { x: number; y: number; e: number }[] = [];
+  for (const contour of campusMap.contours)
+    contour.p.forEach((p, i) => {
+      const q = contour.p[i + 1];
+      if (!q) return samples.push({ x: p[0], y: p[1], e: contour.e });
+      const n = Math.max(1, Math.ceil(Math.hypot(q[0] - p[0], q[1] - p[1]) / 2));
+      for (let k = 0; k < n; k++)
+        samples.push({
+          x: p[0] + ((q[0] - p[0]) * k) / n,
+          y: p[1] + ((q[1] - p[1]) * k) / n,
+          e: contour.e,
+        });
+    });
+  const xs = samples.map((s) => s.x);
+  const ys = samples.map((s) => s.y);
+  const minX = Math.floor(Math.min(...xs));
+  const minY = Math.floor(Math.min(...ys));
+  const columns = Math.ceil((Math.max(...xs) - minX) / TERRAIN_STEP) + 1;
+  const rows = Math.ceil((Math.max(...ys) - minY) / TERRAIN_STEP) + 1;
+  // 등고선 높이를 번호로 바꿔 두고(5m 간격 약 20단계), 격자점마다 높이별 최소 거리만 기록한다.
+  const levelValues = [...new Set(samples.map((s) => s.e))].sort((p, q) => p - q);
+  const levelOf = new Map(levelValues.map((e, i) => [e, i]));
+  const CELL = 10;
+  const cellColumns = Math.ceil(columns * TERRAIN_STEP / CELL) + 1;
+  const cellRows = Math.ceil(rows * TERRAIN_STEP / CELL) + 1;
+  const cells: number[][] = Array.from({ length: cellColumns * cellRows }, () => []);
+  samples.forEach((s, index) => {
+    const cx = Math.floor((s.x - minX) / CELL);
+    const cy = Math.floor((s.y - minY) / CELL);
+    cells[cy * cellColumns + cx].push(index);
+  });
+  const sx = Float64Array.from(samples, (s) => s.x);
+  const sy = Float64Array.from(samples, (s) => s.y);
+  const sl = Int32Array.from(samples, (s) => levelOf.get(s.e)!);
+  const reach = Math.ceil(TERRAIN_SEARCH / CELL);
+  const best = new Float64Array(levelValues.length);
+  let heights = new Float32Array(columns * rows);
+  for (let r = 0; r < rows; r++)
+    for (let c = 0; c < columns; c++) {
+      const x = minX + c * TERRAIN_STEP;
+      const y = minY + r * TERRAIN_STEP;
+      const cx = Math.floor((x - minX) / CELL);
+      const cy = Math.floor((y - minY) / CELL);
+      best.fill(Infinity);
+      for (let j = Math.max(0, cy - reach); j <= Math.min(cellRows - 1, cy + reach); j++)
+        for (let i = Math.max(0, cx - reach); i <= Math.min(cellColumns - 1, cx + reach); i++)
+          for (const k of cells[j * cellColumns + i]) {
+            const dx = sx[k] - x;
+            const dy = sy[k] - y;
+            const d = dx * dx + dy * dy;
+            if (d < best[sl[k]]) best[sl[k]] = d;
+          }
+      // 가장 가까운 높이 두 개
+      let l1 = -1;
+      let l2 = -1;
+      for (let l = 0; l < best.length; l++) {
+        if (best[l] === Infinity) continue;
+        if (l1 < 0 || best[l] < best[l1]) {
+          l2 = l1;
+          l1 = l;
+        } else if (l2 < 0 || best[l] < best[l2]) l2 = l;
+      }
+      let h = NaN;
+      if (l1 >= 0 && l2 < 0) h = levelValues[l1];
+      else if (l1 >= 0) {
+        const d1 = Math.sqrt(best[l1]);
+        const d2 = Math.sqrt(best[l2]);
+        h = levelValues[l1] + ((levelValues[l2] - levelValues[l1]) * d1) / (d1 + d2 || 1);
+      }
+      heights[r * columns + c] = h;
+    }
+  // 표본이 닿지 않은 칸은 가장 낮은 등고선 높이로 채운다.
+  const fallback = Math.min(...campusMap.contours.map((c) => c.e));
+  for (let i = 0; i < heights.length; i++) if (Number.isNaN(heights[i])) heights[i] = fallback;
+  const plaza = campusMap.plaza.polygon;
+  const flat = (r: number, c: number) =>
+    insidePolygon([minX + c * TERRAIN_STEP, minY + r * TERRAIN_STEP], plaza);
+  for (let pass = 0; pass < 2; pass++) {
+    const next = new Float32Array(heights.length);
+    for (let r = 0; r < rows; r++)
+      for (let c = 0; c < columns; c++) {
+        let sum = 0;
+        let count = 0;
+        for (let i = -1; i <= 1; i++)
+          for (let j = -1; j <= 1; j++) {
+            const rr = r + i;
+            const cc = c + j;
+            if (rr < 0 || cc < 0 || rr >= rows || cc >= columns) continue;
+            sum += heights[rr * columns + cc];
+            count++;
+          }
+        next[r * columns + c] = sum / count;
+      }
+    heights = next;
+  }
+  for (let r = 0; r < rows; r++)
+    for (let c = 0; c < columns; c++)
+      if (flat(r, c)) heights[r * columns + c] = PLAZA_ELEVATION - 0.3;
+  let min = Infinity;
+  let max = -Infinity;
+  for (const h of heights) {
+    min = Math.min(min, h);
+    max = Math.max(max, h);
+  }
+  terrainCache = { origin: [minX, minY], step: TERRAIN_STEP, columns, rows, heights, min, max };
+  return terrainCache;
+}
+
+/** 지형 판(원)의 중심과 반지름. 격자 안에 들어가는 가장 큰 원 */
+export function terrainDisc(): { center: [number, number]; radius: number } {
+  const t = campusTerrain();
+  const width = (t.columns - 1) * t.step;
+  const height = (t.rows - 1) * t.step;
+  return {
+    center: [t.origin[0] + width / 2, t.origin[1] + height / 2],
+    radius: Math.min(width, height) / 2 - t.step,
+  };
+}
+
+/** 지형 격자에서 (동, 북) 지점의 땅 높이(양선형 보간). 격자 밖은 가장자리 값 */
+export function terrainHeight(east: number, north: number): number {
+  const t = campusTerrain();
+  const fx = Math.min(Math.max((east - t.origin[0]) / t.step, 0), t.columns - 1);
+  const fy = Math.min(Math.max((north - t.origin[1]) / t.step, 0), t.rows - 1);
+  const c = Math.min(Math.floor(fx), t.columns - 2);
+  const r = Math.min(Math.floor(fy), t.rows - 2);
+  const u = fx - c;
+  const v = fy - r;
+  const at = (rr: number, cc: number) => t.heights[rr * t.columns + cc];
+  return (
+    at(r, c) * (1 - u) * (1 - v) +
+    at(r, c + 1) * u * (1 - v) +
+    at(r + 1, c) * (1 - u) * v +
+    at(r + 1, c + 1) * u * v
+  );
+}
+
+/** 건물 둘레에서 가장 낮은 땅 높이. 이보다 위가 다 묻힌 층은 지하로 본다. */
+export function buildingGround(building: MapBuilding): number {
+  const points = building.poly.flatMap((p, i) => {
+    const q = building.poly[(i + 1) % building.poly.length];
+    return [p, [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2]];
+  });
+  return Math.min(...points.map(([e, n]) => terrainHeight(e, n)));
+}
+
+/** 지하층인지: 층 이름이 B로 시작하거나(지하 1·2층), 천장까지 땅에 완전히 묻힌 층 */
+export function undergroundFloors(building: MapBuilding): boolean[] {
+  const ground = buildingGround(building);
+  const elevations = getFloorElevations(building);
+  return elevations.map((elevation, i) => {
+    if (/^B\d/.test(building.floors[i].floor)) return true;
+    const top = elevations[i + 1] ?? elevation + FLOOR_HEIGHT;
+    return top <= ground + 0.5;
+  });
 }

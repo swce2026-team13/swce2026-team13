@@ -84,7 +84,7 @@ export const places: Place[] = [
     aliases: [name],
     verified: true,
     source: sources.notice,
-    description: "서경대학교 공식 캠퍼스맵 등재",
+    description: "",
   })),
   ...["301", "302", "303", "304", "305", "307", "311"].map((room): Place => ({
     id: `hyein-${room}`,
@@ -117,7 +117,7 @@ export const places: Place[] = [
     aliases: ["주차장", "P1"],
     verified: true,
     source: sources.notice,
-    description: "공식 캠퍼스맵 등재 · 실내 동선은 미검증",
+    description: "실내 동선은 미검증",
   },
   {
     id: "elevator",

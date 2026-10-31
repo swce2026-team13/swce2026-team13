@@ -7,6 +7,13 @@ import {
   routeSegments,
   routeCoordinate,
   getFloorElevations,
+  MAP_MARKERS,
+  markerCoordinate,
+  currentPosition,
+  campusTerrain,
+  terrainHeight,
+  terrainDisc,
+  undergroundFloors,
   toScenePosition,
 } from "../shared/utils/campus-map.ts";
 import { campusBuildings, campusEntrances } from "../shared/utils/campus3d/types.ts";
@@ -230,4 +237,73 @@ test("본관은 정류장 쪽 공통 표시점으로 연결하고 겹친 선분�
   assert.equal(route[0][1].north,door.local[1]);
   assert.deepEqual(routeSegments(["yudam|8","bon|1","bus_stop_2115"]),route.toReversed().map(([a,b])=>[b,a]));
   assert.equal(routeSegments(["bon|1","bon|1","bon|5"]).length,1);
+});
+
+test("3D 지도에 정류장·정문·1주차장 출발 지점을 실제 입구 좌표에 표시한다", () => {
+  assert.deepEqual(MAP_MARKERS.map((m) => m.id), ["bus_stop_2115", "gate_main", "parking_entrance_1"]);
+  for (const marker of MAP_MARKERS) {
+    const entrance = campusEntrances().find((e) => e.id === marker.id)!;
+    const at = markerCoordinate(marker.id)!;
+    assert.deepEqual([at.east, at.north], entrance.local);
+    assert.ok(Number.isFinite(at.elevation));
+  }
+  // 2115 정류장은 본관 1층과 같은 높이, 정문은 언덕 아래(등고선 높이)라 정류장보다 낮다.
+  assert.equal(markerCoordinate("bus_stop_2115")!.elevation, 127.3);
+  assert.ok(markerCoordinate("gate_main")!.elevation < markerCoordinate("bus_stop_2115")!.elevation);
+});
+
+test("안내 중 내 위치 점은 지금 지점에, 연결통로 단계는 다음 지점까지 길의 가운데에 둔다", () => {
+  const nodes = ["bus_stop_2115", "bon|1", "bon|5", "hallim|3", "hallim|6", "eunju1|5", "스콘스퀘어", "hyein|1"];
+  assert.equal(currentPosition(nodes, {}), undefined);
+  assert.deepEqual(currentPosition(nodes, { node: "gate_main" }), routeCoordinate("gate_main"));
+  assert.deepEqual(currentPosition(nodes, { node: "hallim|3" }), routeCoordinate("hallim|3"));
+  // 본관 5층 → 한림관 3층 연결통로: 본관 입구·연결통로를 지나는 길의 가운데, 같은 높이
+  const middle = currentPosition(nodes, { node: "bon|5", link: "bon-5__hallim-3" })!;
+  assert.equal(middle.elevation, 140);
+  // 길 위의 한 점: 어느 한 선분 위에 놓인다
+  const onPath = routeSegments(["bon|5", "hallim|3"]).some(([a, b]) => {
+    const ab = Math.hypot(a.east - b.east, a.north - b.north);
+    const am = Math.hypot(a.east - middle.east, a.north - middle.north);
+    const mb = Math.hypot(middle.east - b.east, middle.north - b.north);
+    return Math.abs(am + mb - ab) < 1e-6;
+  });
+  assert.ok(onPath);
+  assert.notDeepEqual(middle, routeCoordinate("bon|5"));
+  assert.notDeepEqual(middle, routeCoordinate("hallim|3"));
+  // 마지막 지점에서 link가 있어도 다음 지점이 없으면 그 지점에 둔다
+  assert.deepEqual(currentPosition(nodes, { node: "hyein|1", link: "x" }), routeCoordinate("hyein|1"));
+});
+
+test("등고선 지형은 실외 입구 높이와 맞고 건물·출발 지점이 모두 지형 판 안에 든다", () => {
+  const terrain = campusTerrain();
+  assert.ok(terrain.heights.every(Number.isFinite));
+  assert.ok(terrain.min >= 70 && terrain.max <= 170);
+  // 정류장·정문·1주차장: 기존 높이(연결 층 또는 가장 가까운 등고선)와 2m 안에서 맞는다
+  for (const id of ["bus_stop_2115", "gate_main", "parking_entrance_1"]) {
+    const at = routeCoordinate(id)!;
+    assert.ok(Math.abs(terrainHeight(at.east, at.north) - at.elevation) < 2, id);
+  }
+  // 스콘스퀘어 안은 광장 높이로 평평하다
+  const [px, py] = campusMap.plaza.center;
+  assert.ok(Math.abs(terrainHeight(px, py) - 149) < 0.5);
+  const disc = terrainDisc();
+  const inside = ([e, n]: number[]) => Math.hypot(e - disc.center[0], n - disc.center[1]) <= disc.radius;
+  assert.ok(campusMap.buildings.every((b) => b.poly.every(inside)));
+  assert.ok(MAP_MARKERS.every((m) => inside(campusEntrances().find((e) => e.id === m.id)!.local)));
+});
+
+test("지하층(B로 시작하는 층)은 점선 표시 대상이고 지상층은 아니다", () => {
+  for (const building of campusMap.buildings) {
+    const underground = undergroundFloors(building);
+    building.floors.forEach((floor, i) => {
+      if (floor.floor.startsWith("B")) assert.ok(underground[i], `${building.id} ${floor.floor}`);
+    });
+    // 맨 위층은 항상 지상
+    assert.equal(underground.at(-1), false, building.id);
+  }
+  const yudam = campusMap.buildings.find((b) => b.id === "yudam")!;
+  assert.deepEqual(
+    yudam.floors.filter((_, i) => undergroundFloors(yudam)[i]).map((f) => f.floor),
+    ["B2", "B1"],
+  );
 });

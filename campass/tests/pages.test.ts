@@ -67,13 +67,10 @@ test("모든 화면에 직접 접속 가능한 App Router 페이지 제공", () 
 
 test("모달 직접 접속과 일반 이동의 슬롯 초기화 지원", () => {
   for (const page of [
-    "default.tsx",
-    "page.tsx",
-    "(.)help/page.tsx",
-    "(.)map/page.tsx",
-    "(.)map/places/page.tsx",
-    "(.)guide/map/page.tsx",
-  ]) {
+  "default.tsx",
+  "page.tsx",
+  "(.)help/page.tsx",
+]) {
     assert.ok(existsSync(`app/@modal/${page}`), `슬롯 누락: ${page}`);
   }
   const modal = readFileSync("components/ui/route-modal.tsx", "utf8");
@@ -87,4 +84,12 @@ test("공통 레이아웃에서 페이지와 모달 연결", () => {
   const layout = readFileSync("app/layout.tsx", "utf8");
   assert.match(layout, /\{modal\}/);
   assert.match(layout, /CampusProvider/);
+});
+
+
+test("이전 지도 주소는 조건을 보존하여 길찾기 출발 선택으로 연결", () => {
+  const page = readFileSync("app/map/page.tsx", "utf8");
+  assert.match(page, /params.set\("pick", "start"\)/);
+  assert.match(page, /redirect\(`\/directions\?\$\{params\}`\)/);
+  assert.ok(existsSync("app/map/places/page.tsx"));
 });

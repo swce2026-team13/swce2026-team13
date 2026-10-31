@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import { routeSegments, type CampusCoordinate } from "@/shared/utils/campus-map";
+import { placeRouteBadge } from "@/shared/utils/map-labels";
 import { EntrancePins } from "./entrance-pins";
 import { layoutEntrancePins, mapEntrances } from "./map-entrances";
 import { DoorOpen, ArrowUpDown, Maximize, Minus, Plus } from "lucide-react";
@@ -74,6 +76,8 @@ export function CampusOverviewMap({
   buildingPicker = false,
   height: requestedHeight,
   focusBuilding,
+  backgroundOnly = false,
+  routePreview,
 }: {
   selected?: string[];
   // 출발로 고를 수 있는 지도 표시 id
@@ -94,9 +98,13 @@ export function CampusOverviewMap({
     BuildingDetailData,
     "id" | "name" | "entrances" | "elevator"
   >;
+    backgroundOnly?: boolean;
+  routePreview?: { nodes: string[]; name: string; color: string };
 }) {
-  const viewOnly = Boolean(pins || highlight || focusBuilding);
+  const viewOnly = Boolean(pins || highlight || focusBuilding || routePreview);
+  const destinationArea = routePreview?.nodes.at(-1)?.split("|")[0];
   const state = (area: string) =>
+    destinationArea === area ? "current" :
     highlight?.currentArea === area
       ? "current"
       : highlight?.areas.has(area)
@@ -131,14 +139,22 @@ export function CampusOverviewMap({
         ),
       ]
     : [];
-  const bounds = focused
+  const previewSegments = routePreview ? routeSegments(routePreview.nodes) : [];
+  const previewPoints = previewSegments.flat().map((p) => project([p.east, p.north]));
+  const previewBounds = previewPoints.length ? {
+    left: Math.min(...previewPoints.map(([x]) => x)) - 28,
+    right: Math.max(...previewPoints.map(([x]) => x)) + 28,
+    top: Math.min(...previewPoints.map(([, y]) => y)) - 35,
+    bottom: Math.max(...previewPoints.map(([, y]) => y)) + 28,
+  } : null;
+  const bounds = previewBounds ?? (focused
     ? {
         left: Math.min(...focusPoints.map(([x]) => x)),
         right: Math.max(...focusPoints.map(([x]) => x)),
         top: Math.min(...focusPoints.map(([, y]) => y)),
         bottom: Math.max(...focusPoints.map(([, y]) => y)),
       }
-    : null;
+    : null);
   const focusScale = bounds
     ? Math.min(
         ((size.width || MAP_WIDTH) - 64) /
@@ -254,7 +270,11 @@ export function CampusOverviewMap({
   const pressable = viewOnly ? undefined : "overview-building";
 
   return (
-    <div className={`overview-map${pickerMode ? " map-picker-surface" : ""}`}>
+    <div
+  className={`overview-map${pickerMode ? " map-picker-surface" : ""}${
+    backgroundOnly ? " overview-map-background-only" : ""
+  }`}
+>
       <svg
         ref={svgRef}
         viewBox={viewBox}
@@ -490,8 +510,9 @@ export function CampusOverviewMap({
             />
           </g>
         )}
-        <g
-          className="overview-labels"
+{!backgroundOnly && (
+  <g
+    className="overview-labels"
           textAnchor="middle"
           fontSize={11}
           fontWeight={500}
@@ -540,8 +561,10 @@ export function CampusOverviewMap({
                 {label.label}
               </text>
             </g>
-          ))}
-        </g>
+        ))}
+  </g>
+)}
+        
 
         {focused && focusBuilding && (
           <g pointerEvents="none">
@@ -670,8 +693,50 @@ export function CampusOverviewMap({
             </g>
           ))}
         </g>
+        {routePreview && previewSegments.length > 0 && (() => {
+          const toPoint = (p: CampusCoordinate) => project([p.east, p.north]);
+          const path = previewSegments.map(([a, b]) => `M${toPoint(a).join(" ")} L${toPoint(b).join(" ")}`).join(" ");
+          const start = toPoint(previewSegments[0][0]);
+          const end = toPoint(previewSegments.at(-1)![1]);
+          const lengths = previewSegments.map(([a, b]) => Math.hypot(b.east-a.east, b.north-a.north, b.elevation-a.elevation));
+          let remaining = lengths.reduce((a,b) => a+b,0)/2;
+          let middle = start;
+          for (let i=0; i<lengths.length; i++) {
+            if (remaining <= lengths[i]) { const [a,b]=previewSegments[i]; const t=lengths[i] ? remaining/lengths[i] : 0; middle=toPoint({ east:a.east+(b.east-a.east)*t, north:a.north+(b.north-a.north)*t, elevation:0 }); break; }
+            remaining -= lengths[i];
+          }
+          const routeLabelOffset = Math.hypot(middle[0]-end[0], middle[1]-end[1]) / labelScale < 80 ? 24 : -19;
+          const arrivalLabel = placeRouteBadge(end, 52*labelScale, 28*labelScale,
+            [...overviewBuildings.map((building,index) => {
+              const [x,y] = buildingLabelPositions[index];
+              const half = (building.label.length*11+18)/2*labelScale;
+              return {left:x-half,right:x+half,top:y-14*labelScale,bottom:y+14*labelScale};
+            }), {left:middle[0]-(routePreview.name.length*12+28)/2*labelScale, right:middle[0]+(routePreview.name.length*12+28)/2*labelScale, top:middle[1]+(routeLabelOffset-16)*labelScale, bottom:middle[1]+(routeLabelOffset+16)*labelScale}], {left:viewLeft+4*labelScale,right:viewLeft+width-4*labelScale,top:viewTop+4*labelScale,bottom:viewTop+height-4*labelScale});
+          const pill = (at: number[], text: string, color: string, dy: number) => <g transform={`translate(${at.join(" ")}) scale(${labelScale})`}>
+            <rect x={-(text.length*12+24)/2} y={dy-14} width={text.length*12+24} height={28} rx={14} fill={color} stroke="white" strokeWidth={2} />
+            <text textAnchor="middle" y={dy+4} fontSize={12} fontWeight={700} fill="white">{text}</text>
+          </g>;
+          return <g pointerEvents="none" aria-label={`${routePreview.name} 경로, 초록 출발점과 파란 도착점`}>
+            <path d={path} fill="none" stroke="white" strokeWidth={9} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+            <path d={path} fill="none" stroke="#2860ed" strokeWidth={5} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+            <circle cx={start[0]} cy={start[1]} r={7*labelScale} fill="#3f8a48" stroke="white" strokeWidth={2} vectorEffect="non-scaling-stroke" />
+            <circle cx={end[0]} cy={end[1]} r={7*labelScale} fill="#2860ed" stroke="white" strokeWidth={2} vectorEffect="non-scaling-stroke" />
+            {pill(middle, routePreview.name, routePreview.color, routeLabelOffset)}
+            <line x1={end[0]} y1={end[1]} x2={arrivalLabel[0]} y2={arrivalLabel[1]} stroke="#2860ed" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+            {pill(arrivalLabel, "도착", "#2860ed", 0)}
+          </g>;
+        })()}
+        {highlight?.position && (
+          <g className="overview-me" pointerEvents="none" aria-label="현재 위치">
+            <circle cx={highlight.position[0]} cy={highlight.position[1]} r="7" fill="#2563EB" opacity="0.25">
+              <animate attributeName="r" values="6;13" dur="1.8s" repeatCount="indefinite" />
+              <animate attributeName="opacity" values="0.45;0" dur="1.8s" repeatCount="indefinite" />
+            </circle>
+            <circle cx={highlight.position[0]} cy={highlight.position[1]} r="5.5" fill="#2563EB" stroke="white" strokeWidth="2.5" />
+          </g>
+        )}
       </svg>
-      {!buildingPicker && !focused && (
+      {!backgroundOnly && !buildingPicker && !focused && (
         <EntrancePins
           pins={entrancePositions}
           selected={selected}
@@ -684,7 +749,7 @@ export function CampusOverviewMap({
           }
         />
       )}
-      {pickerMode && (
+      {!backgroundOnly && pickerMode && (
         <button
           type="button"
           className="map-fit-all"
@@ -696,7 +761,8 @@ export function CampusOverviewMap({
           <Maximize size={14} /> 전체 보기
         </button>
       )}
-      <svg className="overview-north" viewBox="0 0 7 18" aria-hidden="true">
+      {!backgroundOnly && (
+    <svg className="overview-north" viewBox="0 0 7 18" aria-hidden="true">
         <path d="M0 9L3.5 0L7 9L3.5 7Z" fill="#192334" />
         <text
           x="3.5"
@@ -709,8 +775,9 @@ export function CampusOverviewMap({
           N
         </text>
       </svg>
-      {!focused && (
-        <div className="zoom">
+      )}
+      {!backgroundOnly && !focused && (
+       <div className="zoom">
           <button
             aria-label="지도 확대"
             disabled={zoom >= ZOOMS.length - 1}

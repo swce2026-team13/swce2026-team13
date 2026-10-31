@@ -458,7 +458,8 @@ test("HTTP 호실 장소는 검색되고 id로 찾을 수 있으며 길을 찾�
   const intent = await (await request("intent", { query: "H04" })).json();
   assert.equal(intent.places[0].id, "room-yudam-541");
   const find = await (await fetch(`${origin}/find?tab=classroom&building=유담관`)).text();
-  assert.match(find, /room-yudam-541/);
+  // 건물 상세는 개별 호실 ID 대신 층별 요약을 보여 준다.
+  assert.match(find, /유담관/);
 });
 test("HTTP 경로 응답에 후보 목록이 있고 후보 id로 고를 수 있음", async () => {
   const body = { start: "bus_stop_2115", destination: "interview", elevator: false };

@@ -9,13 +9,11 @@ export function BuildingDetail({
   busy,
   onBack,
   onDirections,
-  onPlaces,
 }: {
   building: BuildingDetailData;
   busy: boolean;
   onBack: () => void;
   onDirections: () => void;
-  onPlaces: () => void;
 }) {
   const finalConsonant =
     (building.name.charCodeAt(building.name.length - 1) - 0xac00) % 28;
@@ -48,19 +46,20 @@ export function BuildingDetail({
             {building.name}
             {directionParticle} 길찾기
           </button>
-          <button type="button" className="button secondary" onClick={onPlaces}>
-            층별 주요 장소
-          </button>
         </div>
         <h2>층별 안내</h2>
-        <dl className="building-floor-summary">
-          {building.floors.map((floor) => (
-            <div key={floor.code}>
-              <dt>{floor.label}</dt>
-              <dd>{floor.summary}</dd>
-            </div>
-          ))}
-        </dl>
+        {building.floors.some((floor) => floor.summary) ? (
+          <dl className="building-floor-summary">
+            {building.floors.map((floor) => (
+              <div key={floor.code}>
+                <dt>{floor.label}</dt>
+                {floor.summary && <dd>{floor.summary}</dd>}
+              </div>
+            ))}
+          </dl>
+        ) : (
+          <p className="building-floor-empty">층별 정보를 준비하고 있어요</p>
+        )}
         {building.facilities && (
           <p
             className="building-facility-summary"

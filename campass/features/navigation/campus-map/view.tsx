@@ -12,9 +12,12 @@ import type { PlacedEntrancePin } from "../map-entrances";
 
 export default function MapView({
   onBuilding,
+  onMarker,
   selectedBuildings,
   currentBuilding,
   routeNodes,
+  routeAnnotation,
+  position,
   fallback,
   embedded,
   controllerRef,
@@ -29,12 +32,26 @@ export default function MapView({
   const [selection, setSelection] = useState("");
   const [entrancePins, setEntrancePins] = useState<PlacedEntrancePin[]>([]);
   const routeRef = useRef(routeNodes);
+  const annotationRef = useRef(routeAnnotation);
   useEffect(() => {
     routeRef.current = routeNodes;
-    controller.current?.showRoute(routeNodes ?? []);
-  }, [routeNodes]);
+    annotationRef.current = routeAnnotation;
+    controller.current?.showRoute(routeNodes ?? [], routeAnnotation);
+  }, [routeNodes, routeAnnotation]);
+  const positionRef = useRef(position);
+  useEffect(() => {
+    positionRef.current = position;
+    controller.current?.showPosition(position);
+    // 좌표 값이 바뀔 때만 다시 그려요(같은 단계에서 새 객체가 와도 무시).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [position?.east, position?.north, position?.elevation]);
   const onBuildingRef = useRef(onBuilding);
   const onFocusChangeRef = useRef(onFocusChange);
+  const showEntrances = Boolean(onEntrance);
+  const onMarkerRef = useRef(onMarker);
+  useEffect(() => {
+    onMarkerRef.current = onMarker;
+  }, [onMarker]);
   const highlightRef = useRef({
     ids: selectedBuildings,
     current: currentBuilding,
@@ -66,7 +83,7 @@ export default function MapView({
         if (cancelled) return;
         controller.current = createCampusScene(three, host, {
           interactive: Boolean(onBuildingRef.current),
-          showEntrances: Boolean(onEntrance),
+          showEntrances,
           onEntrances: (pins) => { if (!cancelled) setEntrancePins(pins); },
           onSelect: (next) => {
             if (cancelled) return;
@@ -74,14 +91,18 @@ export default function MapView({
             onFocusChangeRef.current?.(next?.buildingId ?? "");
             if (next) onBuildingRef.current?.(next.buildingId);
           },
+          onMarker: (id) => {
+            if (!cancelled) onMarkerRef.current?.(id);
+          },
           onError: fail,
         });
+        if (controllerRef) controllerRef.current = controller.current;
         controller.current.highlightBuildings(
           highlightRef.current.ids ?? [],
           highlightRef.current.current,
         );
-        controller.current.showRoute(routeRef.current ?? []);
-        if (controllerRef) controllerRef.current = controller.current;
+        controller.current.showRoute(routeRef.current ?? [], annotationRef.current);
+        controller.current.showPosition(positionRef.current);
         setStatus("ready");
       })
       .catch(fail);
@@ -91,7 +112,7 @@ export default function MapView({
       controller.current = null;
       if (controllerRef) controllerRef.current = null;
     };
-  }, []);
+  }, [controllerRef, showEntrances]);
 
   if (status === "error")
     return (
@@ -143,12 +164,15 @@ export default function MapView({
         )}
       </div>
       {!embedded && <div className={styles.details}>
-        <p className={styles.hint}>드래그로 회전 · 두 손가락으로 이동·확대</p>
+        <p className={styles.hint}>
+          드래그로 회전 · 두 손가락으로 이동·확대
+          {onMarker ? " · 정류장·정문·주차장 표시를 누르면 출발로 골라요" : ""}
+        </p>
         {onBuilding && (
           <label className={styles.picker}>
             <span>건물 선택</span>
             <select
-              aria-label="3D 지도 건물 선택"
+              aria-label="건물 선택"
               value={selection}
               onChange={(event) => {
                 const id = event.target.value;

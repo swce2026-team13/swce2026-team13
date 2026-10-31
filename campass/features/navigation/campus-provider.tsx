@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import { MapPin } from "lucide-react";
 import { BuildingIcon, ChevronRightIcon } from "../../components/ui/icons";
 import { places, type Place } from "@/shared/utils/catalog";
+import { routeRequestState, routeRecoveryAction, type RouteRequest } from "@/shared/utils/directions-state";
+import { mapPickLocations, markerStarts } from "@/shared/utils/map-pick";
 import { waypoints, type Route } from "@/shared/utils/routing";
 import { samePlace } from "@/shared/utils/route-start";
 import type { Session } from "@/shared/types/session";
@@ -33,26 +35,6 @@ export type { Insight } from "@/shared/types/insight";
 import { api } from "@/shared/utils/api";
 export { api } from "@/shared/utils/api";
 
-const manualPickableWaypointIds = [
-  "bus_stop_2115",
-  "gate",
-  "parking",
-];
-
-// 복구 목록에서 빼는 중간 지점
-const recoveryHidden = [
-  "main_bus_stop_passage",
-  "main_corridor",
-  "main_elevator_front",
-  "to_hallim",
-  "hallim_to_elevator",
-  "hallim_elevator_front",
-  "hallim_6f_elevator",
-  "hallim_6f_corridor",
-  "parking-entry",
-  "elevator",
-];
-
 const defaultDestination =
   places.find((place) => place.id === "interview") ?? places[0];
 
@@ -63,6 +45,7 @@ function useCampusState() {
   const selectedDestination =
   params.get("destination") || defaultDestination.id;
   const selectedStart = params.get("start") || "";
+  const hasSelectedDestination = params.get("destination") !== "";
   const selectedElevator = params.get("elevator") !== "false";
   const selectedBuilding = params.get("building") || "혜인관";
   const selectedQuery = params.get("q") || "";
@@ -97,9 +80,16 @@ function useCampusState() {
     [route, setRoute] = useState<Route | null>(null);
   const [registeredPlaces, setRegisteredPlaces] = useState<Place[]>(places);
   const [routeConditions, setRouteConditions] = useState("");
+  const [routeRequest, setRouteRequest] = useState<RouteRequest>({ key: "", status: "loading" });
+  const requestKey = JSON.stringify([selectedStart, selectedDestination, selectedElevator]);
+  const requestState = routeRequestState(requestKey, routeRequest, view === "prepare" && Boolean(selectedStart) && hasSelectedDestination);
+  const routeLoading = requestState === "loading";
+  const routeFailed = requestState === "failed";
+  const routeElevatorUnavailable = routeRecoveryAction(requestKey, routeRequest, view === "prepare") === "disable-elevator";
+
   const routeRevision = useRef(0);
   const conditions = JSON.stringify([start, destination.id, elevator]);
-  const currentRoute = routeConditions === conditions &&
+  const currentRoute = hasSelectedDestination && routeConditions === conditions &&
     start === selectedStart && destination.id === selectedDestination &&
     elevator === selectedElevator ? route : null;
   const [session, setSession] = useState<Session | null>(null),
@@ -168,10 +158,9 @@ function useCampusState() {
   function go(next: View, values: Record<string, string> = {}) {
     setError("");
     const href = navigationHref(next, {
-      destination: destination.id,
+      destination: params.get("destination") === "" ? "" : destination.id,
       start,
       elevator: String(elevator),
-      building,
       recovering: String(recovering),
       ...values,
     });
@@ -186,6 +175,7 @@ function useCampusState() {
       if (cancelled) return;
       setRoute(null);
       setError("");
+      setRouteRequest({ key: requestKey, status: "loading" });
       // 호실은 화면 장소 목록에 없어서 서버에서 찾아옴
       const destination =
         places.find((place) => place.id === selectedDestination) ||
@@ -203,9 +193,10 @@ function useCampusState() {
       setBuilding(selectedBuilding);
       setRecovering(view === "recovery" || recoveringParam === "true");
       if (view === "prepare") {
-        if (!selectedStart) return;
+        if (!selectedStart || !hasSelectedDestination) return;
         if (samePlace(selectedStart, destination.id)) {
           setError("출발지와 도착지가 같아요. 다른 장소를 선택해 주세요.");
+          setRouteRequest({ key: requestKey, status: "failed" });
           return;
         }
         try {
@@ -216,10 +207,13 @@ function useCampusState() {
           });
           if (!cancelled && revision === routeRevision.current) {
             setRoute(route);
+            setRouteRequest({ key: requestKey, status: "ready" });
             setRouteConditions(JSON.stringify([selectedStart, destination.id, selectedElevator]));
           }
         } catch (error) {
           if (cancelled || revision !== routeRevision.current) return;
+          setRouteRequest({ key: requestKey, status: "failed",
+            errorCode: error instanceof Error && "code" in error ? String(error.code) : undefined });
           // 엘리베이터로만 못 가는 곳은 '엘리베이터를 끄면 계단 길을 볼 수 있어요' 안내가 그대로 나감
           setError(
             error instanceof Error ? error.message : "경로를 불러오지 못했어요.",
@@ -232,8 +226,10 @@ function useCampusState() {
     };
   }, [
     view,
+    requestKey,
     recoveringParam,
     selectedDestination,
+    hasSelectedDestination,
     selectedStart,
     selectedElevator,
     selectedBuilding,
@@ -499,11 +495,11 @@ function useCampusState() {
     setStart(nextStart);
     setElevator(nextElevator);
     setRoute(null);
+    setRouteRequest({ key: JSON.stringify([nextStart, destination.id, nextElevator]), status: "loading" });
     go("prepare", {
       start: nextStart,
       elevator: String(nextElevator),
-      // 엘리베이터만 바꾸면 고른 길 id를 넘겨, 새 후보에 같은 길이 있을 때만 이어서 고름
-      ...(routeOption && nextStart === start ? { option: routeOption.id } : {}),
+      // 조건을 바꾸면 이전 후보 id를 주소에서 제거한다.
     });
   }
   async function begin() {
@@ -687,7 +683,7 @@ function cancelRecognition() {
     else if (view === "map") router.back();
     else if (["photo", "recognition", "failed", "recovery"].includes(view))
       go(recovering ? "guide" : "prepare");
-    else if (view === "places") go("map");
+    else if (view === "places") go("find", { tab: "classroom" });
     // 편의시설 정보(A4a)에서는 목록으로
     else if (view === "find" && params.get("place")) router.back();
     else go("home");
@@ -723,11 +719,11 @@ function cancelRecognition() {
       </div>
       <div className="divider" />
       <div className="between">
-        <span className="muted small">
+        {(displayDestination.category === "event" || displayDestination.description) && <span className="muted small">
           {displayDestination.category === "event"
             ? "공모전 시연용 면접 안내"
             : displayDestination.description}
-        </span>
+        </span>}
         <Tag tone={displayDestination.verified ? "green" : "amber"}>
           {displayDestination.verified ? "공식 자료" : "예시 장소"}
         </Tag>
@@ -737,20 +733,14 @@ function cancelRecognition() {
   const manualPicker = (
     <div className="stack">
       <h3>위치를 직접 선택할 수 있어요</h3>
-     {waypoints
-      .filter((w) => manualPickableWaypointIds.includes(w.id))
-     .map((w) => (
-          <button
-            className="choice"
-            key={w.id}
-            disabled={busy}
-            onClick={() => confirmLocation(w.id)}
-          >
-            <MapPin size={18} strokeWidth={1.65} />
-            <span>{w.name}</span>
-            <ChevronRightIcon size={18} />
-          </button>
-        ))}
+      {mapPickLocations.map((pin) => {
+        const location = markerStarts[pin.id];
+        return <button className="choice" key={pin.id} aria-label={pin.label} disabled={busy || !location} onClick={() => location && confirmLocation(location)}>
+          <MapPin size={18} strokeWidth={1.65} />
+          <span>{pin.label}{!location && <small>안내 준비 중</small>}</span>
+          <ChevronRightIcon size={18} />
+        </button>;
+      })}
     </div>
   );
   return {
@@ -823,6 +813,9 @@ function cancelRecognition() {
     search,
     choose,
     updateRoute,
+    routeLoading,
+    routeFailed,
+    routeElevatorUnavailable,
     begin,
     advance,
     previous,

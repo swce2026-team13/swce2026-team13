@@ -3,6 +3,7 @@
 import { Component, type ReactNode, type RefObject } from "react";
 import type { CampusMapController } from "@/shared/utils/campus-map";
 import dynamic from "next/dynamic";
+import type { CampusCoordinate } from "@/shared/utils/campus-map";
 import styles from "../../../styles/campus-map.module.css";
 
 const MapView = dynamic(() => import("./view"), {
@@ -34,9 +35,14 @@ export type CampusMapProps = {
   onEntrance?: (id: string) => void;
   onFocusChange?: (id: string) => void;
   onBuilding?: (id: string) => void;
+  /** 정류장·정문·주차장 표시를 눌렀을 때 (지도 표시 id) */
+  onMarker?: (id: string) => void;
   selectedBuildings?: string[];
   currentBuilding?: string;
   routeNodes?: string[];
+  routeAnnotation?: { name: string; color: string };
+  /** 안내 중 내 위치(지금 단계). 있으면 동그란 점으로 표시해요. */
+  position?: CampusCoordinate;
   fallback: ReactNode;
 };
 

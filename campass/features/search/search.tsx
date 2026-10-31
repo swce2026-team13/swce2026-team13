@@ -214,7 +214,7 @@ export default function Screen() {
     <button
     type="button"
     className="button secondary"
-    onClick={() => go("map")}
+    onClick={() => go("prepare", { pick: "destination", start: "", destination: "", elevator: "false" })}
   >
     <MapIcon size={19} />
     캠퍼스 지도에서 직접 고르기

@@ -88,7 +88,7 @@ function summarize(rooms: Room[]) {
         }
         return [...entry.labels].sort((a, b) => b[1] - a[1])[0][0];
       })
-      .join(" · ") || "등록된 정보가 없어요"
+      .join(" · ")
   );
 }
 
