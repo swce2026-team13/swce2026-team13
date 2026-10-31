@@ -4795,7 +4795,7 @@ body::-webkit-scrollbar,
   padding: 0 10px 0 16px;
 }
 .prepare-screen .route-preview-heading strong { font-size: 15px; font-weight: 800; }
-.prepare-screen .route-preview-card .overview-map { height: 378px; }
+.prepare-screen .route-preview-card .overview-map { height: 420px; }
 .prepare-screen .route-summary-sheet {
   display: flex;
   flex-direction: column;

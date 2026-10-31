@@ -45,7 +45,7 @@ function RouteMap({ map, compact = false, guideActive = false, nextNode }: { map
   const overview = <CampusOverviewMap
     highlight={highlight}
     routePreview={{ ...routeAnnotation, nodes: map.nodes }}
-    height={compact ? 380 : undefined}
+    height={compact ? 420 : undefined}
   />;
   const mapView = flat ? overview : (
     <CampusMap

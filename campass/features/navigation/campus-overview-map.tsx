@@ -23,15 +23,16 @@ import {
   overviewFrame,
   overviewRoads,
   overviewCourts,
-  overviewTrees,
   hillLabel,
   plazaLabel,
   buildingLabelPositions,
 } from "@/shared/utils/campus-overview-design";
 
 const ZOOMS = [1, 1.5, 2];
-// 출발지 고르기 지도의 잔디 바탕
+// 모든 2D 지도의 잔디 바탕. 캠퍼스 바닥과 같은 색이라 가장자리가 보이지 않음
 const lawn = "#e2ead8";
+// 건물 이름표(글씨·박스) 크기. 확대 배율의 85%
+const LABEL_SIZE = 0.85;
 
 export type PinKind = "cafe" | "store" | "dining" | "aed" | "etc" | "mixed";
 
@@ -309,10 +310,6 @@ export function CampusOverviewMap({
         }
       >
         <defs>
-          <linearGradient id={`${id}-bg`} x1="0" y1="0" x2="0" y2="1">
-            <stop stopColor="#F8FAFD" />
-            <stop offset="1" stopColor="#EDF2F9" />
-          </linearGradient>
           <clipPath id={`${id}-plaza-clip`}>
             <path d={plazaPath} />
           </clipPath>
@@ -323,10 +320,10 @@ export function CampusOverviewMap({
           y={viewTop}
           width={width}
           height={height}
-          fill={pickerMode ? lawn : `url(#${id}-bg)`}
+          fill={lawn}
         />
         <g pointerEvents="none" aria-hidden="true">
-          <path d={landPath} fill={pickerMode ? lawn : "#e3ecda"} />
+          <path d={landPath} fill={lawn} />
           {overviewRoads.map((road, i) => (
             <g key={i} fill="none" strokeLinecap="round" strokeLinejoin="round">
               <path d={road.path} stroke="#d9cfba" strokeWidth={7} />
@@ -351,43 +348,6 @@ export function CampusOverviewMap({
           >
             언덕길
           </text>
-          {/* 출발지를 고를 때는 나무를 빼고 잔디색만 남겨 단순하게 */}
-          {!pickerMode && overviewTrees
-            .filter((tree) => {
-              // 확대 후에도 고정된 지도 버튼 뒤로 나무가 들어오지 않게 한다.
-              const x = (tree.x - viewLeft) / labelScale;
-              const y = (tree.y - viewTop) / labelScale;
-              const r = tree.r / labelScale;
-              const screenWidth = size.width || MAP_WIDTH;
-              const screenHeight = size.height || MAP_HEIGHT;
-              return (
-                !(x + r > screenWidth - 112 && y - r < 112) &&
-                !(x + r > screenWidth - 64 && y + r > screenHeight - 108)
-              );
-            })
-            .map((tree, i) => (
-              <g key={i} transform={`translate(${tree.x} ${tree.y})`}>
-                <ellipse
-                  cx={1.4}
-                  cy={1.8}
-                  rx={tree.r}
-                  ry={tree.r * 0.8}
-                  fill="rgba(46,74,44,0.18)"
-                />
-                <circle
-                  r={tree.r}
-                  fill={tree.color}
-                  stroke="#7aa868"
-                  strokeWidth={0.6}
-                />
-                <circle
-                  cx={-tree.r * 0.3}
-                  cy={-tree.r * 0.3}
-                  r={tree.r * 0.42}
-                  fill="rgba(255,255,255,0.28)"
-                />
-              </g>
-            ))}
           {buildingPaths.map((path, i) => (
             <path
               key={i}
@@ -530,7 +490,7 @@ export function CampusOverviewMap({
   <g
     className="overview-labels"
           textAnchor="middle"
-          fontSize={pickerMode ? 10 : 11}
+          fontSize={11}
           fontWeight={500}
         >
           {(focused
@@ -546,13 +506,12 @@ export function CampusOverviewMap({
           ).map((item) => {
             const arriving = !focused && item.id === destinationLabel;
             const label = arriving ? { ...item, label: `${item.label} · 도착` } : item;
-            // 고르기 화면 이름표는 한 사이즈 작게
-            const charWidth = pickerMode ? 10 : 11;
-            const boxHeight = pickerMode ? 18 : 20;
+            const charWidth = 11;
+            const boxHeight = 20;
             return (
             <g
               key={label.id}
-              transform={`translate(${label.at.join(" ")}) scale(${labelScale})`}
+              transform={`translate(${label.at.join(" ")}) scale(${labelScale * LABEL_SIZE})`}
               className={
                 buildingPicker && label.id !== "스콘스퀘어"
                   ? "overview-building-label-pick"
@@ -565,9 +524,9 @@ export function CampusOverviewMap({
               }
             >
               <rect
-                x={-(label.label.length * charWidth + (pickerMode ? 8 : 10)) / 2}
+                x={-(label.label.length * charWidth + 10) / 2}
                 y={-boxHeight / 2}
-                width={label.label.length * charWidth + (pickerMode ? 8 : 10)}
+                width={label.label.length * charWidth + 10}
                 height={boxHeight}
                 rx={6}
                 fill={
@@ -577,7 +536,7 @@ export function CampusOverviewMap({
                 }
               />
               <text
-                y={pickerMode ? 3.5 : 4}
+                y={4}
                 fill={focused || arriving ? "white" : labelFill(label.id, "#4a5361")}
                 fontWeight={arriving ? 700 : undefined}
               >

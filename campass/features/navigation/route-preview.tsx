@@ -18,7 +18,7 @@ export function RoutePreview({ option }: { option: RouteOption }) {
   const overview = (
     <CampusOverviewMap
       key={option.id}
-      height={378}
+      height={420}
       routePreview={{ nodes: option.nodes, ...annotation }}
     />
   );
