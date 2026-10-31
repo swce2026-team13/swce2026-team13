@@ -46,7 +46,7 @@ export function legRows(option: RouteOption) {
 
 export function hillDescription(option: RouteOption) {
   switch (option.hillMode) {
-    case "hill": return "건물 밖 언덕길로 언덕 위·아래를 이동해요";
+    case "hill": return "건물 밖 오르막길로 언덕 위·아래를 이동해요";
     case "stairs": return "본관 버스정류장 입구 ↔ 한림관 ↔ 은주관 외부 계단";
     case "elevator": return "본관 정문 ↔ 본관 엘리베이터 ↔ 한림관·은주관 연결통로";
     default: return "";

@@ -120,7 +120,7 @@ test("외부 계단 분류와 이동 방식 칩은 서로 모순되지 않는다
   const hill = options.find((o) => o.hillMode === "hill")!;
   const stairs = options.find((o) => o.hillMode === "stairs")!;
   const lift = options.find((o) => o.hillMode === "elevator")!;
-  assert.equal(routeModeLabel(stairs), "실외 길 (계단길)");
+  assert.equal(routeModeLabel(stairs), "실외 길 (지름길)");
   assert.ok(routeChips(hill).includes("현장 확인 전"));
   assert.ok(routeChips(stairs).includes("실외 길"));
   assert.ok(!routeChips(stairs).includes("실내 위주"));

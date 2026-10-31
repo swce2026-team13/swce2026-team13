@@ -239,20 +239,14 @@ export default function Screen() {
           </section>
         )}
         {unavailable && routeElevatorUnavailable && (
-          <div className="route-elevator-control">
-            <span>엘리베이터</span>
-            <button
-              type="button"
-              className="switch on"
-              role="switch"
-              aria-label="엘리베이터"
-              aria-checked={true}
-              disabled={busy}
-              onClick={() => void updateRoute(start, false)}
-            >
-              <span />
-            </button>
-          </div>
+          <button
+            type="button"
+            className="button secondary"
+            disabled={busy}
+            onClick={() => void updateRoute(start, false)}
+          >
+            엘리베이터 없는 길로 찾기
+          </button>
         )}
         {!pickingOnMap &&
           hasDestination &&
@@ -321,15 +315,6 @@ export default function Screen() {
         )}
       </section>
       <div className="actions route-start-actions prepare-fixed-actions">
-        {routeOption && hasDestination && !pickingOnMap && !routeLoading && (
-          <button
-            className="button secondary route-camera-button"
-            aria-label="사진으로 현재 위치 찾기"
-            onClick={openPhoto}
-          >
-            <CameraIcon size={24} />
-          </button>
-        )}
         <button
           className="button primary"
           disabled={

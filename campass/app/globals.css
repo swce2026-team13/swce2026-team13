@@ -4540,17 +4540,6 @@ body::-webkit-scrollbar,
 .prepare-screen .map-building-select { height:32px; padding:0 8px; background:#f3f5f9; border-radius:9px; color:#818894; }
 .prepare-screen .map-building-select select { height:32px; min-height:32px; padding:0 4px; border:0; background:transparent; font-weight:700; color:#26354c; }
 
-.route-mode-row, .route-elevator-control { display:flex; align-items:center; justify-content:space-between; gap:10px; }
-.route-mode-tabs { display:flex; border-radius:10px; background:#eef1f6; padding:0 2px; }
-.route-mode-tabs label { width:52px; min-height:44px; display:grid; place-items:center; }
-.route-mode-tabs label span { display:grid; place-items:center; width:52px; height:36px; border-radius:8px; color:#748198; }
-.route-mode-tabs input:checked + span { background:#2860ed; color:white; }
-.route-mode-tabs label.disabled { opacity:.4; cursor:default; }
-.route-elevator-control { font-size:13px; font-weight:600; }
-.route-elevator-control .switch { position:relative; }
-.route-elevator-control .switch::after { content:""; position:absolute; inset:-8px 0; }
-.route-mode-reason { font-size:11px; color:#737f90; margin:5px 0 0; }
-.route-mode-reason:empty { display:none; }
 
 .route-preview-card { background:white; border:1px solid #edf0f4; border-radius:20px; overflow:hidden; }
 .route-preview-heading { display:flex; align-items:center; justify-content:space-between; gap:8px; min-height:52px; padding:8px 14px; border-bottom:1px solid #edf0f4; font-size:13px; }
@@ -4584,11 +4573,8 @@ body::-webkit-scrollbar,
 .actions.route-start-actions.prepare-fixed-actions { position:fixed; bottom:0; left:50%; transform:translateX(-50%); z-index:20; display:flex; flex-direction:row; gap:10px; width:100%; max-width:390px; padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px)); background:transparent; border:0; }
 .prepare-fixed-actions .button { min-height:56px; margin:0; }
 .prepare-fixed-actions .primary { flex:1; font-size:14px; }
-.prepare-fixed-actions .route-camera-button { flex:0 0 56px; width:56px; padding:0; }
 
-.route-mode-tabs input:focus-visible + span { outline:2px solid #2860ed; outline-offset:3px; }
 
-.route-mode-tabs label:first-child span svg { border-bottom:1.5px solid currentColor; padding-bottom:1px; }
 
 /* #111 길찾기 화면: 좁은 두 줄 출발·도착 카드 */
 .prepare-screen.content {
@@ -4881,7 +4867,6 @@ body::-webkit-scrollbar,
 .prepare-fixed-actions .button { min-height: 54px; border-radius: 16px; }
 .prepare-fixed-actions .primary { background: linear-gradient(90deg, #3d6ff2, #6b98ff); box-shadow: 0 8px 18px rgba(40, 96, 237, .3); font-size: 16px; font-weight: 800; }
 .prepare-fixed-actions .primary:disabled { background: #c9d6f3; box-shadow: none; opacity: 1; }
-.prepare-fixed-actions .route-camera-button { height: 54px; border-color: #dce2ec; color: #2860ed; }
 
 /* 엘리베이터 지름길 */
 
@@ -5689,4 +5674,154 @@ body::-webkit-scrollbar,
 .help-note-icon.blue {
   background: #dbe6fd;
   color: #2051d6;
+}
+
+/* #121 경로 추천: 길 고르기 카드(라디오처럼 하나만 선택) */
+.route-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.route-choice h2 {
+  margin: 4px 4px 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: #1c3866;
+}
+.route-choice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.route-choice-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 0 14px 0 16px;
+  border: 1.5px solid rgba(255, 255, 255, 0.85);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 3px 10px rgba(40, 70, 130, 0.05);
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.25s ease, background-color 0.2s ease;
+}
+.route-choice-card:active:not(.is-disabled) {
+  transform: scale(0.97);
+}
+.route-choice-card.is-checked {
+  border-color: #2860ed;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 6px 16px rgba(40, 96, 237, 0.16);
+  animation: route-choice-pop 0.32s cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+.route-choice-card.is-disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.route-choice-card:has(input:focus-visible) {
+  outline: 2px solid #2860ed;
+  outline-offset: 2px;
+}
+.route-choice-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  font-size: 15px;
+  font-weight: 800;
+  color: #1c3866;
+}
+.route-choice-badge {
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: #2860ed;
+  color: white;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+}
+.route-choice-hint {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 11px;
+  color: #7f8da3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.route-choice-radio {
+  position: relative;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border: 2px solid #c4cfe2;
+  border-radius: 50%;
+  background: white;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+.route-choice-radio::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  background: white;
+  transform: scale(0);
+  transition: transform 0.22s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+.route-choice-card.is-checked .route-choice-radio {
+  border-color: #2860ed;
+  background: #2860ed;
+}
+.route-choice-card.is-checked .route-choice-radio::after {
+  transform: scale(1);
+}
+.route-choice-status {
+  margin: 0 4px;
+  font-size: 11px;
+  color: #7f8da3;
+}
+@keyframes route-choice-pop {
+  0% { transform: scale(0.97); }
+  60% { transform: scale(1.015); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .route-choice-card,
+  .route-choice-radio,
+  .route-choice-radio::after {
+    transition: none;
+    animation: none;
+  }
+  .route-choice-card:active:not(.is-disabled) {
+    transform: none;
+  }
+  .route-choice-card.is-checked {
+    animation: none;
+  }
+}
+
+/* #121 경로 미리보기: 거쳐 가는 곳 한 줄 */
+.route-preview-via {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 0;
+  margin: 0;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1c3866;
+}
+.route-preview-via i {
+  margin: 0 6px;
+  font-style: normal;
+  color: #2860ed;
+}
+
+/* #121 아래에는 안내 시작 버튼 하나만 */
+.prepare-fixed-actions .button.primary {
+  flex: 1;
 }
