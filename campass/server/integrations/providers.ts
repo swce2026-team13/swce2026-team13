@@ -5,7 +5,13 @@ import { places, type Place } from "../../shared/utils/catalog.ts";
 import { findPlace } from "../services/rooms.ts";
 import { askGemini, type AskGemini, type GeminiConfig, type GeminiIntentResponse } from "./gemini.ts";
 import { graphNodes } from "../../shared/utils/campus3d/route.ts";
-import { hasDestinationRequest, resolveIntentPlaces, shouldComplementIntent, splitJourney } from "../services/intent-analysis.ts";
+import {
+  hasDestinationRequest,
+  resolveIntentPlaces,
+  resolveStartPoint,
+  shouldComplementIntent,
+  splitJourney,
+} from "../services/intent-analysis.ts";
 const geminiTimeoutMs = 3000;
 const geminiCandidateLimit = 5;
 const retrySearchMessage = "질문을 이해하지 못했어요. 장소 이름으로 다시 검색해 주세요.";
@@ -50,11 +56,20 @@ function extractConditions(query: string) {
 export function classifyIntent(query: string, matchedPlaces?: Place[]) {
   const { conditions, searchQuery } = extractConditions(query);
   const journey = splitJourney(searchQuery);
-  const local = searchQuery ? resolveIntentPlaces(journey?.destination ?? searchQuery) : { places: [], exact: false };
-  const candidates = ((journey && local.exact ? local.places : matchedPlaces) ?? local.places)
+  // 출발 지점만 답한 경우(예: 출발을 묻자 '학교 정문')는 출발만 바꿔요.
+  const startOnly = journey ? undefined : resolveStartPoint(searchQuery);
+  const destinationText = journey?.destination ?? searchQuery;
+  // 출발 지점은 도착지로 해석하지 않아요.
+  const local = searchQuery && !startOnly && !resolveStartPoint(destinationText)
+    ? resolveIntentPlaces(destinationText) : { places: [], exact: false };
+  const candidates = (startOnly || (journey && resolveStartPoint(destinationText)) ? [] :
+    (journey && local.exact ? local.places : matchedPlaces) ?? local.places)
     .filter((p) => conditions.elevator === undefined || p.id !== "elevator");
   const starts = journey ? resolveIntentPlaces(journey.start).places : [];
-  const intent: Intent = candidates.length || journey
+  const startPlaceId = starts.length === 1 ? starts[0].id
+    : journey && !starts.length ? resolveStartPoint(journey.start)?.routeId
+      : startOnly?.routeId;
+  const intent: Intent = candidates.length || journey || startOnly
     ? "destination"
     : conditions.elevator !== undefined && !hasDestinationRequest(searchQuery)
       ? "condition"
@@ -62,7 +77,7 @@ export function classifyIntent(query: string, matchedPlaces?: Place[]) {
         ? "next" : "destination";
   return {
     intent, conditions, places: candidates,
-    ...(journey ? { startRequested: true, ...(starts.length === 1 ? { startPlaceId: starts[0].id } : {}) } : {}),
+    ...(journey || startOnly ? { startRequested: true, ...(startPlaceId ? { startPlaceId } : {}) } : {}),
   };
 }
 type Config = {

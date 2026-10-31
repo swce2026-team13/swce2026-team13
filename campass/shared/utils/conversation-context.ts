@@ -122,8 +122,10 @@ export function mergeConversation(
     ? oldCandidates.filter((p) => answer === compact(p.building) || answer === compact(p.floor))
     : [];
   const oldDestination = previous?.destinationPlaceId ? find(previous.destinationPlaceId) : undefined;
-  const followup = result.conditions.elevator !== undefined && !result.places.length &&
-    (result.intent === "condition" || /그럼|거기|그곳|그쪽|그대로/.test(question));
+  // 출발만 새로 알려 준 답이면 이전 목적지를 그대로 이어가요.
+  const startAnswer = Boolean(result.startRequested && result.startPlaceId) && !result.places.length;
+  const followup = !result.places.length && (startAnswer || result.conditions.elevator !== undefined &&
+    (result.intent === "condition" || /그럼|거기|그곳|그쪽|그대로/.test(question)));
   const candidates = clarified.length ? clarified : result.places.length ? result.places :
     followup ? oldCandidates.length ? oldCandidates : oldDestination ? [oldDestination] : [] : [];
   const startPlaceId = result.startRequested ? result.startPlaceId : previous?.startPlaceId;

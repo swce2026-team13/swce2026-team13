@@ -1,14 +1,50 @@
 import { searchPlaces, type Place } from "../../shared/utils/catalog.ts";
 import { allPlaces, floorPlaces } from "./rooms.ts";
 import { campusBuildings } from "../../shared/utils/campus3d/types.ts";
+import { MAP_MARKERS, type MapMarker } from "../../shared/utils/campus-map.ts";
 import type { IntentResult } from "../integrations/providers.ts";
 
 const normalize = (text: string) => text.replaceAll("헤인", "혜인").replace(/\s/g, "").toLowerCase();
 
+// 지도 출발 지점(정문·정류장·주차장)을 부르는 다른 이름
+const startAliases: Record<string, string[]> = {
+  gate: ["정문", "학교 정문", "정문 입구"],
+  bus_stop_2115: ["2115번 정류장", "2115번", "2115", "정류장", "버스 정류장"],
+  parking: ["1주차장", "주차장"],
+};
+
+// 글로 쓴 출발 지점을 지도 표시로 바꿔요. 출발로만 쓰고 도착 후보에는 넣지 않아요.
+export function resolveStartPoint(text: string): MapMarker | undefined {
+  const target = normalize(text)
+    .replace(/(?:에서|부터|으로|로|이요|이에요|예요|입니다|요|이|가|은|는)?[.!?]*$/u, "");
+  return MAP_MARKERS.find((marker) =>
+    [marker.label, ...(startAliases[marker.routeId] ?? [])]
+      .some((name) => normalize(name) === target));
+}
+
+// 건물 이름이나 출발 지점만 쓴 말인지. '본관 혜인관'처럼 띄어 쓴 출발·도착을 나눌 때만 써요.
+function isEndpoint(text: string) {
+  const target = normalize(text);
+  return Boolean(resolveStartPoint(text)) || campusBuildings().some((b) =>
+    normalize(b.name) === target || (b.name.endsWith("관") && b.name.length >= 3 &&
+      normalize(b.name.slice(0, -1)) === target));
+}
+
 export function splitJourney(query: string) {
-  const match = query.match(/^(.+?)(?:에서|부터)\s*(.+)$/);
-  if (!match || /^(?:여기|지금|이곳)$/.test(match[1].trim())) return null;
-  return { start: match[1].trim(), destination: match[2].replace(/까지.*$/, "").trim() };
+  const journey = (start: string, destination: string) =>
+    /^(?:여기|지금|이곳)$/.test(start.trim()) ? null
+      : { start: start.trim(), destination: destination.replace(/까지.*$/, "").trim() };
+  const match = query.match(/^(.+?)(?:에서|부터)\s*(.+)$/) ??
+    query.match(/^(.+?)\s*(?:↔|→|->|~)\s*(.+)$/);
+  if (match) return journey(match[1], match[2]);
+  // 띄어쓰기만 있으면 앞뒤가 둘 다 건물이나 출발 지점일 때만 앞을 출발, 뒤를 도착으로 봐요.
+  const words = query.trim().split(/\s+/);
+  for (let i = 1; i < words.length; i++) {
+    const start = words.slice(0, i).join(" ");
+    const destination = words.slice(i).join(" ").replace(/까지.*$/, "");
+    if (isEndpoint(start) && isEndpoint(destination)) return journey(start, destination);
+  }
+  return null;
 }
 
 export function resolveIntentPlaces(query: string): { places: Place[]; exact: boolean } {
@@ -70,6 +106,7 @@ export function hasDestinationRequest(searchQuery: string) {
 
 export function shouldComplementIntent(query: string, searchQuery: string, keyword: IntentResult) {
   if (!searchQuery || (keyword.intent === "next" && !splitJourney(searchQuery))) return false;
+  if (resolveStartPoint(searchQuery)) return false;
   const journey = splitJourney(searchQuery);
   if (journey) return true;
   if (/^\s*\d{3,4}호/.test(searchQuery) && !hasDestinationRequest(searchQuery.replace(/^\s*\d{3,4}호/, "")))
