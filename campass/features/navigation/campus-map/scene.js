@@ -186,20 +186,14 @@ export function createCampusScene(THREE, container, events) {
       );
     return result;
   }
-  function addLabel(text, position, buildingId, kind) {
+  function addLabel(text, position, buildingId) {
     const element = document.createElement("span");
-    element.className = kind ? `${styles.label} ${styles.markerLabel}` : styles.label;
-    if (kind) element.dataset.kind = kind;
-    // 지점 이름표는 작은 핀보다 누르기 쉬우므로 이름표 자체도 출발 선택 버튼으로 쓴다.
-    if (kind && events.interactive && events.onMarker) {
-      element.dataset.tap = "true";
-      element.addEventListener("click", () => events.onMarker(buildingId));
-    }
+    element.className = styles.label;
     element.textContent = text;
     labelLayer.appendChild(element);
-    labels.push({ element, position, buildingId, marker: Boolean(kind) });
+    labels.push({ element, position, buildingId });
   }
-  // 정류장·정문·주차장 표시는 출발로 고르거나 경로에 들어 있으면 강조한다.
+  // 3D 지점 도형의 강조에만 사용한다. 이름은 EntrancePins가 한 번만 표시한다.
   function markerActive(marker) {
     return (
       routeIds.includes(marker.id) ||
@@ -207,13 +201,10 @@ export function createCampusScene(THREE, container, events) {
       routeNodes.includes(marker.routeId)
     );
   }
-  function labelSelected(label) {
+  function labelEmphasis(label) {
     const focus = currentId ?? selectedId;
-    if (label.marker) {
-      const marker = markers.find((m) => m.id === label.buildingId);
-      return Boolean(marker && markerActive(marker));
-    }
-    return Boolean(focus && label.buildingId === focus);
+    if (focus && label.buildingId === focus) return 2;
+    return routeIds.includes(label.buildingId) ? 1 : 0;
   }
   function scheduleRender() {
     if (!disposed && !frame) frame = window.requestAnimationFrame(render);
@@ -248,11 +239,10 @@ export function createCampusScene(THREE, container, events) {
         me.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%)`;
       }
     }
-    // 작은 화면에서는 현재 건물·고른 지점 이름을 우선하고, 다음으로 출발 지점 이름을 남겨요.
+    // 모든 건물·광장 이름을 두고, 겹칠 때 현재 건물과 경로 건물을 먼저 남긴다.
     const ordered = [...labels].sort(
       (a, b) =>
-        Number(labelSelected(b)) - Number(labelSelected(a)) ||
-        Number(b.marker) - Number(a.marker) ||
+        labelEmphasis(b) - labelEmphasis(a) ||
         a.position.distanceToSquared(camera.position) -
           b.position.distanceToSquared(camera.position),
     );
@@ -279,7 +269,8 @@ export function createCampusScene(THREE, container, events) {
             box.bottom > r.top - 3,
         );
       label.element.hidden = hidden;
-      label.element.dataset.selected = String(labelSelected(label));
+      label.element.dataset.emphasis =
+        labelEmphasis(label) === 2 ? "current" : labelEmphasis(label) === 1 ? "route" : "";
       if (!hidden) {
         label.element.style.transform = `translate(${x}px, ${y}px) translate(-50%, -100%)`;
         occupied.push(box);
@@ -775,7 +766,6 @@ export function createCampusScene(THREE, container, events) {
       markers.push({ ...item, head, ring, hit, top });
       bounds.expandByPoint(base);
       bounds.expandByPoint(head.position);
-      addLabel(item.label, new THREE.Vector3(base.x, top + 5, base.z), item.id, item.kind);
     }
     // 그림자 범위를 캠퍼스 전체에 맞추고 한 번만 그린다.
     const sphere = bounds.getBoundingSphere(new THREE.Sphere());
