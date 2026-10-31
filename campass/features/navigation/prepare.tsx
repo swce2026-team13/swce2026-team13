@@ -23,6 +23,9 @@ export default function Screen() {
     elevator,
     route,
     routeOption,
+    routeLoading,
+    routeFailed,
+    routeElevatorUnavailable,
     chooseOption,
     busy,
     ready,
@@ -43,6 +46,10 @@ export default function Screen() {
         ? "start"
         : null;
   const pickingOnMap = Boolean(picking);
+  const unavailable = routeFailed && !pickingOnMap;
+  const showPicker =
+    !routeLoading &&
+    (pickingOnMap || (!unavailable && (!start || !hasDestination)));
   const [pickNotice, setPickNotice] = useState("");
   const setPicking = (target: "start" | "destination" | null) => {
     setPickNotice("");
@@ -186,19 +193,39 @@ export default function Screen() {
             );
           })}
         </div>
-        {!pickingOnMap && hasDestination && (
-          <RouteModePicker
-            start={start}
-            destination={destination.id}
-            elevator={elevator}
-            route={route}
-            selected={routeOption}
-            busy={busy}
-            onOption={chooseOption}
-            onElevator={(value) => void updateRoute(start, value)}
-          />
+        {unavailable && routeElevatorUnavailable && (
+          <div className="route-elevator-control">
+            <span>엘리베이터</span>
+            <button
+              type="button"
+              className="switch on"
+              role="switch"
+              aria-label="엘리베이터"
+              aria-checked={true}
+              disabled={busy}
+              onClick={() => void updateRoute(start, false)}
+            >
+              <span />
+            </button>
+          </div>
         )}
-        {(!routeOption || pickingOnMap || !hasDestination) && (
+        {!pickingOnMap &&
+          hasDestination &&
+          !routeLoading &&
+          !routeFailed &&
+          routeOption && (
+            <RouteModePicker
+              start={start}
+              destination={destination.id}
+              elevator={elevator}
+              route={route}
+              selected={routeOption}
+              busy={busy}
+              onOption={chooseOption}
+              onElevator={(value) => void updateRoute(start, value)}
+            />
+          )}
+        {showPicker && (
           <div className="route-start-picker">
             <MapPicker
               selected={[
@@ -209,22 +236,14 @@ export default function Screen() {
               onSelect={selectPlace}
             />
             {pickNotice && <p role="status">{pickNotice}</p>}
-            {hasDestination && destination.category === "building" && (
-              <button
-                className="button secondary"
-                onClick={() => go("places", { building: destination.name })}
-              >
-                {destination.name} 층별 장소 보기
-              </button>
-            )}
           </div>
         )}
 
-        {routeOption && hasDestination && !pickingOnMap && (
+        {routeOption && hasDestination && !pickingOnMap && !routeLoading && (
           <RoutePreview option={routeOption} />
         )}
 
-        {(!routeOption || pickingOnMap || !hasDestination) && (
+        {showPicker && (
           <button
             className="button secondary"
             aria-label="사진으로 현재 위치 찾기"
@@ -234,7 +253,7 @@ export default function Screen() {
             사진으로 현재 위치 찾기
           </button>
         )}
-        {routeOption && hasDestination && !pickingOnMap && (
+        {routeOption && hasDestination && !pickingOnMap && !routeLoading && (
           <RouteSummarySheet
             option={routeOption}
             recommended={route?.options[0]?.id === routeOption.id}
@@ -266,7 +285,7 @@ export default function Screen() {
         )}
       </section>
       <div className="actions route-start-actions prepare-fixed-actions">
-        {routeOption && hasDestination && !pickingOnMap && (
+        {routeOption && hasDestination && !pickingOnMap && !routeLoading && (
           <button
             className="button secondary route-camera-button"
             aria-label="사진으로 현재 위치 찾기"
@@ -278,19 +297,26 @@ export default function Screen() {
         <button
           className="button primary"
           disabled={
-            !start ||
-            !hasDestination ||
-            pickingOnMap ||
-            !route ||
             busy ||
-            !ready
+            (!unavailable &&
+              (!start ||
+                !hasDestination ||
+                pickingOnMap ||
+                !route ||
+                !ready ||
+                routeLoading))
           }
-          onClick={begin}
+          aria-busy={routeLoading}
+          onClick={unavailable ? () => setPicking("destination") : begin}
         >
           <Footprints size={20} aria-hidden="true" />
-          {routeOption && hasDestination && !pickingOnMap
-            ? `${routeName(routeOption)}로 안내 시작`
-            : "안내 시작"}
+          {routeLoading
+            ? "경로를 불러오는 중…"
+            : unavailable
+              ? "도착 변경"
+              : routeOption && hasDestination && !pickingOnMap
+                ? `${routeName(routeOption)}로 안내 시작`
+                : "안내 시작"}
         </button>
       </div>
     </>

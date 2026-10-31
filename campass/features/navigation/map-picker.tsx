@@ -61,7 +61,7 @@ export function MapPicker({
         <label className="map-building-select">
           건물
           <select
-            aria-label="캠퍼스 지도 건물 선택"
+            aria-label="건물 선택"
             value={buildingFocus}
             onChange={(event) => {
               const id = event.target.value;

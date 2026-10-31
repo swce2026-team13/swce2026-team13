@@ -46,3 +46,19 @@ export function displayedRouteOption(
     ? selected
     : options.find((o) => routeMode(o) !== "elevator");
 }
+
+export function routeEnvironment(option: RouteOption) {
+  if (routeMode(option) === "elevator") return "elevator";
+  if (
+    option.hillMode === "hill" ||
+    option.hillMode === "stairs" ||
+    option.approximate
+  )
+    return "outdoor";
+  return "indoor";
+}
+
+export function routeModeLabel(option: RouteOption) {
+  const environment = routeEnvironment(option);
+  return `${environment === "elevator" ? "엘리베이터" : environment === "outdoor" ? "실외" : "실내"} 길 (${routeName(option)})`;
+}

@@ -114,7 +114,9 @@ npm start
 - `/directions`: 출발지·경로 선택
 - `/directions/photo`, `/directions/recognition`, `/directions/failed`, `/directions/recovery`: 사진·위치 확인
 - `/guide`, `/guide/arrival`: 안내·도착
-- `/map`, `/map/places`, `/guide/map`, `/help`: 지도·건물·이용 안내
+- `/map`: `/directions`의 출발 선택으로 연결
+- `/map/places`: 기존 주소 호환용. `/find`의 건물 상세로 연결
+- `/guide/map`, `/help`: 안내 중 지도·이용 안내
 - `/admin`: 관리자
 
 `app/` 폴더의 `page.tsx`가 각 URL에 대응합니다. 공통 상태는 루트 레이아웃의 `CampusProvider`에서 유지합니다. 검색어·목적지·출발지·건물은 URL 쿼리로 복원하며, 진행 세션은 기존 브라우저의 세션 저장소에서 복원합니다.

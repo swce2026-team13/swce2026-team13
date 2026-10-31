@@ -10,6 +10,7 @@ import {
 import type { RouteOption } from "@/shared/utils/routing";
 import {
   routeSummary,
+  routeChips,
   routeHeightText,
   routeStepKind,
   type MovementKind,
@@ -45,13 +46,7 @@ export function RouteSummarySheet({
   const color = routeColors[mode];
   const min = Math.min(...summary.bars.map((bar) => bar.elevation));
   const max = Math.max(...summary.bars.map((bar) => bar.elevation));
-  const chips = [
-    summary.bars.some((bar) => bar.kind === "steep") && "경사 있음",
-    summary.outdoorLength > 0 && "실외 길",
-    summary.stairs === 0 && option.stepFree !== null && "계단 없음",
-    summary.indoorMostly && "실내 위주",
-    option.unverified && "현장 확인 전",
-  ].filter(Boolean);
+  const chips = routeChips(option, summary);
   return (
     <section className="route-summary-sheet" aria-label="선택한 경로 요약">
       <div className="route-sheet-handle" aria-hidden="true" />

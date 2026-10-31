@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { routeSegments, type CampusCoordinate } from "@/shared/utils/campus-map";
+import { placeRouteBadge } from "@/shared/utils/map-labels";
 import { EntrancePins } from "./entrance-pins";
 import { layoutEntrancePins, mapEntrances } from "./map-entrances";
 import { DoorOpen, ArrowUpDown, Maximize, Minus, Plus } from "lucide-react";
@@ -704,6 +705,13 @@ export function CampusOverviewMap({
             if (remaining <= lengths[i]) { const [a,b]=previewSegments[i]; const t=lengths[i] ? remaining/lengths[i] : 0; middle=toPoint({ east:a.east+(b.east-a.east)*t, north:a.north+(b.north-a.north)*t, elevation:0 }); break; }
             remaining -= lengths[i];
           }
+          const routeLabelOffset = Math.hypot(middle[0]-end[0], middle[1]-end[1]) / labelScale < 80 ? 24 : -19;
+          const arrivalLabel = placeRouteBadge(end, 52*labelScale, 28*labelScale,
+            [...overviewBuildings.map((building,index) => {
+              const [x,y] = buildingLabelPositions[index];
+              const half = (building.label.length*11+18)/2*labelScale;
+              return {left:x-half,right:x+half,top:y-14*labelScale,bottom:y+14*labelScale};
+            }), {left:middle[0]-(routePreview.name.length*12+28)/2*labelScale, right:middle[0]+(routePreview.name.length*12+28)/2*labelScale, top:middle[1]+(routeLabelOffset-16)*labelScale, bottom:middle[1]+(routeLabelOffset+16)*labelScale}], {left:viewLeft+4*labelScale,right:viewLeft+width-4*labelScale,top:viewTop+4*labelScale,bottom:viewTop+height-4*labelScale});
           const pill = (at: number[], text: string, color: string, dy: number) => <g transform={`translate(${at.join(" ")}) scale(${labelScale})`}>
             <rect x={-(text.length*12+24)/2} y={dy-14} width={text.length*12+24} height={28} rx={14} fill={color} stroke="white" strokeWidth={2} />
             <text textAnchor="middle" y={dy+4} fontSize={12} fontWeight={700} fill="white">{text}</text>
@@ -713,8 +721,9 @@ export function CampusOverviewMap({
             <path d={path} fill="none" stroke="#2860ed" strokeWidth={5} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
             <circle cx={start[0]} cy={start[1]} r={7*labelScale} fill="#3f8a48" stroke="white" strokeWidth={2} vectorEffect="non-scaling-stroke" />
             <circle cx={end[0]} cy={end[1]} r={7*labelScale} fill="#2860ed" stroke="white" strokeWidth={2} vectorEffect="non-scaling-stroke" />
-            {pill(middle, routePreview.name, routePreview.color, Math.hypot(middle[0]-end[0], middle[1]-end[1]) / labelScale < 80 ? 24 : -19)}
-            {pill(end, "도착", "#2860ed", -24)}
+            {pill(middle, routePreview.name, routePreview.color, routeLabelOffset)}
+            <line x1={end[0]} y1={end[1]} x2={arrivalLabel[0]} y2={arrivalLabel[1]} stroke="#2860ed" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+            {pill(arrivalLabel, "도착", "#2860ed", 0)}
           </g>;
         })()}
       </svg>

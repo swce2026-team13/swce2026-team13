@@ -1,17 +1,9 @@
 import { campusEntrances } from "@/shared/utils/campus3d/types";
 import { routeCoordinate } from "@/shared/utils/campus-map";
-import { markerStarts } from "@/shared/utils/map-pick";
+import { markerStarts, mapPickLocations } from "@/shared/utils/map-pick";
 
 // 표시할 입구만 고름. 원본 좌표나 경로 연결은 추가·수정하지 않음.
-const entranceLabels = [
-  { id: "gate_west", label: "서문(후문)", kind: "gate" },
-  { id: "bus_stop_2115", label: "2115번 정류장", kind: "bus" },
-  { id: "parking_entrance_2", label: "2주차장", kind: "parking" },
-  { id: "parking_entrance_1", label: "1주차장", kind: "parking" },
-  { id: "gate_main", label: "정문", kind: "gate" },
-] as const;
-
-export const mapEntrances = entranceLabels.map((pin) => {
+export const mapEntrances = mapPickLocations.map((pin) => {
   const entrance = campusEntrances().find((item) => item.id === pin.id)!;
   return {
     ...pin,

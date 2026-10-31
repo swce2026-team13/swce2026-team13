@@ -1,10 +1,12 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
-import { Building, PersonStanding } from "lucide-react";
+import { Building, PersonStanding, MoveUpRight } from "lucide-react";
 import { api } from "./campus-provider";
 import type { Route, RouteOption } from "@/shared/utils/routing";
 import {
   routeMode,
+  routeModeLabel,
+  routeEnvironment,
   displayedRouteOption,
 } from "@/shared/utils/route-presentation";
 
@@ -83,11 +85,16 @@ export function RouteModePicker({
         <div
           className="route-mode-tabs"
           role="radiogroup"
-          aria-label="실외 또는 실내 길"
+          aria-label="가는 길 선택"
         >
           {(["hill", "stairs"] as const).map((mode) => {
             const option = options.find((o) => routeMode(o) === mode);
-            const Icon = mode === "hill" ? PersonStanding : Building;
+            const Icon =
+              mode === "hill"
+                ? PersonStanding
+                : option && routeEnvironment(option) === "indoor"
+                  ? Building
+                  : MoveUpRight;
             const disabled = busy || elevator || !option;
             return (
               <label key={mode} className={disabled ? "disabled" : ""}>
@@ -97,7 +104,11 @@ export function RouteModePicker({
                   name={radioName}
                   value={mode}
                   aria-label={
-                    mode === "hill" ? "실외 길 (언덕길)" : "실내 길 (계단길)"
+                    option
+                      ? routeModeLabel(option)
+                      : mode === "hill"
+                        ? "실외 길 (언덕길)"
+                        : "실외 길 (계단길)"
                   }
                   checked={
                     !elevator &&
@@ -153,7 +164,7 @@ export function RouteModePicker({
                 elevator ? "엘리베이터 길만 보여 드려요." : "",
                 ...missing.map(
                   (mode) =>
-                    `${mode === "hill" ? "실외" : "실내"} 길은 이 구간에 없어요.`,
+                    `${mode === "hill" ? "언덕길" : "계단길"}은 이 구간에 없어요.`,
                 ),
                 !lift.some((o) => routeMode(o) === "elevator")
                   ? "엘리베이터 길은 이 구간에 없어요."

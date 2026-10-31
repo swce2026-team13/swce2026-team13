@@ -1,4 +1,4 @@
-import { routeMode } from "./route-presentation.ts";
+import { routeMode, routeEnvironment } from "./route-presentation.ts";
 import type { RouteOption, Waypoint } from "./routing.ts";
 import { campusMap, routeCoordinate, routeSegments } from "./campus-map.ts";
 import { graphEdges, nodeArea } from "./campus3d/route.ts";
@@ -204,4 +204,21 @@ export function routeHeightText(
     return `계단으로 ${height}m ${direction}`;
   if (summary.indoorElevationChange) return `실내에서 ${height}m ${direction}`;
   return `${summary.rise < 0 ? "내리막" : "오르막"} ${height}m${summary.grade !== null ? ` · 평균 경사 ${summary.grade}%` : ""}`;
+}
+
+export function routeChips(
+  option: RouteOption,
+  summary = routeSummary(option),
+): string[] {
+  const environment = routeEnvironment(option);
+  return [
+    summary.grade !== null && summary.grade > 8 ? "경사 있음" : "",
+    environment === "elevator"
+      ? "엘리베이터"
+      : environment === "outdoor"
+        ? "실외 길"
+        : "실내 위주",
+    summary.stairs === 0 && option.stepFree !== null ? "계단 없음" : "",
+    option.unverified || option.approximate ? "현장 확인 전" : "",
+  ].filter(Boolean);
 }

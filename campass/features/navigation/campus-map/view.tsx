@@ -152,7 +152,7 @@ export default function MapView({
           <label className={styles.picker}>
             <span>건물 선택</span>
             <select
-              aria-label="3D 지도 건물 선택"
+              aria-label="건물 선택"
               value={selection}
               onChange={(event) => {
                 const id = event.target.value;

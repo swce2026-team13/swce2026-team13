@@ -44,3 +44,13 @@ export function pickStatus(pick: MapPick): {
     message: "아직 안내 경로가 없는 곳이에요",
   };
 }
+
+
+// 지도 핀과 사진 화면의 직접 선택 목록이 같은 이름을 사용한다.
+export const mapPickLocations = [
+  { id: "gate_main", label: "정문", kind: "gate" },
+  { id: "parking_entrance_1", label: "1주차장", kind: "parking" },
+  { id: "parking_entrance_2", label: "2주차장", kind: "parking" },
+  { id: "bus_stop_2115", label: "2115번 정류장", kind: "bus" },
+  { id: "gate_west", label: "서문(후문)", kind: "gate" },
+] as const;
