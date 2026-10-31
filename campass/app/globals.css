@@ -1423,7 +1423,7 @@ progress::-moz-progress-bar {
   align-items: center;
   justify-content: center;
 
-  background: #f0f5fc;
+  background: #eaf1fd;
 
   opacity: 1;
   transition: opacity 0.4s ease;
@@ -1445,13 +1445,7 @@ progress::-moz-progress-bar {
     splash-map-fade 0.5s ease-out forwards;
 }
 
-.splash-map .overview-map {
-  width: 100%;
-  height: 100%;
-  border-radius: 0;
-}
-
-.splash-map .overview-map > svg {
+.splash-map > svg {
   width: 100%;
   height: 100%;
   display: block;
@@ -1526,7 +1520,15 @@ progress::-moz-progress-bar {
 /* 경로를 따라 움직이는 로고 */
 .splash-moving-logo {
   pointer-events: none;
+  opacity: 0;
+  animation: splash-logo-show 0s linear 0.25s forwards;
 }
+
+.splash-static-logo {
+  display: none;
+  pointer-events: none;
+}
+
 .splash-moving-logo-inner {
   width: 72px;
   height: 72px;
@@ -1624,6 +1626,12 @@ progress::-moz-progress-bar {
   }
 }
 
+@keyframes splash-logo-show {
+  to {
+    opacity: 1;
+  }
+}
+
 @keyframes splash-logo-arrive {
   0% {
     transform: scale(0.8);
@@ -1682,6 +1690,14 @@ progress::-moz-progress-bar {
   .campass-logo-needle.animated,
   .splash-wordmark {
     animation: none !important;
+  }
+
+  .splash-moving-logo {
+    display: none;
+  }
+
+  .splash-static-logo {
+    display: block;
   }
 
   .splash-map {
