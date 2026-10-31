@@ -297,3 +297,7 @@ export const CupSolidIcon = (props: IconProps) => (
     />
   </Svg>
 );
+
+export const SwapIcon = (props: IconProps) => (
+  <Line d="M4 8H19M15 4L19 8L15 12M20 16H5M9 12L5 16L9 20" {...props} />
+);

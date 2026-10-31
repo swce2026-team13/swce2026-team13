@@ -52,6 +52,8 @@ export type SearchOptions = {
   hillMode?: HillMode;
   // 기본은 '확인'만. '확인 필요' · '추정'을 더할 수 있음
   statuses?: LinkStatus[];
+  // 엘리베이터 이동과 '확인' + 단차 없는 연결만 씀(계단 · 언덕 · 추정 연결 제외)
+  stepFreeOnly?: boolean;
 };
 
 const buildings = campusBuildings();
@@ -218,6 +220,10 @@ for (const edge of graphEdges)
     adjacency.set(node, [...(adjacency.get(node) ?? []), edge]);
 
 function usable(edge: Edge, options: SearchOptions) {
+  if (options.stepFreeOnly)
+    return edge.kind === "elevator" ||
+      ((edge.kind === "link" || edge.kind === "start") && !edge.hillMode &&
+        edge.status === "확인" && edge.stepFree === true);
   if (edge.hillMode && edge.hillMode !== options.hillMode) return false;
   if (
     options.hillMode === "stairs" &&
@@ -317,6 +323,7 @@ export function findPaths(
     options.elevator,
     options.hillMode,
     [...(options.statuses ?? [])].sort(),
+    Boolean(options.stepFreeOnly),
   ]);
   const cached = cache.get(key);
   if (cached) return cached;

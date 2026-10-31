@@ -4687,3 +4687,178 @@ body::-webkit-scrollbar,
 .prepare-fixed-actions .primary { background: linear-gradient(90deg, #3d6ff2, #6b98ff); box-shadow: 0 8px 18px rgba(40, 96, 237, .3); font-size: 16px; font-weight: 800; }
 .prepare-fixed-actions .primary:disabled { background: #c9d6f3; box-shadow: none; opacity: 1; }
 .prepare-fixed-actions .route-camera-button { height: 54px; border-color: #dce2ec; color: #2860ed; }
+
+/* 엘리베이터 지름길 */
+
+.elevator-shortcut,
+.elevator-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+.elevator-shortcut > strong,
+.elevator-section-head strong {
+  font-size: 15px;
+  color: #273a59;
+}
+
+.elevator-shortcut-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: end;
+  gap: 8px;
+}
+
+.elevator-shortcut-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.elevator-shortcut-fields label > span:first-child {
+  font-size: 11px;
+  color: #718098;
+}
+
+.elevator-shortcut-fields select {
+  font-size: 14px;
+}
+
+.elevator-shortcut-swap {
+  width: 36px;
+  height: 36px;
+  margin-bottom: 5px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 50%;
+  background: rgba(40, 96, 237, 0.1);
+  color: var(--blue);
+}
+
+.elevator-shortcut-swap:disabled {
+  opacity: 0.4;
+}
+
+.elevator-shortcut-label {
+  font-size: 12px;
+  color: #718098;
+}
+
+.elevator-shortcut-frequent {
+  margin: -4px 0 0;
+}
+
+.elevator-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.elevator-section-badge {
+  flex-shrink: 0;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(64, 200, 140, 0.14);
+  color: #16845f;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.elevator-section-figure {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  background: rgba(237, 243, 255, 0.7);
+}
+
+.elevator-section-hill {
+  fill: #dfead6;
+  stroke: #b9d0aa;
+  stroke-width: 1;
+}
+
+.elevator-section-building rect {
+  fill: rgba(255, 255, 255, 0.85);
+  stroke: #b8c7e2;
+  stroke-width: 1;
+}
+
+.elevator-section-building.destination rect {
+  fill: rgba(40, 96, 237, 0.14);
+  stroke: var(--blue);
+  stroke-width: 1.4;
+}
+
+.elevator-section-name {
+  font-size: 9px;
+  font-weight: 700;
+  fill: #4d5e77;
+}
+
+.elevator-section-building.destination .elevator-section-name {
+  fill: var(--blue);
+}
+
+.elevator-section-floor {
+  font-size: 7.5px;
+  fill: #718098;
+}
+
+.elevator-section-route {
+  fill: none;
+  stroke: var(--blue);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.elevator-section-start {
+  fill: #16a34a;
+  stroke: white;
+  stroke-width: 2;
+}
+
+.elevator-section-end {
+  fill: var(--blue);
+  stroke: white;
+  stroke-width: 2;
+}
+
+.elevator-section-steps {
+  margin: 0;
+  padding-left: 20px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+
+  font-size: 13px;
+  color: #3b4c67;
+}
+
+.elevator-section-summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  font-size: 12px;
+  color: #5d6d83;
+}
+
+.elevator-section-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.elevator-section-actions .button {
+  min-height: 40px;
+  font-size: 13px;
+}

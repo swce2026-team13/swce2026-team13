@@ -15,6 +15,8 @@ import { PlaceIcon } from "@/features/search/floor-places";
 import { FacilityStatus, useNow } from "@/features/search/facility-status";
 import { withCopula } from "@/shared/utils/hangul";
 import { useCampus } from "@/features/navigation/campus-provider";
+import { ElevatorShortcut } from "@/features/search/elevator-shortcut";
+import { elevatorShortcutAreas, shortcutAreaOf } from "@/shared/utils/elevator-shortcut";
 export default function Screen() {
   const now = useNow();
   const {
@@ -52,6 +54,11 @@ export default function Screen() {
     ? conversation.clarification.value : "";
   const selected = clarify ? filter?.revision === searchRevision ? filter.value : saved : "";
   const visibleResults = selected ? results.filter((place) => place[field] === selected) : results;
+  // 엘리베이터로 가겠다고 했는데 확인된 지름길이 닿지 않는 곳이면 일반 경로로 안내
+  const shortcutIds = new Set(elevatorShortcutAreas().areas.map((area) => area.id));
+  const noShortcut = elevator && /엘리베이터|승강기|계단\s*없이|휠체어/.test(query) &&
+    searchIntent === "destination" && results.length > 0 &&
+    results.every((place) => !shortcutIds.has(shortcutAreaOf(place)));
   return (
     <section className="content stack">
       <h1>어디를 찾으시나요?</h1>
@@ -98,13 +105,21 @@ export default function Screen() {
           </div>
         </div>
       ) : searchIntent !== "destination" ? (
-        <Notice>
-          {searchIntent === "next"
-            ? "먼저 목적지를 알려 주세요."
-            : elevator
-              ? "엘리베이터로 안내할게요. 어디로 가시나요?"
-              : "계단으로 안내할게요. 어디로 가시나요?"}
-        </Notice>
+        <>
+          <Notice>
+            {searchIntent === "next"
+              ? "먼저 목적지를 알려 주세요."
+              : elevator
+                ? "엘리베이터로 안내할게요. 어디로 가시나요?"
+                : "계단으로 안내할게요. 어디로 가시나요?"}
+          </Notice>
+          {searchIntent === "condition" && elevator && (
+            <ElevatorShortcut
+              busy={busy}
+              onStart={(from, to) => go("prepare", { start: from, destination: to, elevator: "true" })}
+            />
+          )}
+        </>
       ) : classroomBuilding && classroomSelection ? (
         <ClassroomPicker
           key={`${searchRevision}-${classroomBuilding.id}`}
@@ -128,6 +143,9 @@ export default function Screen() {
         />
       ) : (
           <div className="ai-search-flow">
+  {noShortcut && (
+    <Notice>아직 확인된 엘리베이터 지름길이 없어요. 일반 경로로 안내할게요</Notice>
+  )}
   <div className="ai-user-message">
     {query || "목적지를 찾고 있어요"}
   </div>
