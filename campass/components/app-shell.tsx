@@ -11,7 +11,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     useCampus();
   return (
     <div className={`phone ${view === "photo" ? "photo-shell" : ""}`}>
-      {view !== "home" && (
+      {/* 검색은 대화형 화면이 자기 머리글(「CAMPASS에게 묻기」)을 그림 */}
+      {view !== "home" && view !== "search" && (
         <header
           className={`app-header ${view === "photo" ? "photo-app-header" : ""} ${view === "guide" ? "guide-live-header" : ""}`}
         >
