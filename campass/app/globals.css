@@ -1802,12 +1802,10 @@ progress::-moz-progress-bar {
   stroke-width: 1;
 }
 
+/* 눈금은 고정. 무한 회전은 다이얼 전체를 계속 다시 그려 미세하게 흔들려 보여서 뺌 */
 .home-compass-ticks {
   stroke: #174fd6;
   stroke-linecap: round;
-  transform-box: view-box;
-  transform-origin: 130px 130px;
-  animation: home-compass-spin 60s linear infinite;
 }
 
 .home-compass-cardinal {
@@ -1854,12 +1852,6 @@ progress::-moz-progress-bar {
 .home-compass-hint strong {
   color: var(--blue);
   font-weight: 700;
-}
-
-@keyframes home-compass-spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 @keyframes home-compass-settle {
@@ -1920,7 +1912,6 @@ progress::-moz-progress-bar {
 
 @media (prefers-reduced-motion: reduce) {
   .home-rise,
-  .home-compass-ticks,
   .home-compass-needle,
   .home-compass-pulse,
   .home-compass-button {
