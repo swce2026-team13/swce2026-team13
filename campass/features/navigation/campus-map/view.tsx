@@ -44,6 +44,7 @@ export default function MapView({
   }, [position?.east, position?.north, position?.elevation]);
   const onBuildingRef = useRef(onBuilding);
   const onMarkerRef = useRef(onMarker);
+  const onFocusChangeRef = useRef(onFocusChange);
   useEffect(() => {
     onMarkerRef.current = onMarker;
   }, [onMarker]);
@@ -91,6 +92,7 @@ export default function MapView({
           },
           onError: fail,
         });
+        if (controllerRef) controllerRef.current = controller.current;
         controller.current.highlightBuildings(
           highlightRef.current.ids ?? [],
           highlightRef.current.current,
@@ -157,6 +159,7 @@ export default function MapView({
           </>
         )}
       </div>
+      {!embedded && (
       <div className={styles.details}>
         <p className={styles.hint}>
           드래그로 회전 · 두 손가락으로 이동·확대
@@ -193,7 +196,8 @@ export default function MapView({
             </select>
           </label>
         )}
-      </div>}
+      </div>
+      )}
     </>
   );
 }
