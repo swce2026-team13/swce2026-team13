@@ -9,7 +9,7 @@ import {
   type GuideViewModel,
   toGuideViewModel,
 } from "@/shared/utils/guide-view";
-import { ArrowRight, MessageCircle, Sparkles } from "lucide-react";
+import { MessageCircle, Sparkles } from "lucide-react";
 import {
   ArrowRightIcon,
   CameraIcon,
@@ -124,7 +124,7 @@ export default function Screen() {
                   <span>현재</span>
                   <strong>{guide.current?.name ?? "현재 위치"}</strong>
                 </div>
-                <ArrowRight size={20} aria-hidden="true" />
+                <ArrowRightIcon size={20} />
                 <div>
                   <span>{guide.next ? "다음" : "도착"}</span>
                   <strong>{guide.next?.name ?? displayDestination.name}</strong>

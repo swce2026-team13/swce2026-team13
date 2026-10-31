@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { CameraIcon } from "@/components/ui/icons";
-import { ArrowDownUp, Footprints, TriangleAlert, X } from "lucide-react";
+import { CameraIcon, CloseIcon } from "@/components/ui/icons";
+import { ArrowDownUp, Footprints, TriangleAlert } from "lucide-react";
 import { routeName } from "@/shared/utils/route-presentation";
 import { RouteSummarySheet } from "./route-summary-sheet";
 import { markerStarts } from "@/shared/utils/map-pick";
@@ -199,7 +199,7 @@ export default function Screen() {
                       aria-label={`${isStart ? "출발" : "도착"} 고르기 취소`}
                       onClick={() => setPicking(null)}
                     >
-                      <X size={12} strokeWidth={2.6} aria-hidden="true" />
+                      <CloseIcon size={12} />
                     </button>
                   )}
                 </div>
