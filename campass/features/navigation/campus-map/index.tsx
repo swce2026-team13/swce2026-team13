@@ -61,9 +61,18 @@ export function CampusMap({ fallback, mapHeight, ...props }: CampusMapProps) {
       </div>
     );
   return (
-    <section className={styles.card} aria-label="캠퍼스 3D 지도">
+    <section
+      className={`${styles.card} ${props.designTheme ? styles.designTheme : ""}`}
+      aria-label="캠퍼스 3D 지도"
+    >
       <div className={styles.heading}>
-        <b>{props.onBuilding ? "캠퍼스 3D 지도" : "3D 경로 미리보기"}</b>
+        <b>
+          {props.onBuilding
+            ? "캠퍼스 3D 지도"
+            : props.position
+              ? "3D 길안내 지도"
+              : "3D 경로 미리보기"}
+        </b>
         <span>서경대학교</span>
       </div>
       <MapBoundary fallback={fallback}>
