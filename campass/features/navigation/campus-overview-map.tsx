@@ -30,6 +30,8 @@ import {
 } from "@/shared/utils/campus-overview-design";
 
 const ZOOMS = [1, 1.5, 2];
+// 출발지 고르기 지도의 잔디 바탕
+const lawn = "#e2ead8";
 
 export type PinKind = "cafe" | "store" | "dining" | "aed" | "etc" | "mixed";
 
@@ -71,6 +73,7 @@ export function CampusOverviewMap({
   onPin,
   highlight,
   pickerMode = false,
+  destinationLabel,
   onEntrance,
   onResetView,
   buildingPicker = false,
@@ -89,6 +92,8 @@ export function CampusOverviewMap({
   onPin?: (id: string) => void;
   highlight?: OverviewRouteHighlight;
   pickerMode?: boolean;
+  // 출발을 고를 때 목적지 건물 id. 이름표를 파란 「건물명 · 도착」으로 바꿈
+  destinationLabel?: string;
   onEntrance?: (id: string) => void;
   onResetView?: () => void;
   // 건물·강의실 탭에서만 입구를 숨기고 이름표도 건물 선택 영역으로 쓴다.
@@ -318,10 +323,10 @@ export function CampusOverviewMap({
           y={viewTop}
           width={width}
           height={height}
-          fill={`url(#${id}-bg)`}
+          fill={pickerMode ? lawn : `url(#${id}-bg)`}
         />
         <g pointerEvents="none" aria-hidden="true">
-          <path d={landPath} fill="#e3ecda" />
+          <path d={landPath} fill={pickerMode ? lawn : "#e3ecda"} />
           {overviewRoads.map((road, i) => (
             <g key={i} fill="none" strokeLinecap="round" strokeLinejoin="round">
               <path d={road.path} stroke="#d9cfba" strokeWidth={7} />
@@ -346,7 +351,8 @@ export function CampusOverviewMap({
           >
             언덕길
           </text>
-          {overviewTrees
+          {/* 출발지를 고를 때는 나무를 빼고 잔디색만 남겨 단순하게 */}
+          {!pickerMode && overviewTrees
             .filter((tree) => {
               // 확대 후에도 고정된 지도 버튼 뒤로 나무가 들어오지 않게 한다.
               const x = (tree.x - viewLeft) / labelScale;
@@ -524,7 +530,7 @@ export function CampusOverviewMap({
   <g
     className="overview-labels"
           textAnchor="middle"
-          fontSize={11}
+          fontSize={pickerMode ? 10 : 11}
           fontWeight={500}
         >
           {(focused
@@ -537,7 +543,13 @@ export function CampusOverviewMap({
                 })),
                 { id: "스콘스퀘어", label: "스콘스퀘어", at: plazaLabel },
               ]
-          ).map((label) => (
+          ).map((item) => {
+            const arriving = !focused && item.id === destinationLabel;
+            const label = arriving ? { ...item, label: `${item.label} · 도착` } : item;
+            // 고르기 화면 이름표는 한 사이즈 작게
+            const charWidth = pickerMode ? 10 : 11;
+            const boxHeight = pickerMode ? 18 : 20;
+            return (
             <g
               key={label.id}
               transform={`translate(${label.at.join(" ")}) scale(${labelScale})`}
@@ -553,25 +565,27 @@ export function CampusOverviewMap({
               }
             >
               <rect
-                x={-(label.label.length * 11 + 10) / 2}
-                y={-10}
-                width={label.label.length * 11 + 10}
-                height={20}
+                x={-(label.label.length * charWidth + (pickerMode ? 8 : 10)) / 2}
+                y={-boxHeight / 2}
+                width={label.label.length * charWidth + (pickerMode ? 8 : 10)}
+                height={boxHeight}
                 rx={6}
                 fill={
-                  focused || state(label.id) === "current"
+                  focused || arriving || state(label.id) === "current"
                     ? "#2563EB"
                     : "rgba(255,255,255,0.7)"
                 }
               />
               <text
-                y={4}
-                fill={focused ? "white" : labelFill(label.id, "#4a5361")}
+                y={pickerMode ? 3.5 : 4}
+                fill={focused || arriving ? "white" : labelFill(label.id, "#4a5361")}
+                fontWeight={arriving ? 700 : undefined}
               >
                 {label.label}
               </text>
             </g>
-        ))}
+            );
+          })}
   </g>
 )}
         

@@ -4533,7 +4533,6 @@ body::-webkit-scrollbar,
   transform: translateY(0);
 }
 .endpoint-map-surface { position:relative; }
-.endpoint-map-hint { position:absolute; z-index:5; top:12px; left:12px; max-width:calc(100% - 130px); margin:0; padding:7px 11px; border-radius:20px; background:#fffffff0; box-shadow:0 2px 8px #10223f12; color:#45618a; font-size:11px; pointer-events:none; }
 .prepare-screen .map-picker-toolbar { height:46px; padding:0 10px; border-bottom:1px solid #edf0f4; background:white; }
 .prepare-screen .map-view-switch { background:#eef1f6; border-radius:9px; padding:2px; }
 .prepare-screen .map-view-switch button { position:relative; min-height:28px; height:28px; padding:0 13px; font-size:12.5px; }
@@ -4603,9 +4602,12 @@ body::-webkit-scrollbar,
   gap: 8px;
   margin: 0 12px;
   padding: 8px 6px 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
   border-radius: 18px;
-  background: white;
-  box-shadow: 0 8px 22px rgba(40, 70, 130, .09), 0 0 0 1px #e6ecf6;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 4px 14px rgba(40, 70, 130, .05);
 }
 .route-endpoint-line {
   flex: none;
@@ -4640,15 +4642,34 @@ body::-webkit-scrollbar,
 .route-endpoint-field {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   height: 42px;
-  padding: 0 6px 0 12px;
+  padding: 0 6px 0 10px;
+  border: 1.5px solid rgba(255, 255, 255, 0.9);
   border-radius: 12px;
-  background: #f4f6fa;
+  background: rgba(255, 255, 255, 0.6);
+}
+/* #121 출발 칸은 파란 점선 */
+.route-endpoint-field.start {
+  border: 1.5px dashed #2860ed;
 }
 .route-endpoint-field.is-picking {
-  background: #f1f6ff;
-  box-shadow: inset 0 0 0 1.5px #8fb0f6;
+  background: rgba(241, 246, 255, 0.85);
+}
+.route-endpoint-tag {
+  flex: none;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.route-endpoint-tag.start {
+  background: #e2f6ec;
+  color: #16845f;
+}
+.route-endpoint-tag.destination {
+  background: #dbe6fd;
+  color: #2051d6;
 }
 .route-endpoint-field-button {
   flex: 1;
@@ -4708,32 +4729,58 @@ body::-webkit-scrollbar,
 }
 .prepare-screen .route-start-picker .endpoint-map-surface,
 .prepare-screen .route-start-picker .endpoint-map-surface .overview-map {
-  height: 400px;
+  height: 480px;
 }
-.prepare-screen .endpoint-map-hint {
-  position: absolute;
-  z-index: 5;
-  top: auto;
-  bottom: 14px;
-  left: 50%;
-  max-width: calc(100% - 24px);
+/* #121 카드 아래 안내와 빠르게 고르기 */
+.route-pick-guide {
   display: flex;
   align-items: center;
   gap: 7px;
-  height: 36px;
-  margin: 0;
-  padding: 0 14px 0 11px;
-  transform: translateX(-50%);
-  border-radius: 99px;
-  background: rgba(31, 42, 60, .86);
-  box-shadow: 0 4px 14px rgba(20, 30, 50, .25);
-  color: white;
-  font-size: 13px;
+  margin: 10px 4px 0;
+  font-size: 15px;
   font-weight: 700;
-  white-space: nowrap;
-  pointer-events: none;
+  color: var(--blue);
 }
-.prepare-screen .endpoint-map-hint svg { flex: none; color: #9dbaf7; }
+.route-quick-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 6px 4px 8px;
+}
+.route-quick-pick h2 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #7f8da3;
+}
+.route-quick-pick .chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.route-quick-pick .chips button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+/* #121 출발로 고를 수 있는 곳은 초록 버튼 */
+.map-picker-start .map-entrance-button[data-start="true"] .map-entrance-pill {
+  background: #1d9e75;
+  border-color: #1d9e75;
+  color: white;
+  font-weight: 700;
+}
+.map-picker-start .map-entrance-button[data-start="true"] .map-entrance-icon {
+  background: rgba(255, 255, 255, 0.25);
+  color: white;
+}
+/* #121 지도 아래 안내 한 줄 */
+.prepare-screen .endpoint-map-caption {
+  margin: 12px 0 2px;
+  text-align: center;
+  font-size: 13px;
+  color: #5d6d83;
+}
 .route-pick-notice { padding: 8px 4px 0; color: #9a5400; font-size: 12px; }
 .prepare-screen > .button.secondary {
   min-height: 48px;

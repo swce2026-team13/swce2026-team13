@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { CameraIcon, CloseIcon } from "@/components/ui/icons";
+import { CameraIcon, CloseIcon, TapIcon } from "@/components/ui/icons";
 import { ArrowDownUp, Footprints, TriangleAlert } from "lucide-react";
 import { routeName } from "@/shared/utils/route-presentation";
 import { RouteSummarySheet } from "./route-summary-sheet";
@@ -179,10 +179,13 @@ export default function Screen() {
                   ? startLabel(start, registeredPlaces)
                   : placeLabel(destination)
                 : isStart
-                  ? "출발지를 골라 주세요"
+                  ? "어디서 출발하세요?"
                   : "도착지를 골라 주세요";
               return (
-                <div className={`route-endpoint-field${active ? " is-picking" : ""}${selected && !active ? " has-place" : ""}`} key={target}>
+                <div className={`route-endpoint-field ${target}${active ? " is-picking" : ""}${selected && !active ? " has-place" : ""}`} key={target}>
+                  <span className={`route-endpoint-tag ${target}`} aria-hidden="true">
+                    {isStart ? "출발" : "도착"}
+                  </span>
                   <button
                     type="button"
                     className="route-endpoint-field-button"
@@ -190,7 +193,7 @@ export default function Screen() {
                     disabled={busy}
                     onClick={() => setPicking(target)}
                   >
-                    {active ? `${isStart ? "출발지" : "도착지"}를 골라 주세요` : label}
+                    {active ? (isStart ? "어디서 출발하세요?" : "도착지를 골라 주세요") : label}
                   </button>
                   {active && (
                     <button
@@ -216,6 +219,25 @@ export default function Screen() {
             <ArrowDownUp size={20} strokeWidth={1.9} aria-hidden="true" />
           </button>
         </section>
+        {showPicker && (
+          <p className="route-pick-guide">
+            <TapIcon size={18} />
+            {picking === "start" ? "출발할 곳을 눌러 주세요" : "도착할 곳을 눌러 주세요"}
+          </p>
+        )}
+        {showPicker && picking === "start" && (
+          <section className="route-quick-pick" aria-labelledby="route-quick-pick-title">
+            <h2 id="route-quick-pick-title">빠르게 고르기</h2>
+            <div className="chips">
+              <button type="button" disabled={busy} onClick={openPhoto}>
+                <CameraIcon size={16} /> 사진으로 찾기
+              </button>
+              <button type="button" disabled={busy} onClick={() => selectPlace("gate_main", false)}>정문</button>
+              <button type="button" disabled={busy} onClick={() => selectPlace("bus_stop_2115", false)}>2115 정류장</button>
+              <button type="button" disabled={busy} onClick={() => selectPlace("parking_entrance_1", false)}>1주차장</button>
+            </div>
+          </section>
+        )}
         {unavailable && routeElevatorUnavailable && (
           <div className="route-elevator-control">
             <span>엘리베이터</span>
@@ -256,6 +278,7 @@ export default function Screen() {
                 ...(hasDestination ? [destination.id] : []),
               ]}
               target={picking ?? (!start ? "start" : "destination")}
+              destination={hasDestination ? destination.id : undefined}
               onSelect={selectPlace}
             />
             {pickNotice && <p className="route-pick-notice" role="status">{pickNotice}</p>}
@@ -266,16 +289,6 @@ export default function Screen() {
           <RoutePreview option={routeOption} />
         )}
 
-        {showPicker && (
-          <button
-            className="button secondary"
-            aria-label="사진으로 현재 위치 찾기"
-            onClick={openPhoto}
-          >
-            <CameraIcon size={24} />
-            사진으로 현재 위치 찾기
-          </button>
-        )}
         {routeOption && hasDestination && !pickingOnMap && !routeLoading && (
           <RouteSummarySheet
             option={routeOption}
