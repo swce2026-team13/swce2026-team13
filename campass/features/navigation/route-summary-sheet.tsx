@@ -13,7 +13,7 @@ import {
 import type { RouteOption } from "@/shared/utils/routing";
 import { routeSummary, routeChips } from "@/shared/utils/route-summary";
 import { routeColors, routeMode, routeName } from "@/shared/utils/route-presentation";
-import { guideStepItems, type GuideStepItem } from "@/shared/utils/guide-instruction";
+import { guideStepItems, visibleStepItems, type GuideStepItem } from "@/shared/utils/guide-instruction";
 
 const icons: Record<GuideStepItem["kind"], typeof Footprints> = {
   start: Footprints,
@@ -54,8 +54,11 @@ export function RouteSummarySheet({
   const sparkLine = spark.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`).join(" ");
   // 단계 목록: 안내 중 화면의 안내 단계(묶음)와 같은 단위. 5개를 넘으면 주요 지점만
   const items = guideStepItems(option, option.steps, destinationName);
-  const majorCount = items.filter((item) => item.major).length;
-  const folding = items.length > 5;
+  // 주요 지점은 최대 5곳. 숨길 단계는 모두 모아 첫 숨긴 자리에 버튼 하나만 둠
+  const visible = visibleStepItems(items);
+  const hiddenCount = visible.filter((shown) => !shown).length;
+  const folding = hiddenCount > 0;
+  const firstHidden = visible.indexOf(false);
   const [expanded, setExpanded] = useState(false);
   return (
     <section className="route-summary-sheet" aria-label="선택한 경로 요약">
@@ -111,19 +114,17 @@ export function RouteSummarySheet({
       {warning}
       <div className="route-timeline-heading">
         <strong>이렇게 이동해요</strong>
-        {folding && <small>전체 {items.length}단계 · 주요 {majorCount}곳</small>}
+        {folding && <small>전체 {items.length}단계 · 주요 {items.length - hiddenCount}곳</small>}
       </div>
       <ol className="route-timeline">
         {items.map((item, index) => {
-          const hidden = folding && !item.major;
-          // 접힌 단계 자리: 연속된 접힌 단계의 첫 자리에만 점선과 버튼
-          const gapStart = hidden && (index === 0 || items[index - 1].major);
-          const gapSize = gapStart ? items.slice(index).findIndex((next) => next.major) : 0;
+          const hidden = !visible[index];
+          const toggle = index === firstHidden;
           if (hidden && !expanded)
-            return gapStart ? (
-              <li key={`gap-${index}`} className="route-timeline-gap">
+            return toggle ? (
+              <li key="gap" className="route-timeline-gap">
                 <button type="button" onClick={() => setExpanded(true)}>
-                  ··· 중간 {gapSize < 0 ? items.length - index : gapSize}단계 더 보기
+                  ··· 중간 {hiddenCount}단계 더 보기
                 </button>
               </li>
             ) : null;
@@ -132,7 +133,7 @@ export function RouteSummarySheet({
               <li key={index} className="route-timeline-minor">
                 <span className="route-timeline-dot" aria-hidden="true" />
                 <span>{item.title}</span>
-                {gapStart && (
+                {toggle && (
                   <button type="button" onClick={() => setExpanded(false)}>중간 단계 접기</button>
                 )}
               </li>
