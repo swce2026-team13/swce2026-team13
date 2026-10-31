@@ -20,7 +20,9 @@ import { mapEntrances, layoutEntrancePins } from "../map-entrances.ts";
  * @param {*} THREE 지도 렌더링 모듈
  * @param {HTMLDivElement} container
  * @param {{ onSelect: (selection: import('../../../shared/utils/campus-map.ts').MapSelection | null) => void,
- *   onError: () => void, interactive?: boolean, onMarker?: (id: string) => void }} events
+ *   onError: () => void, interactive?: boolean, onMarker?: (id: string) => void,
+ *   showEntrances?: boolean,
+ *   onEntrances?: (pins: import('../map-entrances.ts').PlacedEntrancePin[]) => void }} events
  * @returns {import('../../../shared/utils/campus-map.ts').CampusMapController}
  */
 export function createCampusScene(THREE, container, events) {

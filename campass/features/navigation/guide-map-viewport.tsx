@@ -42,6 +42,7 @@ function RouteMap({ map }: { map: GuideMapData }) {
 ) : (
   <CampusMap
     routeNodes={map.nodes}
+    position={position}
     selectedBuildings={buildings.ids}
     currentBuilding={buildings.currentId}
     fallback={overview}

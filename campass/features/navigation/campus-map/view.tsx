@@ -46,6 +46,7 @@ export default function MapView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [position?.east, position?.north, position?.elevation]);
   const onBuildingRef = useRef(onBuilding);
+  const onFocusChangeRef = useRef(onFocusChange);
   const showEntrances = Boolean(onEntrance);
   const onMarkerRef = useRef(onMarker);
   useEffect(() => {
@@ -95,6 +96,7 @@ export default function MapView({
           },
           onError: fail,
         });
+        if (controllerRef) controllerRef.current = controller.current;
         controller.current.highlightBuildings(
           highlightRef.current.ids ?? [],
           highlightRef.current.current,
@@ -161,7 +163,7 @@ export default function MapView({
           </>
         )}
       </div>
-      <div className={styles.details}>
+      {!embedded && <div className={styles.details}>
         <p className={styles.hint}>
           드래그로 회전 · 두 손가락으로 이동·확대
           {onMarker ? " · 정류장·정문·주차장 표시를 누르면 출발로 골라요" : ""}
