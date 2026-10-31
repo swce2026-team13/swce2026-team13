@@ -1698,6 +1698,12 @@ progress::-moz-progress-bar {
   flex: 1;
   display: flex;
   flex-direction: column;
+
+  /* 하늘색 그라데이션(.phone) 위에 아주 옅은 등고선 무늬 */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='390' height='520' viewBox='0 0 390 520' fill='none' stroke='%232860ED' stroke-opacity='0.055' stroke-width='1'%3E%3Cpath d='M-20 92C40 60 96 104 150 82S250 18 320 46S400 120 420 104'/%3E%3Cpath d='M-20 120C44 90 100 132 156 110S252 50 322 76S398 146 420 132'/%3E%3Cpath d='M-20 148C48 122 106 160 162 140S256 84 326 108S396 172 420 160'/%3E%3Cpath d='M300 300C300 260 340 236 372 246S420 296 404 330S344 372 316 352S300 322 300 300Z'/%3E%3Cpath d='M276 302C274 244 330 210 378 222S440 296 420 344S340 398 302 374S278 336 276 302Z'/%3E%3Cpath d='M-30 410C30 380 84 420 140 402S240 340 300 366S380 440 420 430'/%3E%3Cpath d='M-30 440C34 412 90 450 146 432S244 372 304 396S382 468 420 460'/%3E%3Cpath d='M40 250C40 226 64 212 86 218S118 248 108 266S72 290 56 280S40 262 40 250Z'/%3E%3C/svg%3E");
+  background-size: 390px 520px;
+  background-repeat: repeat-y;
+  background-position: top center;
 }
 
 .home-topbar {
@@ -1736,17 +1742,18 @@ progress::-moz-progress-bar {
 
 .home-main {
   flex: 1;
-  padding: 25px 20px 20px;
+  padding: 14px 20px 20px;
 }
 
 .home-intro {
-  margin-bottom: 26px;
+  margin-bottom: 18px;
+  text-align: center;
 }
 
 .home-intro > p {
   margin-bottom: 6px;
 
-  font-size: 13px;
+  font-size: 15px;
   color: #7f8da3;
 }
 
@@ -1756,52 +1763,260 @@ progress::-moz-progress-bar {
   color: #273a59;
 }
 
-.home-search {
-  min-height: 64px;
+/* 나침반 미니 지도 */
+
+.home-compass {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-.home-search-caption {
+.home-compass-button {
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  display: block;
+  transition: transform 0.15s ease;
+}
+
+.home-compass-button:active {
+  transform: scale(0.98);
+}
+
+.home-compass-button:focus-visible {
+  outline: 3px solid rgba(23, 79, 214, 0.45);
+  outline-offset: 4px;
+}
+
+.home-compass-dial {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 8px 18px rgba(23, 79, 214, 0.12));
+}
+
+.home-compass-face {
+  fill: rgba(255, 255, 255, 0.55);
+  stroke: rgba(255, 255, 255, 0.85);
+  stroke-width: 1;
+}
+
+.home-compass-ticks {
+  stroke: #174fd6;
+  stroke-linecap: round;
+  transform-box: view-box;
+  transform-origin: 130px 130px;
+  animation: home-compass-spin 60s linear infinite;
+}
+
+.home-compass-cardinal {
+  font-size: 11px;
+  font-weight: 700;
+  fill: #6c7f9c;
+}
+
+.home-compass-cardinal.north {
+  fill: #174fd6;
+}
+
+.home-compass-needle {
+  transform-box: view-box;
+  transform-origin: 130px 130px;
+  animation: home-compass-settle 2.4s cubic-bezier(0.3, 0.7, 0.4, 1) 0.3s both;
+  filter: drop-shadow(0 2px 3px rgba(23, 50, 110, 0.25));
+}
+
+.home-compass-pulse {
+  fill: #ffd166;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: home-compass-pulse 2s ease-out infinite;
+}
+
+.home-compass-hint {
   margin-top: 14px;
 
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 7px;
+  gap: 4px;
 
-  font-size: 11px;
-  color: #7f8da3;
+  font-size: 15px;
+  color: #5d6d83;
+  text-align: center;
 }
 
-.home-search-caption svg {
+.home-compass-hint svg {
   color: var(--blue);
 }
 
+.home-compass-hint strong {
+  color: var(--blue);
+  font-weight: 700;
+}
+
+@keyframes home-compass-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes home-compass-settle {
+  0% {
+    transform: rotate(-48deg);
+  }
+  25% {
+    transform: rotate(32deg);
+  }
+  45% {
+    transform: rotate(-18deg);
+  }
+  65% {
+    transform: rotate(9deg);
+  }
+  82% {
+    transform: rotate(-3deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes home-compass-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(3.2);
+    opacity: 0;
+  }
+}
+
+/* 제목 → 나침반 → 아래 내용 순서로 떠오름 */
+.home-rise {
+  animation: home-rise 0.6s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+.home-main > .home-rise:nth-child(2) {
+  animation-delay: 0.12s;
+}
+
+.home-main > .home-rise:nth-child(n + 3) {
+  animation-delay: 0.24s;
+}
+
+@keyframes home-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-rise,
+  .home-compass-ticks,
+  .home-compass-needle,
+  .home-compass-pulse,
+  .home-compass-button {
+    animation: none;
+    transition: none;
+  }
+
+  .home-compass-pulse {
+    opacity: 0;
+  }
+}
+
+/* 검색창 */
+
+.home-search {
+  min-height: 60px;
+  margin-top: 40px;
+  padding: 8px 8px 8px 9px;
+
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(40, 70, 120, 0.07);
+}
+
+.home-search-icon {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 11px;
+  background: rgba(40, 96, 237, 0.1);
+  color: var(--blue);
+}
+
+.home-search > button {
+  width: 38px;
+  height: 38px;
+
+  border-radius: 11px;
+  background: rgba(40, 96, 237, 0.12);
+  color: var(--blue);
+}
+
+.home-search > button:disabled {
+  opacity: 0.55;
+}
+
+/* 추천 질문: 메신저 말풍선처럼 좌우로 */
 .home-question-chips {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 8px;
 
-  margin-top: 15px;
+  margin-top: 16px;
 }
 
 .home-question-chips button {
-  min-height: 34px;
+  min-height: 36px;
+  max-width: 82%;
 
-  padding: 7px 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 
-  border: 1px solid rgba(255, 255, 255, 0.46);
-  border-radius: 10px;
+  padding: 8px 13px;
 
-  background: rgba(255, 255, 255, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 16px;
 
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
 
-  box-shadow:
-    0 3px 10px rgba(40, 70, 120, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  box-shadow: 0 2px 8px rgba(40, 70, 120, 0.05);
 
-  font-size: 11px;
-  color: #5d6d83;
+  font-size: 13px;
+  color: #4d5e77;
+}
+
+.home-question-chips button.from-left {
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.home-question-chips button.from-right {
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+  border-color: rgba(40, 96, 237, 0.12);
+  background: rgba(40, 96, 237, 0.1);
+  color: #24479f;
+}
+
+.home-question-chips button.from-right svg {
+  color: var(--blue);
 }
 
 .home-section {
@@ -1823,7 +2038,7 @@ progress::-moz-progress-bar {
   flex-direction: column;
   justify-content: space-between;
 
-  padding: 18px;
+  padding: 26px 18px;
   text-align: left;
 }
 
@@ -1846,6 +2061,10 @@ progress::-moz-progress-bar {
 }
 
 .home-event-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+
   padding: 5px 9px;
 
   border-radius: 999px;
@@ -1855,6 +2074,14 @@ progress::-moz-progress-bar {
 
   font-size: 10px;
   font-weight: 700;
+}
+
+.home-event-status.live::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #1fb57a;
 }
 
 .home-event-place {
@@ -1867,16 +2094,19 @@ progress::-moz-progress-bar {
 
 .home-event-link {
   align-self: flex-end;
-  margin-top: 6px;
+  margin-top: 10px;
   min-height: 32px;
+  padding: 0 12px;
 
   display: inline-flex;
   align-items: center;
   gap: 3px;
 
+  border-radius: 999px;
+  background: rgba(40, 96, 237, 0.1);
   color: var(--blue);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .home-carousel-dots {
@@ -1909,46 +2139,45 @@ progress::-moz-progress-bar {
 }
 
 .home-quick-card {
-  min-height: 102px;
+  height: 64px;
 
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
+  gap: 9px;
 
-  gap: 5px;
-
-  text-align: center;
+  padding: 0 10px 0 12px;
+  text-align: left;
 }
 
 .home-quick-icon {
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
 
   display: grid;
   place-items: center;
 
-  margin-bottom: 3px;
-
   border-radius: 11px;
 
-  background: rgba(230, 240, 255, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(40, 96, 237, 0.1);
 
-  color: var(--blue);
+  color: #2860ed;
 }
 
 .home-quick-card strong {
-  font-size: 13px;
+  flex: 1;
+  min-width: 0;
+
+  font-size: 12px;
+  font-weight: 400;
   color: #3b4c67;
 }
 
-.home-quick-card small {
-  font-size: 10px;
-  color: #8995a7;
+.home-quick-arrow {
+  flex-shrink: 0;
+  color: #8a99b0;
 }
 
-.home-map-button,
 .home-resume-button {
   margin-top: 12px;
 }
