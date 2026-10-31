@@ -8,6 +8,7 @@ import {
   CameraIcon,
   CloseIcon,
   MapIcon,
+  SearchLensIcon,
 } from "@/components/ui/icons";
 import { CampassLogo } from "@/components/ui/campass-logo";
 import { startLabel } from "@/shared/utils/route-start";
@@ -422,19 +423,18 @@ export default function Screen() {
         }}
       >
         <div className="chat-input-row">
-          <button type="button" className="chat-camera" aria-label="사진으로 현재 위치 찾기"
-            onClick={() => go("photo", place ? { destination: place.id } : {})}>
-            <CameraIcon size={20} />
-          </button>
+          <span className="chat-input-icon" aria-hidden="true">
+            <SearchLensIcon size={22} />
+          </span>
           <input
             aria-label="CAMPASS에게 묻기"
             value={draft}
             maxLength={200}
-            placeholder="장소나 궁금한 걸 물어보세요"
+            placeholder="어디든 물어보세요"
             onChange={(e) => setDraft(e.target.value)}
           />
           <button className="chat-send" disabled={busy || !draft.trim()} aria-label="보내기">
-            <ArrowRightIcon size={20} />
+            <ArrowRightIcon size={18} />
           </button>
         </div>
         <p className="chat-fine-print">질문은 AI(Gemini)로 해석할 수 있어요 · 이름 · 연락처는 적지 마세요</p>

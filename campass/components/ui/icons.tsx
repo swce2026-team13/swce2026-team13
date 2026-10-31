@@ -301,3 +301,11 @@ export const CupSolidIcon = (props: IconProps) => (
 export const SwapIcon = (props: IconProps) => (
   <Line d="M4 8H19M15 4L19 8L15 12M20 16H5M9 12L5 16L9 20" {...props} />
 );
+
+// 홈·대화 검색창의 장식용 돋보기(연한 렌즈 + 파란 테두리, 진한 손잡이)
+export const SearchLensIcon = (props: IconProps) => (
+  <Svg {...props}>
+    <circle cx="10.5" cy="10.5" r="6" fill="#E1E9F7" stroke="#2860ED" strokeWidth={2} />
+    <path d="M15 15L19.5 19.5" stroke="#174FD6" strokeWidth={3.2} strokeLinecap="round" />
+  </Svg>
+);

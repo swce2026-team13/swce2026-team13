@@ -334,7 +334,7 @@ export default function Screen() {
 
             <input
               aria-label="목적지 검색"
-              placeholder="어디든 물어보세요 · 혜인관 301호"
+              placeholder="어디든 물어보세요"
               value={query}
               maxLength={200}
               onChange={(e) => setQuery(e.target.value)}
