@@ -1165,39 +1165,119 @@ progress::-moz-progress-bar {
   }
 }
 
-.route-modal {
-  width: calc(100% - 24px);
+/* 하단 시트 팝업. 모든 경로 팝업(route-modal)이 같은 모양을 씀 */
+.sheet-modal {
+  position: fixed;
+  inset: 56px 0 0;
+  width: 100%;
   max-width: 390px;
-  max-height: calc(100dvh - 32px);
-  margin: auto;
+  height: calc(100dvh - 56px);
+  max-height: none;
+  margin: 0 auto;
   padding: 0;
+
   border: 0;
-  border-radius: 20px;
-  background: var(--background);
+  border-radius: 28px 28px 0 0;
+  background:
+    radial-gradient(circle at 15% 10%, rgba(115, 174, 255, 0.32), transparent 35%),
+    radial-gradient(circle at 90% 35%, rgba(185, 205, 255, 0.35), transparent 38%),
+    linear-gradient(180deg, #edf6ff 0%, #f7faff 50%, #eef4ff 100%);
+  box-shadow: 0 -8px 30px rgba(16, 28, 52, 0.18);
   color: var(--foreground);
-  overscroll-behavior: contain;
-  overflow-y: auto;
-  scrollbar-width: none;
+  overflow: hidden;
 }
-.route-modal::-webkit-scrollbar {
-  display: none;
+
+.sheet-modal[open] {
+  display: flex;
+  flex-direction: column;
+  animation: sheet-modal-up 0.32s cubic-bezier(0.2, 0.8, 0.3, 1);
 }
+
+/* 홈 위에 시트를 띄우면 주소가 /help로 바뀌어 뒤 화면에 「이용 안내」 공통 머리글이 생김. 뒤는 홈이어야 하므로 가림 */
+body:has(.sheet-modal[open]) .phone > .app-header {
+  visibility: hidden;
+}
+
+.sheet-modal::backdrop {
+  background: rgba(16, 28, 52, 0.42);
+}
+
+.sheet-modal-handle {
+  flex-shrink: 0;
+  width: 40px;
+  height: 5px;
+  margin: 10px auto 0;
+
+  border-radius: 3px;
+  background: rgba(28, 56, 102, 0.2);
+}
+
+.sheet-modal-header {
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 6px 10px 6px 20px;
+}
+
+.sheet-modal-header .route-modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1c3866;
+}
+
 .route-modal-title:focus {
   outline: none;
 }
-.route-modal::backdrop {
-  background: rgb(20 30 50 / 55%);
+
+.sheet-modal-close {
+  width: 44px;
+  height: 44px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 50%;
+  color: #1c3866;
 }
-.route-modal .app-header {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  /* 스크롤되는 내용이 고정 머리줄 뒤로 비치지 않게 */
-  background: var(--background);
+
+.sheet-modal-close:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: -2px;
 }
-.route-modal .actions {
-  position: relative;
-  --actions-fade: var(--background);
+
+/* 내용만 시트 안에서 세로로 스크롤. 스크롤 막대는 숨김 */
+.sheet-modal-body {
+  flex: 1;
+  min-height: 0;
+
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.sheet-modal-body::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes sheet-modal-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet-modal[open] {
+    animation: none;
+  }
 }
 /* 공통 유리 효과와 컴포넌트별 색상 */
 
@@ -5220,4 +5300,269 @@ body::-webkit-scrollbar,
   font-size: 10px;
   text-align: center;
   color: #8a99b0;
+}
+
+/* 이용 안내 (팝업 시트와 /help 전체 화면 공통) */
+
+.help {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  padding: 8px 20px 32px;
+}
+
+.help p {
+  margin: 0;
+}
+
+.help-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.help-lead {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1c3866;
+}
+
+.help-sub {
+  font-size: 15px;
+  color: #6b7a90;
+}
+
+.help-panel {
+  margin: 0;
+  padding: 18px;
+  list-style: none;
+
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 3px 12px rgba(60, 100, 170, 0.06);
+}
+
+.help-panel strong {
+  font-size: 15px;
+  color: #1c3866;
+}
+
+.help-panel p {
+  margin-top: 3px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #5d6d83;
+}
+
+.help-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.help-step {
+  position: relative;
+
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 12px;
+}
+
+/* 번호 원 사이를 잇는 세로선 */
+.help-step:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  top: 34px;
+  bottom: -18px;
+
+  width: 2px;
+  border-radius: 1px;
+  background: #dbe6fd;
+}
+
+.help-step-number {
+  width: 30px;
+  height: 30px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 50%;
+  background: #dbe6fd;
+
+  font-size: 14px;
+  font-weight: 800;
+  color: #2051d6;
+}
+
+.help-step-body strong {
+  display: block;
+  line-height: 30px;
+}
+
+.help-sample {
+  display: block;
+  margin-top: 10px;
+}
+
+.help-sample-search {
+  height: 44px;
+  padding: 0 6px 0 7px;
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.85);
+
+  font-size: 14px;
+  color: #6b7a90;
+}
+
+.help-sample-search-icon {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 9px;
+  background: rgba(225, 234, 250, 0.85);
+}
+
+.help-sample-send {
+  width: 28px;
+  height: 28px;
+  margin-left: auto;
+  flex-shrink: 0;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 8px;
+  background: rgba(40, 96, 237, 0.12);
+  color: #2860ed;
+}
+
+.help-sample-button {
+  min-height: 40px;
+  padding: 0 16px;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  border: 1px solid rgba(40, 96, 237, 0.25);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+
+  font-size: 14px;
+  font-weight: 700;
+  color: #2051d6;
+}
+
+.help-sample-button.primary {
+  border-color: transparent;
+  background: #2860ed;
+  color: white;
+}
+
+.help-elevator {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.help-elevator-icon {
+  width: 44px;
+  height: 44px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 14px;
+  background: #dbe6fd;
+}
+
+/* 켜진 스위치 그림 */
+.help-switch {
+  width: 44px;
+  height: 26px;
+  padding: 3px;
+
+  display: flex;
+  justify-content: flex-end;
+
+  border-radius: 13px;
+  background: #2860ed;
+}
+
+.help-switch i {
+  width: 20px;
+  height: 20px;
+
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 3px rgba(16, 28, 52, 0.2);
+}
+
+.help-notes h2 {
+  margin: 4px 0 10px;
+  font-size: 16px;
+  color: #1c3866;
+}
+
+.help-note {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+}
+
+.help-note + .help-note {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(28, 56, 102, 0.08);
+}
+
+/* 아이콘은 굵은 제목 줄 높이(32px)에 맞춰 정렬 */
+.help-note strong {
+  display: block;
+  line-height: 32px;
+}
+
+.help-note p {
+  margin-top: 0;
+}
+
+.help-note-icon {
+  width: 32px;
+  height: 32px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 10px;
+}
+
+.help-note-icon.green {
+  background: #e2f6ec;
+  color: #16845f;
+}
+
+.help-note-icon.orange {
+  background: #fff0e0;
+  color: #d9730d;
+}
+
+.help-note-icon.blue {
+  background: #dbe6fd;
+  color: #2051d6;
 }
