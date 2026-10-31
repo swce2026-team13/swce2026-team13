@@ -2083,6 +2083,41 @@ body:has(.sheet-modal[open]) .phone > .app-header {
   opacity: 0.55;
 }
 
+.home-conversation-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-top: 12px;
+  padding: 14px;
+  text-align: left;
+  color: var(--blue);
+}
+
+.home-conversation-card > svg {
+  flex-shrink: 0;
+}
+
+.home-conversation-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.home-conversation-text strong {
+  display: block;
+  font-size: 14px;
+}
+
+.home-conversation-text > span {
+  display: block;
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: #53647b;
+}
+
 /* 추천 질문: 메신저 말풍선처럼 좌우로 */
 .home-question-chips {
   display: flex;

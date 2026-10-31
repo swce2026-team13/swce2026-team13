@@ -2,6 +2,7 @@ import type { Place } from "./catalog.ts";
 import type { IntentResult } from "../types/recognition.ts";
 
 export const conversationStorageKey = "campass-conversation-v1";
+export const chatStorageKey = "campass-chat-v1";
 export const conversationLifetimeMs = 30 * 60 * 1000;
 const candidateLimit = 20;
 
@@ -13,6 +14,7 @@ export type ConversationContext = {
   pending: boolean;
   clarification?: { field: "building" | "floor"; value: string };
   turnId?: string;
+  lastQuestion?: string;
   expiresAt: number;
 };
 
@@ -20,11 +22,13 @@ type ConversationStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
 export function clearConversation(storage: ConversationStorage) {
   storage.removeItem(conversationStorageKey);
+  storage.removeItem(chatStorageKey);
 }
 
 export function saveConversation(storage: ConversationStorage, context: ConversationContext | null) {
   if (!context || (!context.startPlaceId && !context.destinationPlaceId &&
-      context.elevator === undefined && !context.candidateIds.length)) {
+      context.elevator === undefined && !context.candidateIds.length &&
+      !(context.turnId && context.lastQuestion))) {
     clearConversation(storage);
     return;
   }
@@ -51,6 +55,8 @@ export async function restoreConversation(
         (data.destinationPlaceId !== undefined && !validId(data.destinationPlaceId)) ||
         (data.elevator !== undefined && typeof data.elevator !== "boolean") ||
         (data.turnId !== undefined && !validId(data.turnId)) ||
+        (data.lastQuestion !== undefined && (typeof data.lastQuestion !== "string" ||
+          !data.lastQuestion.trim() || data.lastQuestion.length > 200 || !validId(data.turnId))) ||
         typeof data.pending !== "boolean" || !Array.isArray(data.candidateIds) ||
         data.candidateIds.length > candidateLimit || !data.candidateIds.every(validId) ||
         (data.clarification !== undefined && (!data.clarification ||
@@ -83,6 +89,7 @@ export async function restoreConversation(
         places.some((place) => filteredCandidates.includes(place.id) &&
           place[clarification.field] === clarification.value) ? { clarification } : {}),
       ...(typeof data.turnId === "string" ? { turnId: data.turnId } : {}),
+      ...(typeof data.lastQuestion === "string" ? { lastQuestion: data.lastQuestion } : {}),
       expiresAt: data.expiresAt,
     };
     if (!isCurrent()) return null;
@@ -149,7 +156,8 @@ export function mergeConversation(
     ...(candidates.length > 1 && previous?.clarification &&
       previous.candidateIds.every((id) => candidates.some((p) => p.id === id))
       ? { clarification: previous.clarification } : {}),
-    ...(turnId ? { turnId } : {}),
+    ...(turnId ? { turnId, lastQuestion: question.trim().slice(0, 200) } :
+      previous?.turnId ? { turnId: previous.turnId, lastQuestion: previous.lastQuestion } : {}),
     expiresAt: now + conversationLifetimeMs,
   };
   return {
@@ -178,5 +186,6 @@ export function selectConversationPlace(
       ? { elevator: elevator ?? current?.elevator } : {}),
     candidateIds: [], pending: false, expiresAt: now + conversationLifetimeMs,
     ...(current?.turnId ? { turnId: current.turnId } : {}),
+    ...(current?.lastQuestion ? { lastQuestion: current.lastQuestion } : {}),
   };
 }
