@@ -47,7 +47,7 @@ export default function MapView({
   }, [position?.east, position?.north, position?.elevation]);
   const onBuildingRef = useRef(onBuilding);
   const onFocusChangeRef = useRef(onFocusChange);
-  const showEntrances = Boolean(onEntrance || routeNodes?.length);
+  const showEntrances = Boolean(onEntrance || (routeNodes?.length && !routeAnnotation));
   const onMarkerRef = useRef(onMarker);
   useEffect(() => {
     onMarkerRef.current = onMarker;

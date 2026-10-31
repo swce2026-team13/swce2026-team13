@@ -368,14 +368,34 @@ export function createCampusScene(THREE, container, events) {
       }
       for (const p of segments.flat()) previewBounds.expandByPoint(point(p.east,p.north,p.elevation+5));
       previewBounds.expandByScalar(22);
-      for (const [p,text,color] of [[segments.at(-1)[1],"도착","#2860ed"],[middle,annotation.name,annotation.color]]) {
-        const element=document.createElement("span");
-        element.className=styles.routePill;
-        element.textContent=text;
-        element.style.background=color;
+      const addRouteLabel = (position, className, text, elevationOffset = 5) => {
+        const element = document.createElement("span");
+        element.className = className;
+        element.textContent = text;
         labelLayer.appendChild(element);
-        routeLabels.push({element,position:point(p.east,p.north,p.elevation+5)});
-      }
+        routeLabels.push({ element, position: point(position.east, position.north, position.elevation + elevationOffset) });
+        return element;
+      };
+      addRouteLabel(segments[0][0], `${styles.routePill} ${styles.routeStartPill}`, "출발", 2);
+      if (annotation.name)
+        addRouteLabel(middle, `${styles.routePill} ${styles.routeGradePill}`, annotation.name);
+      const flag = addRouteLabel(segments.at(-1)[1], styles.routeFlagPin, "", 1.2);
+      const flagIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      flagIcon.setAttribute("viewBox", "0 0 30 40");
+      flagIcon.setAttribute("width", "30");
+      flagIcon.setAttribute("height", "40");
+      const pin = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      pin.setAttribute("d", "M15 39S1 24 1 15a14 14 0 0 1 28 0C29 24 15 39 15 39z");
+      pin.setAttribute("fill", "#2860ed");
+      pin.setAttribute("stroke", "white");
+      pin.setAttribute("stroke-width", "2.5");
+      const pennant = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      pennant.setAttribute("d", "M11 9v13m.5-12h9l-2.5 3 2.5 3h-9z");
+      pennant.setAttribute("fill", "white");
+      pennant.setAttribute("stroke", "white");
+      pennant.setAttribute("stroke-width", "1.5");
+      flagIcon.append(pin, pennant);
+      flag.appendChild(flagIcon);
       fitBox(previewBounds);
     }
     for (const child of [...routeLayer.children]) {
@@ -384,17 +404,17 @@ export function createCampusScene(THREE, container, events) {
       routeLayer.remove(child);
     }
     const joints = new Map();
+    const lineLayers = annotation
+      ? [[2.1, "#102864", 4], [1.7, "#ffffff", 5], [1, "#2860ed", 6]]
+      : [[1.5, "#ffffff", 5], [0.95, "#dc2626", 6]];
     for (const [from, to] of segments) {
       const a = point(from.east, from.north, from.elevation + 1.2);
       const b = point(to.east, to.north, to.elevation + 1.2);
       const delta = b.clone().sub(a);
       if (delta.length() < 0.01) continue;
       for (const endpoint of [a, b]) joints.set(endpoint.toArray().join(","), endpoint);
-      // 흰 외곽선과 굵은 빨간 선을 건물 위에 겹쳐 실내 구간도 보이게 한다.
-      for (const [radius, color, order] of [
-        [1.5, "#ffffff", 5],
-        [0.95, annotation ? "#2860ed" : "#dc2626", 6],
-      ]) {
+      // 경로 미리보기에는 그림자·흰 테두리·파란 선을 겹친다.
+      for (const [radius, color, order] of lineLayers) {
         const mesh = new THREE.Mesh(
           new THREE.CylinderGeometry(radius, radius, delta.length(), 16),
           new THREE.MeshBasicMaterial({
@@ -402,6 +422,7 @@ export function createCampusScene(THREE, container, events) {
             depthTest: false,
             depthWrite: false,
             transparent: true,
+            opacity: order === 4 ? 0.18 : 1,
             fog: false,
           }),
         );
@@ -416,17 +437,43 @@ export function createCampusScene(THREE, container, events) {
     }
     // 끝점과 공유 꼭짓점을 구로 마감해 원통 사이의 틈과 각진 단면을 없앤다.
     for (const position of joints.values()) {
-      for (const [radius, color, order] of [
-        [1.5, "#ffffff", 5],
-        [0.95, annotation ? "#2860ed" : "#dc2626", 6],
-      ]) {
+      for (const [radius, color, order] of lineLayers) {
         const cap = new THREE.Mesh(
           new THREE.SphereGeometry(radius, 16, 12),
-          new THREE.MeshBasicMaterial({ color, depthTest: false, depthWrite: false, transparent: true, fog: false }),
+          new THREE.MeshBasicMaterial({ color, opacity: order === 4 ? 0.18 : 1, depthTest: false, depthWrite: false, transparent: true, fog: false }),
         );
         cap.position.copy(position);
         cap.renderOrder = order;
         routeLayer.add(cap);
+      }
+    }
+    if (annotation && segments.length) {
+      const total = segments.reduce((sum, [a, b]) =>
+        sum + Math.hypot(b.east-a.east, b.north-a.north, b.elevation-a.elevation), 0);
+      let remaining = total / 2;
+      let middle = segments[0][1];
+      for (const [a, b] of segments) {
+        const length = Math.hypot(b.east-a.east, b.north-a.north, b.elevation-a.elevation);
+        if (remaining <= length) {
+          const t = length ? remaining / length : 0;
+          middle = { east: a.east+(b.east-a.east)*t, north: a.north+(b.north-a.north)*t, elevation: a.elevation+(b.elevation-a.elevation)*t };
+          break;
+        }
+        remaining -= length;
+      }
+      for (const [at, outer, inner] of [
+        [segments[0][0], "#ffffff", "#1d9e75"],
+        [middle, "#2860ed", "#ffffff"],
+      ]) {
+        for (const [radius, color, order] of [[3.1, outer, 7], [2.1, inner, 8]]) {
+          const dot = new THREE.Mesh(
+            new THREE.SphereGeometry(radius, 16, 12),
+            new THREE.MeshBasicMaterial({ color, depthTest: false, depthWrite: false }),
+          );
+          dot.position.copy(point(at.east, at.north, at.elevation + 2));
+          dot.renderOrder = order;
+          routeLayer.add(dot);
+        }
       }
     }
     highlight();

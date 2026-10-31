@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { CameraIcon } from "@/components/ui/icons";
-import { Footprints } from "lucide-react";
+import { ArrowDownUp, Footprints, TriangleAlert, X } from "lucide-react";
 import { routeName } from "@/shared/utils/route-presentation";
 import { RouteSummarySheet } from "./route-summary-sheet";
 import { markerStarts } from "@/shared/utils/map-pick";
@@ -42,14 +42,16 @@ export default function Screen() {
   const picking =
     pick === "start" || pick === "destination"
       ? pick
-      : !start && pick !== "none"
-        ? "start"
-        : null;
+      : pick === "none"
+        ? null
+        : !start
+          ? "start"
+          : !hasDestination
+            ? "destination"
+            : null;
   const pickingOnMap = Boolean(picking);
   const unavailable = routeFailed && !pickingOnMap;
-  const showPicker =
-    !routeLoading &&
-    (pickingOnMap || (!unavailable && (!start || !hasDestination)));
+  const showPicker = !routeLoading && pickingOnMap;
   const [pickNotice, setPickNotice] = useState("");
   const setPicking = (target: "start" | "destination" | null) => {
     setPickNotice("");
@@ -79,6 +81,17 @@ export default function Screen() {
       destination:
         target === "destination" ? value : hasDestination ? destination.id : "",
       pick: target === "start" && !hasDestination ? "destination" : "none",
+    });
+  };
+  const swapPlaces = () => {
+    if (busy || !start || !hasDestination) return;
+    const previousStartCanBeDestination = registeredPlaces.some(
+      (place) => place.id === start,
+    );
+    go("prepare", {
+      start: destination.id,
+      destination: previousStartCanBeDestination ? start : "",
+      pick: previousStartCanBeDestination ? "none" : "destination",
     });
   };
   // 헤매는 구간 주의 카드는 고른 길에 혼란 기록이 있을 때만
@@ -147,52 +160,62 @@ export default function Screen() {
   return (
     <>
       <section className="content stack prepare-screen">
-        <div className="card route-endpoints" aria-label="선택한 출발과 도착">
-          {(["start", "destination"] as const).map((target) => {
-            const isStart = target === "start";
-            const description = isStart
-              ? registeredPlaces.find((p) => p.id === start)?.description
-              : destination.description;
-            return (
-              <div className="route-endpoint" key={target}>
-                <span className={`map-pick-tag ${target}`}>
-                  {isStart ? "출발" : "도착"}
-                </span>
-                {picking === target ? (
-                  <div className="endpoint-picking" role="status">
-                    <i />
-                    지도에서 {isStart ? "출발지" : "도착지"}를 눌러 주세요
-                  </div>
-                ) : (
-                  <div>
-                    <strong>
-                      {isStart
-                        ? startLabel(start, registeredPlaces)
-                        : hasDestination
-                          ? placeLabel(destination)
-                          : "도착지를 선택해 주세요"}
-                    </strong>
-                    {description &&
-                      (isStart ? Boolean(start) : hasDestination) && (
-                        <small>{description}</small>
-                      )}
-                  </div>
-                )}
-                <button
-                  className={`text-button ${picking === target ? "endpoint-cancel" : ""}`}
-                  disabled={busy}
-                  onClick={() => setPicking(picking === target ? null : target)}
-                >
-                  {picking === target
-                    ? "취소"
-                    : isStart
-                      ? "출발 변경"
-                      : "도착 변경"}
-                </button>
-              </div>
-            );
-          })}
-        </div>
+        <section className="route-endpoints" aria-label="출발과 도착">
+          <div className="route-endpoint-line" aria-hidden="true">
+            <span className="route-start-dot" />
+            <span className="route-endpoint-dash" />
+            <svg className="route-destination-pin" width="13" height="16" viewBox="0 0 13 16">
+              <path d="M6.5 15.5S1 10 1 6.5a5.5 5.5 0 0 1 11 0C12 10 6.5 15.5 6.5 15.5z" fill="#2860ed" />
+              <circle cx="6.5" cy="6.4" r="2" fill="white" />
+            </svg>
+          </div>
+          <div className="route-endpoint-fields">
+            {(["start", "destination"] as const).map((target) => {
+              const isStart = target === "start";
+              const selected = isStart ? Boolean(start) : hasDestination;
+              const active = picking === target;
+              const label = selected
+                ? isStart
+                  ? startLabel(start, registeredPlaces)
+                  : placeLabel(destination)
+                : isStart
+                  ? "출발지를 골라 주세요"
+                  : "도착지를 골라 주세요";
+              return (
+                <div className={`route-endpoint-field${active ? " is-picking" : ""}${selected && !active ? " has-place" : ""}`} key={target}>
+                  <button
+                    type="button"
+                    className="route-endpoint-field-button"
+                    aria-label={`${isStart ? "출발" : "도착"}: ${active ? "고르는 중" : label}. 눌러서 다시 고르기`}
+                    disabled={busy}
+                    onClick={() => setPicking(target)}
+                  >
+                    {active ? `${isStart ? "출발지" : "도착지"}를 골라 주세요` : label}
+                  </button>
+                  {active && (
+                    <button
+                      type="button"
+                      className="route-endpoint-cancel"
+                      aria-label={`${isStart ? "출발" : "도착"} 고르기 취소`}
+                      onClick={() => setPicking(null)}
+                    >
+                      <X size={12} strokeWidth={2.6} aria-hidden="true" />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <button
+            type="button"
+            className="route-endpoint-swap"
+            aria-label="출발과 도착 바꾸기"
+            disabled={busy || !start || !hasDestination}
+            onClick={swapPlaces}
+          >
+            <ArrowDownUp size={20} strokeWidth={1.9} aria-hidden="true" />
+          </button>
+        </section>
         {unavailable && routeElevatorUnavailable && (
           <div className="route-elevator-control">
             <span>엘리베이터</span>
@@ -235,7 +258,7 @@ export default function Screen() {
               target={picking ?? (!start ? "start" : "destination")}
               onSelect={selectPlace}
             />
-            {pickNotice && <p role="status">{pickNotice}</p>}
+            {pickNotice && <p className="route-pick-notice" role="status">{pickNotice}</p>}
           </div>
         )}
 
@@ -262,22 +285,22 @@ export default function Screen() {
             warning={
               riskyPoint && (
                 <div className="prepare-warning">
-                  <b>헤매는 사람이 많은 구간이 있어요</b>
-                  {isDemoRisk && <small>시연용 예시 기록 포함</small>}
+                  <b><TriangleAlert size={17} aria-hidden="true" /> 헤매는 사람이 많은 구간이 있어요</b>
                   <p>
                     {riskyPoint.name}에서 {riskyPoint.passages}명 중{" "}
                     {riskyPoint.confusions}명이 헤맸어요. 그 구간 앞에서 한 번
                     더 확인해 주세요.
                   </p>
-                  <button
-                    type="button"
-                    className="button secondary"
-                    onClick={() =>
-                      go("confusion", { option: routeOption?.id ?? "" })
-                    }
-                  >
-                    자세히 보기
-                  </button>
+                  <div className="prepare-warning-footer">
+                    {isDemoRisk && <small>시연용 예시 기록 표본</small>}
+                    <button
+                      type="button"
+                      className="button secondary"
+                      onClick={() => go("confusion", { option: routeOption?.id ?? "" })}
+                    >
+                      자세히 보기
+                    </button>
+                  </div>
                 </div>
               )
             }
