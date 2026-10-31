@@ -4126,16 +4126,16 @@ progress::-moz-progress-bar {
   flex-direction: column;
 }
 
-/* 홈 전환 때 문서(모바일)와 앱 내부(데스크톱)의 스크롤 막대가 번쩍이지 않게 한다. */
-html:has(.page-transition-root),
-body:has(.page-transition-root),
-.phone > main:has(.page-transition-root) {
+/* 앱 화면은 계속 스크롤할 수 있게 두고, 모바일·데스크톱의 막대만 숨긴다. */
+html,
+body,
+.phone > main {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
-html:has(.page-transition-root)::-webkit-scrollbar,
-body:has(.page-transition-root)::-webkit-scrollbar,
-.phone > main:has(.page-transition-root)::-webkit-scrollbar {
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+.phone > main::-webkit-scrollbar {
   display: none;
 }
 
@@ -4205,7 +4205,7 @@ body:has(.page-transition-root)::-webkit-scrollbar,
 .route-timeline li > div { flex:1; }
 .route-timeline strong { font-size:13px; }
 .route-timeline p { margin:4px 0 0; color:#7b8798; font-size:11px; line-height:1.7; }
-.actions.route-start-actions.prepare-fixed-actions { position:fixed; bottom:0; left:50%; transform:translateX(-50%); z-index:20; display:flex; flex-direction:row; gap:10px; width:100%; max-width:390px; padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px)); background:#fffffff5; border-top:1px solid #edf0f4; }
+.actions.route-start-actions.prepare-fixed-actions { position:fixed; bottom:0; left:50%; transform:translateX(-50%); z-index:20; display:flex; flex-direction:row; gap:10px; width:100%; max-width:390px; padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px)); background:transparent; border:0; }
 .prepare-fixed-actions .button { min-height:56px; margin:0; }
 .prepare-fixed-actions .primary { flex:1; font-size:14px; }
 .prepare-fixed-actions .route-camera-button { flex:0 0 56px; width:56px; padding:0; }
@@ -4453,7 +4453,7 @@ body:has(.page-transition-root)::-webkit-scrollbar,
 .prepare-screen .route-timeline li > div { padding-top: 5px; }
 .prepare-screen .route-timeline strong { color: #1f2a3c; font-size: 15px; font-weight: 700; }
 .prepare-screen .route-timeline p { margin: 0; color: #6b7480; font-size: 12.5px; }
-.actions.route-start-actions.prepare-fixed-actions { gap: 8px; padding: 12px 16px calc(24px + env(safe-area-inset-bottom, 0px)); background: white; }
+.actions.route-start-actions.prepare-fixed-actions { gap: 8px; padding: 12px 16px calc(24px + env(safe-area-inset-bottom, 0px)); }
 .prepare-fixed-actions .button { min-height: 54px; border-radius: 16px; }
 .prepare-fixed-actions .primary { background: linear-gradient(90deg, #3d6ff2, #6b98ff); box-shadow: 0 8px 18px rgba(40, 96, 237, .3); font-size: 16px; font-weight: 800; }
 .prepare-fixed-actions .primary:disabled { background: #c9d6f3; box-shadow: none; opacity: 1; }
