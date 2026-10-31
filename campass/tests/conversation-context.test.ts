@@ -119,3 +119,61 @@ test("초기화 뒤에 끝난 복원은 이전 대화를 다시 저장하지 않
   assert.equal(await restoring, null);
   assert.equal(storage.getItem(conversationStorageKey), null);
 });
+
+test("최근 질문과 turn을 새로고침 뒤에도 함께 복원해요", async () => {
+  const storage = memory();
+  const now = 1_000_000;
+  const question = "혜인관 301호 어디예요?";
+  const first = mergeConversation(question, await ask(question), null, find, now, "turn-1");
+  saveConversation(storage, first.context);
+  const restored = await restoreConversation(storage, async (id) => find(id), now + 1000);
+  assert.equal(restored?.context.lastQuestion, question);
+  assert.equal(restored?.context.turnId, "turn-1");
+  assert.deepEqual(rememberedTurnPlaces(restored!.context, "turn-1", find).map((p) => p.id), ["hyein-301"]);
+
+  const followup = mergeConversation("그럼 엘리베이터로는?", await ask("그럼 엘리베이터로는?"), first.context, find, now + 2000, "turn-2");
+  assert.equal(followup.context.lastQuestion, "그럼 엘리베이터로는?");
+  assert.equal(followup.context.turnId, "turn-2");
+});
+
+test("장소나 출발지를 버튼으로 골라도 마지막 질문의 turn을 유지해요", async () => {
+  const now = 1_000_000;
+  const first = mergeConversation("혜인관", await ask("혜인관"), null, find, now, "turn-1");
+  const chosen = selectConversationPlace(first.context, find("hyein")!, undefined, true, now + 1000);
+  assert.equal(chosen.lastQuestion, "혜인관");
+  assert.equal(chosen.turnId, "turn-1");
+  const local = mergeConversation("학교 정문", {
+    intent: "destination", conditions: {}, places: [], startPlaceId: "gate", startRequested: true,
+    mode: "keyword", message: "",
+  }, chosen, find, now + 2000);
+  assert.equal(local.context.lastQuestion, "혜인관");
+  assert.equal(local.context.turnId, "turn-1");
+  assert.equal(local.context.startPlaceId, "gate");
+});
+
+test("검색 결과가 없어도 최근 질문을 복원하고 만료되면 말풍선도 지워요", async () => {
+  const storage = memory();
+  const now = 1_000_000;
+  const question = "등록되지 않은 비밀 강의실";
+  const unknown = mergeConversation(question, await ask(question), null, find, now, "turn-empty");
+  saveConversation(storage, unknown.context);
+  const restored = await restoreConversation(storage, async (id) => find(id), now + 1000);
+  assert.equal(restored?.context.lastQuestion, question);
+  storage.setItem("campass-chat-v1", JSON.stringify({ entries: [{ role: "user", text: question }], local: "" }));
+  assert.equal(await restoreConversation(storage, async (id) => find(id), now + conversationLifetimeMs), null);
+  assert.equal(storage.getItem("campass-chat-v1"), null);
+});
+
+test("새 대화를 시작할 때 이전 질문과 말풍선을 함께 비워요", async () => {
+  const storage = memory();
+  const first = mergeConversation("본관에서 혜인관", await ask("본관에서 혜인관"), null, find, Date.now(), "old-turn");
+  saveConversation(storage, first.context);
+  storage.setItem("campass-chat-v1", JSON.stringify({ entries: [{ role: "user", text: "이전 질문" }], local: "학교 정문" }));
+  clearConversation(storage);
+  assert.equal(storage.getItem(conversationStorageKey), null);
+  assert.equal(storage.getItem("campass-chat-v1"), null);
+  const fresh = mergeConversation("엘리베이터로 갈래요", await ask("엘리베이터로 갈래요"), null, find, Date.now(), "new-turn");
+  assert.equal(fresh.context.destinationPlaceId, undefined);
+  assert.equal(fresh.context.startPlaceId, undefined);
+  assert.equal(fresh.context.turnId, "new-turn");
+});

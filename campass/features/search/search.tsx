@@ -21,7 +21,7 @@ import { ElevatorShortcut } from "@/features/search/elevator-shortcut";
 import { ElevatorSectionCard } from "@/features/navigation/elevator-section-card";
 import { CampusOverviewMap } from "@/features/navigation/campus-overview-map";
 import { elevatorSection, shortcutAreaOf } from "@/shared/utils/elevator-shortcut";
-import { isConfirmation } from "@/shared/utils/conversation-context";
+import { chatStorageKey, isConfirmation } from "@/shared/utils/conversation-context";
 import { campusBuildings } from "@/shared/utils/campus3d/types";
 import { routeSummary } from "@/shared/utils/route-summary";
 import { api } from "@/shared/utils/api";
@@ -30,7 +30,6 @@ import type { Place } from "@/shared/utils/catalog";
 
 // 지난 말풍선. 마지막 질문의 답은 화면 상태로 그리고, 그 전 대화는 글로만 남김
 type Entry = { role: "user" | "bot"; text: string };
-const chatStorageKey = "campass-chat-v1";
 
 // 출발을 묻는 빠른 답. 출발 지점은 글이 아니라 선택값으로 바로 넘김
 const startChoices = [{ id: "gate", label: "학교 정문" }];
@@ -41,16 +40,17 @@ function floorRange(place: Place) {
   return `${building.floors[0].label} ~ ${building.floors.at(-1)!.label}`;
 }
 
-function readLog(): { entries: Entry[]; local: string } {
+function readLog(): { entries: Entry[]; local: string; draft: string } {
   try {
     const value = JSON.parse(sessionStorage.getItem(chatStorageKey) ?? "null");
     if (value && Array.isArray(value.entries))
       return {
         entries: value.entries.filter((e: Entry) => (e.role === "user" || e.role === "bot") && typeof e.text === "string"),
         local: typeof value.local === "string" ? value.local : "",
+        draft: typeof value.draft === "string" ? value.draft : "",
       };
   } catch {}
-  return { entries: [], local: "" };
+  return { entries: [], local: "", draft: "" };
 }
 
 export default function Screen() {
@@ -96,11 +96,13 @@ export default function Screen() {
 
   // 새로고침해도 같은 대화(turn)면 지난 말풍선을 이어서 보여 줌
   useEffect(() => {
+    // Activity 복원 때 저장 effect가 이전 화면의 말풍선을 쓰기 전에 읽어요.
+    const saved = readLog();
     Promise.resolve().then(() => {
-      const saved = readLog();
       if (turn || params.get("q")) {
         setEntries(saved.entries);
         setLocal(saved.local);
+        setDraft(saved.draft);
       } else {
         // 질문 없이 새로 열면 이전 대화를 이어받지 않고 새로 시작
         sessionStorage.removeItem(chatStorageKey);
@@ -114,9 +116,9 @@ export default function Screen() {
   useEffect(() => {
     if (!restored) return;
     try {
-      sessionStorage.setItem(chatStorageKey, JSON.stringify({ entries, local }));
+      sessionStorage.setItem(chatStorageKey, JSON.stringify({ entries, local, draft }));
     } catch {}
-  }, [entries, local, restored]);
+  }, [entries, local, draft, restored]);
 
   const userText = local || query.trim();
   const buildings = [...new Set(results.map((place) => place.building).filter(Boolean))];

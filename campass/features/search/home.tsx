@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
-import { CircleHelp, Navigation } from "lucide-react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { CircleHelp, MessageCircle, Navigation } from "lucide-react";
 import {
   CampassLogo,
   CampassWordmark,
@@ -254,8 +254,21 @@ function CompassDial() {
 }
 
 export default function Screen() {
-  const { query, setQuery, session, busy, ready, go, search, choose } =
+  const { conversation, session, busy, ready, go, search, choose } =
     useCampus();
+  const [draft, setDraft] = useState("");
+  // Activity가 홈을 숨겼다가 복원해도 입력 중이던 문장은 남기지 않아요.
+  useLayoutEffect(() => () => setDraft(""), []);
+
+  function submitQuestion(question: string) {
+    const value = question.trim();
+    if (!value || busy || !ready) return;
+    setDraft("");
+    search(value);
+  }
+
+  const recentConversation = session?.status !== "active" &&
+    conversation?.turnId && conversation.lastQuestion ? conversation : null;
 
   const carousel = useEventRotation(events.length);
   const eventIndex = carousel.index;
@@ -323,9 +336,7 @@ export default function Screen() {
             onSubmit={(e) => {
               e.preventDefault();
 
-              if (query.trim()) {
-                search();
-              }
+              submitQuestion(draft);
             }}
           >
             <span className="home-search-icon">
@@ -335,24 +346,49 @@ export default function Screen() {
             <input
               aria-label="목적지 검색"
               placeholder="어디든 물어보세요"
-              value={query}
+              value={draft}
               maxLength={200}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => setDraft(e.target.value)}
             />
 
             <button
               aria-label="목적지 찾기"
-              disabled={busy || !ready || !query.trim()}
+              disabled={busy || !ready || !draft.trim()}
             >
               <ArrowRightIcon size={20} />
             </button>
           </form>
 
+          {recentConversation && (
+            <button
+              type="button"
+              className="home-conversation-card card"
+              onClick={() => {
+                // 클릭 직전에 만료되었다면 이전 질문을 다시 보내지 않아요.
+                if (recentConversation.expiresAt <= Date.now()) return;
+                go("search", {
+                  q: recentConversation.lastQuestion!,
+                  category: "",
+                  turn: recentConversation.turnId!,
+                  start: recentConversation.startPlaceId || "",
+                  elevator: String(recentConversation.elevator ?? true),
+                });
+              }}
+            >
+              <MessageCircle size={20} aria-hidden="true" />
+              <span className="home-conversation-text">
+                <strong>최근 대화 이어가기</strong>
+                <span>{recentConversation.lastQuestion}</span>
+              </span>
+              <ChevronRightIcon size={18} />
+            </button>
+          )}
+
           <div className="home-question-chips">
             <button
               className="from-left"
               disabled={busy || !ready}
-              onClick={() => search("엘리베이터로 갈래요")}
+              onClick={() => submitQuestion("엘리베이터로 갈래요")}
             >
               <ElevatorIcon size={16} />
               엘리베이터로 갈래요
@@ -361,7 +397,7 @@ export default function Screen() {
             <button
               className="from-right"
               disabled={busy || !ready}
-              onClick={() => search("혜인관 301호 어디예요?")}
+              onClick={() => submitQuestion("혜인관 301호 어디예요?")}
             >
               <PinIcon size={16} />
               혜인관 301호 어디예요?
