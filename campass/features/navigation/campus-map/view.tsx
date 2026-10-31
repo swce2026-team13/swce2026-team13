@@ -47,7 +47,7 @@ export default function MapView({
   }, [position?.east, position?.north, position?.elevation]);
   const onBuildingRef = useRef(onBuilding);
   const onFocusChangeRef = useRef(onFocusChange);
-  const showEntrances = Boolean(onEntrance);
+  const showEntrances = Boolean(onEntrance || routeNodes?.length);
   const onMarkerRef = useRef(onMarker);
   useEffect(() => {
     onMarkerRef.current = onMarker;
@@ -128,7 +128,7 @@ export default function MapView({
     <>
       <div className={styles.stage} aria-busy={status === "loading"}>
         <div className={styles.canvas} ref={container} />
-        {status === "ready" && onEntrance && (
+        {status === "ready" && showEntrances && (
           <EntrancePins pins={entrancePins} selected={selectedBuildings ?? []} onSelect={onEntrance} />
         )}
         {status === "loading" ? (
