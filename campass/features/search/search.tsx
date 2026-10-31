@@ -36,6 +36,7 @@ export default function Screen() {
     classroomBuilding,
     setClassroomBuilding,
     searchRevision,
+    searchLoading,
     busy,
     go,
     search,
@@ -78,11 +79,25 @@ export default function Screen() {
           search("");
         }}>새 길찾기 시작</button>
       )}
-      {searchStartRequested && (
+      {!searchLoading && searchStartRequested && (
         <Notice>출발: {startLabel(start, registeredPlaces)}{start ? " · 목적지를 골라 경로를 확인해 주세요." : " · 길찾기 화면에서 출발지를 선택해 주세요."}</Notice>
       )}
-      {searchIntent !== "destination" && <p>{searchNote}</p>}
-      {searchIntent !== "destination" ? (
+      {!searchLoading && searchIntent !== "destination" && <p>{searchNote}</p>}
+      {searchLoading ? (
+        <div className="ai-search-flow">
+          <div className="ai-user-message">{query || "목적지를 찾고 있어요"}</div>
+          <div className="ai-assistant-label">
+            <MessageIcon size={15} />
+            <span>CAMPASS</span>
+          </div>
+          <div className="card ai-answer-card ai-search-loading" role="status" aria-live="polite">
+            <span className="ai-answer-type">검색 중</span>
+            <h3>목적지를 찾고 있어요</h3>
+            <p className="muted">검색 결과를 확인하는 중이에요.</p>
+            <span className="ai-search-loading-bar" aria-hidden="true" />
+          </div>
+        </div>
+      ) : searchIntent !== "destination" ? (
         <Notice>
           {searchIntent === "next"
             ? "먼저 목적지를 알려 주세요."
