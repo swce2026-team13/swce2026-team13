@@ -4472,6 +4472,19 @@ progress::-moz-progress-bar {
   flex-direction: column;
 }
 
+/* 홈 전환 때 문서(모바일)와 앱 내부(데스크톱)의 스크롤 막대가 번쩍이지 않게 한다. */
+html:has(.page-transition-root),
+body:has(.page-transition-root),
+.phone > main:has(.page-transition-root) {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+html:has(.page-transition-root)::-webkit-scrollbar,
+body:has(.page-transition-root)::-webkit-scrollbar,
+.phone > main:has(.page-transition-root)::-webkit-scrollbar {
+  display: none;
+}
+
 .home-transition {
   flex: 1;
   min-height: 0;
