@@ -33,8 +33,8 @@
   content: "";
   position: absolute;
   top: 14px;
-  left: 16.66%;
-  right: 16.66%;
+  left: var(--guide-line-edge, 16.66%);
+  right: var(--guide-line-edge, 16.66%);
   height: 2px;
   background: #d3ddeb;
 }
@@ -42,14 +42,12 @@
   content: "";
   position: absolute;
   top: 14px;
-  left: 16.66%;
+  left: var(--guide-line-edge, 16.66%);
   width: var(--guide-line-fill, 0%);
   height: 2px;
   background: #2860ed;
   transition: width .9s ease-in-out;
 }
-.guide-live-milestones[data-count="2"]::before { left: 25%; right: 25%; }
-.guide-live-milestones[data-count="2"]::after { left: 25%; }
 .guide-live-milestones li {
   position: relative;
   z-index: 1;
@@ -89,6 +87,9 @@
 }
 .guide-live-milestones li[data-state="current"] strong { color: #2860ed; }
 .guide-live-milestones li[data-state="passed"] strong { color: #526787; }
+/* 줄인 단계(「…」)는 점 없이 글자만 */
+.guide-live-milestones li[data-state="more"] .guide-live-milestone-dot { visibility: hidden; }
+.guide-live-milestones li[data-state="more"] strong { color: #9aa6b8; }
 .guide-live-viewport { position: relative; min-width: 0; }
 .guide-live-map {
   position: relative;
@@ -160,18 +161,18 @@
 }
 .guide-live-chips span.unverified { background: #fff2d9; color: #a16a11; }
 .guide-live-distance { flex: none; color: #5d6d83; font-size: 11px; font-weight: 600; white-space: nowrap; }
-/* 안내 문장은 한 줄(약 19px 굵게, 줄바꿈 없음) */
+/* 안내 문장: 19px 굵게, 두 줄까지 줄바꿈. 두 줄을 넘으면 17px(data-size="small") */
 .guide-live-instruction h1 {
   margin: 10px 0 10px;
-  overflow: hidden;
   color: #1c3866;
   font-size: 19px;
   font-weight: 800;
   line-height: 1.35;
   letter-spacing: -.5px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
+.guide-live-instruction h1[data-size="small"] { font-size: 17px; }
 .guide-live-detail { margin: -6px 0 10px; color: #8a96a8; font-size: 10px; line-height: 1.45; }
 /* 현재 → 다음: 각 칸은 「라벨 장소명」 한 줄, 가운데 정렬 */
 .guide-live-flow { display: grid; grid-template-columns: minmax(0,1fr) 18px minmax(0,1fr); align-items: center; gap: 8px; }
@@ -211,7 +212,13 @@
 .guide-live-actions .guide-step-actions { grid-template-columns: minmax(0,.35fr) minmax(0,1fr); gap: 7px; }
 .guide-live-actions .button { min-height: 52px; border-radius: 15px; font-size: 13px; font-weight: 800; }
 .guide-live-actions .button.primary { gap: 6px; background: #2860ed; box-shadow: 0 8px 18px #2860ed30; }
-.guide-live-actions .button.secondary { background: white; }
+/* 이전 버튼은 불투명한 흰 바탕이라 뒤 내용이 비치지 않음 */
+.guide-live-actions .button.secondary {
+  border: 1px solid #dfe5ee;
+  background: #fff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
 
 @media (max-width: 360px) {
   .guide-live-meta { align-items: flex-start; flex-direction: column; }
@@ -219,4 +226,5 @@
 }
 
 /* #121 「지금 여기」 퍼지는 원은 움직임 줄이기 설정에서 빠짐(SVG에서 처리) */
-.guide-live-screen.content { gap: 8px; padding-bottom: 8px; }
+/* 하단 고정 버튼(52px + 위아래 여백)만큼 본문 아래를 띄워 버튼이 내용을 가리지 않게 */
+.guide-live-screen.content { gap: 8px; padding-bottom: calc(96px + env(safe-area-inset-bottom)); }

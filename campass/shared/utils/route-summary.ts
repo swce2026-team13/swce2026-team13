@@ -115,13 +115,14 @@ export function routeSummary(option: RouteOption) {
     !kinds.includes("elevator")
       ? Math.round((Math.abs(rise) / slopedOutdoorLength) * 1000) / 10
       : null;
+  // 같은 곳 안에서 이어지는 계단·엘리베이터는 한 번으로 셈. 건물 안 계단에 이어 건물 밖 계단길로 나가면 따로 셈
+  // (경로 상세 시트 단계 목록과 같은 기준)
+  const hopArea = (i: number) => `${nodeArea(option.nodes[i])}>${nodeArea(option.nodes[i + 1])}`;
   const countRuns = (kind: MovementKind) =>
     kinds.filter(
       (value, i) =>
         value === kind &&
-        (i === 0 ||
-          kinds[i - 1] !== kind ||
-          nodeArea(option.nodes[i - 1]) !== nodeArea(option.nodes[i])),
+        (i === 0 || kinds[i - 1] !== kind || hopArea(i - 1) !== hopArea(i)),
     ).length;
   const total = segments.reduce((sum, s) => sum + s.length, 0);
   const bars =
@@ -198,9 +199,12 @@ export function routeHeightText(
   const height = Math.round(Math.abs(summary.rise));
   if (height === 0) return "같은 높이로 이동해요";
   const direction = summary.rise < 0 ? "내려가요" : "올라가요";
-  if (routeMode(option) === "elevator")
+  // 길 종류가 아니라 실제로 지나는 엘리베이터·계단 개수로 정해 요약 숫자와 어긋나지 않게 함
+  if (summary.elevators > 0 && summary.stairs > 0)
+    return `엘리베이터와 계단으로 ${height}m ${direction}`;
+  if (summary.elevators > 0 || (routeMode(option) === "elevator" && summary.stairs === 0))
     return `엘리베이터로 ${height}m ${direction}`;
-  if (summary.stairs > 0 || option.hillMode === "stairs")
+  if (summary.stairs > 0)
     return `계단으로 ${height}m ${direction}`;
   if (summary.indoorElevationChange) return `실내에서 ${height}m ${direction}`;
   return `${summary.rise < 0 ? "내리막" : "오르막"} ${height}m${summary.grade !== null ? ` · 평균 경사 ${summary.grade}%` : ""}`;
@@ -221,4 +225,16 @@ export function routeChips(
     summary.stairs === 0 && option.stepFree !== null ? "계단 없음" : "",
     option.unverified || option.approximate ? "현장 확인 전" : "",
   ].filter(Boolean);
+}
+
+// 길 고르기 카드의 설명 한 줄. 길 종류마다 고정하지 않고 그 경로의 계단 수와 오르막 여부로 정함
+export function routeHint(option: RouteOption, summary = routeSummary(option)) {
+  const hilly = summary.slopedOutdoorLength > 10 &&
+    summary.rise !== null && Math.abs(summary.rise) >= 3;
+  if (summary.stairs > 0 && hilly) return "오르막과 계단이 조금 있어요";
+  if (summary.stairs > 0 && summary.elevators > 0) return "엘리베이터와 계단을 함께 써요";
+  if (summary.stairs > 0) return "계단이 있어요";
+  if (hilly) return "오르막이 조금 있어요";
+  if (summary.elevators > 0) return "계단 없이 엘리베이터로 가요";
+  return "평지로 걸어가요";
 }

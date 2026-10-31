@@ -32,15 +32,17 @@ const floorIndex = (node: string) => {
 export function guideStepKind(option: RouteOption, step: Step, next?: Step): GuideStepKind {
   const from = step.node;
   const to = next?.node;
+  const kind = routeStepKind(option, step as Waypoint);
+  // 실외 언덕길은 건물을 드나들어도 출입구가 아니라 오르막 단계로 봄(다른 단계와 합치지 않음)
+  if (kind === "hill") return "hill";
+  // 계단(건물 밖 계단길 포함)도 출입구보다 먼저 봄. 경로 요약의 계단 개수와 같은 기준
+  if (kind === "stairs") return "stairs";
   // 건물 밖 지점 ↔ 건물 층: 출입구로 드나듦
   if (from && to && from.includes("|") !== to.includes("|") &&
       (buildingById(nodeArea(from)) || buildingById(nodeArea(to))))
     return "entrance";
-  const kind = routeStepKind(option, step as Waypoint);
   if (kind === "elevator") return "elevator";
-  if (kind === "stairs") return "stairs";
   if (kind === "indoor") return "passage";
-  if (kind === "hill") return "hill";
   return "walk";
 }
 
@@ -92,10 +94,11 @@ export function guideStepGroups(
       continue;
     }
     const previous = groups.at(-1);
+    const hill = Boolean(option && next && guideStepKind(option, step, next) === "hill");
     groups.push({
       first: i,
       last: i,
-      instruction: next && previous && previous.instruction === sentences[i]
+      instruction: !hill && next && previous && previous.instruction === sentences[i]
         ? `통로를 따라 ${placeName(next.name, step.node)}까지 걸어가세요`
         : sentences[i],
     });
@@ -171,4 +174,80 @@ export function stepUnverified(option: RouteOption | undefined, step: Pick<Waypo
   const linkId = step.link ?? (index >= 0 ? option.links[index] : undefined);
   const edge = linkId ? graphEdges.find((e) => e.id === linkId) : undefined;
   return Boolean(edge && edge.status !== "확인");
+}
+
+// 경로 상세 시트 단계 목록의 항목. 안내 중 화면의 안내 단계(묶음)와 같은 단위
+export type GuideStepItem = {
+  title: string;
+  instruction: string;
+  kind: GuideStepKind | "start" | "destination";
+  // 주요 지점: 출발, 엘리베이터 타는 곳, 오르막, 다른 건물로 넘어가는 곳, 도착
+  major: boolean;
+  // 주요 지점이 많을 때 남길 순서. 출발 0 > 도착 1 > 엘리베이터·오르막 2 > 연결통로 3
+  priority: number;
+};
+
+export function guideStepItems(
+  option: RouteOption,
+  steps: Step[],
+  destinationName: string,
+): GuideStepItem[] {
+  const groups = guideStepGroups(option, steps, destinationName);
+  return groups.map((group, index) => {
+    const step = steps[group.first];
+    const target = steps[group.last + 1];
+    if (index === 0)
+      return { title: step.name, instruction: group.instruction, kind: "start", major: true, priority: 0 };
+    // 마지막은 건물이 아니라 실제 도착지 이름(예: 혜인관 2층 면접 대기실)
+    if (!target)
+      return { title: step.name || destinationName, instruction: "도착했어요", kind: "destination", major: true, priority: 1 };
+    const from = steps[group.last].node;
+    const to = target.node;
+    const kind = guideStepKind(option, steps[group.last], target);
+    // 엘리베이터 타는 곳: 실제로 층이 바뀔 때만
+    if (kind === "elevator" && from && to && floorIndex(from) !== floorIndex(to))
+      return {
+        title: `${areaName(nodeArea(from))} 엘리베이터 → ${floorLabel(to)}`,
+        instruction: group.instruction,
+        kind,
+        major: true,
+        priority: 2,
+      };
+    // 오르막(실외 언덕) 구간은 항상 주요 지점
+    if (kind === "hill")
+      return { title: `${placeName(target.name, from)}까지 오르막길`, instruction: group.instruction, kind, major: true, priority: 2 };
+    // 다른 건물로 넘어가는 곳: 연결통로로 건물이 바뀔 때
+    if (kind === "passage" && from && to && nodeArea(from) !== nodeArea(to) && buildingById(nodeArea(to)))
+      return {
+        title: `${areaName(nodeArea(to))} ${floorLabel(to)} 연결통로`,
+        instruction: group.instruction,
+        kind,
+        major: true,
+        priority: 3,
+      };
+    // 그 밖의 단계는 단계를 시작하는 곳 이름(도착지 이름과 겹치지 않게)
+    return {
+      title: placeName(step.name, steps[group.first - 1]?.node),
+      instruction: group.instruction,
+      kind,
+      major: false,
+      priority: 4,
+    };
+  });
+}
+
+// 단계 목록에서 접지 않고 보여 줄 항목. 5개 이하면 전부.
+// 넘치면 주요 지점을 우선순위대로 최대 5곳만 남기고(같은 순위는 뒤쪽부터 숨김), 숨길 게 1개뿐이면 접지 않음
+export function visibleStepItems(items: GuideStepItem[], limit = 5): boolean[] {
+  if (items.length <= limit) return items.map(() => true);
+  const keep = new Set(
+    items
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => item.major)
+      .sort((a, b) => a.item.priority - b.item.priority || a.index - b.index)
+      .slice(0, limit)
+      .map(({ index }) => index),
+  );
+  const hidden = items.length - keep.size;
+  return items.map((_, index) => hidden <= 1 || keep.has(index));
 }

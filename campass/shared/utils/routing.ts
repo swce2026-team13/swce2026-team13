@@ -39,6 +39,8 @@ export type Waypoint = {
   detail: string;
   photo: string;
   direction: "forward" | "right" | "up";
+  // 헤매기 쉬운 구간 팝업의 「이렇게 찾으세요」. 없으면 기본 문장
+  findTip?: string;
 };
 export const waypoints: Waypoint[] = [
   {

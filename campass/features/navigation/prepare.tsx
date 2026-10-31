@@ -2,8 +2,9 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { CameraIcon, CloseIcon, TapIcon } from "@/components/ui/icons";
-import { ArrowDownUp, Footprints, TriangleAlert } from "lucide-react";
-import { routeName } from "@/shared/utils/route-presentation";
+import { ArrowDownUp, Footprints } from "lucide-react";
+import { routeMode, routeName } from "@/shared/utils/route-presentation";
+import type { HillMode } from "@/shared/utils/campus3d/route";
 import { RouteSummarySheet } from "./route-summary-sheet";
 import { markerStarts } from "@/shared/utils/map-pick";
 import {
@@ -12,6 +13,7 @@ import {
   startMapIds,
 } from "@/shared/utils/route-start";
 import { RouteModePicker } from "./route-mode-picker";
+import { ConfusionStrip, type ConfusionPoint } from "./confusion-popup";
 import { MapPicker } from "./map-picker";
 import { RoutePreview } from "./route-preview";
 import { api, useCampus } from "@/features/navigation/campus-provider";
@@ -53,6 +55,8 @@ export default function Screen() {
   const unavailable = routeFailed && !pickingOnMap;
   const showPicker = !routeLoading && pickingOnMap;
   const [pickNotice, setPickNotice] = useState("");
+  // 길 고르기에서 정한 추천 길 종류(요약 카드의 「추천」 표시와 맞춤)
+  const [recommendedMode, setRecommendedMode] = useState<HillMode | undefined>();
   const setPicking = (target: "start" | "destination" | null) => {
     setPickNotice("");
     const url = new URL(window.location.href);
@@ -94,17 +98,12 @@ export default function Screen() {
       pick: previousStartCanBeDestination ? "none" : "destination",
     });
   };
-  // 헤매는 구간 주의 카드는 고른 길에 혼란 기록이 있을 때만
+  // 헤매기 쉬운 구간 띠는 고른 길에 혼란 기록이 있을 때만. 여러 곳이면 팝업에 차례로 쌓아 보여 줌
   const [risky, setRisky] = useState<{
     key: string;
-    point?: {
-      name: string;
-      passages: number;
-      confusions: number;
-      rate: number;
-    };
+    points: ConfusionPoint[];
     dataMode?: string;
-  }>({ key: "" });
+  }>({ key: "", points: [] });
   const riskyKey = routeOption
     ? JSON.stringify([start, destination.id, elevator, routeOption.id])
     : "";
@@ -117,28 +116,16 @@ export default function Screen() {
       elevator: String(elevator),
       option: routeOption!.id,
     });
-    api<{
-      points: {
-        name: string;
-        passages: number;
-        confusions: number;
-        rate: number;
-      }[];
-      dataMode: string;
-    }>(`route-insights?${params}`)
+    api<{ points: ConfusionPoint[]; dataMode: string }>(`route-insights?${params}`)
       .then((data) => {
         if (cancelled) return;
-        const point = data.points
+        const points = data.points
           .filter((p) => p.confusions > 0)
-          .sort((a, b) => b.rate - a.rate || b.confusions - a.confusions)[0];
-        setRisky({
-          key: riskyKey,
-          point,
-          dataMode: data.dataMode,
-        });
+          .sort((a, b) => b.rate - a.rate || b.confusions - a.confusions);
+        setRisky({ key: riskyKey, points, dataMode: data.dataMode });
       })
       .catch(() => {
-        if (!cancelled) setRisky({ key: riskyKey });
+        if (!cancelled) setRisky({ key: riskyKey, points: [] });
       });
     return () => {
       cancelled = true;
@@ -146,7 +133,7 @@ export default function Screen() {
     // 조건이 바뀔 때만 다시 받음
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [riskyKey]);
-  const riskyPoint = risky.key === riskyKey ? risky.point : undefined;
+  const riskyPoints = risky.key === riskyKey ? risky.points : [];
   const isDemoRisk =
     risky.key === riskyKey && risky.dataMode === "demo-route-activity";
   const openPhoto = () => {
@@ -248,20 +235,21 @@ export default function Screen() {
             엘리베이터 없는 길로 찾기
           </button>
         )}
+        {/* 길을 바꾸면 경로를 다시 불러오는데, 그동안에도 길 카드를 그대로 둬서 깜빡이지 않게 함 */}
         {!pickingOnMap &&
           hasDestination &&
-          !routeLoading &&
           !routeFailed &&
-          routeOption && (
+          (routeOption || routeLoading) && (
             <RouteModePicker
               start={start}
               destination={destination.id}
               elevator={elevator}
-              route={route}
-              selected={routeOption}
-              busy={busy}
+              route={routeLoading ? null : route}
+              selected={routeLoading ? undefined : routeOption}
+              busy={busy || routeLoading}
               onOption={chooseOption}
               onElevator={(value) => void updateRoute(start, value)}
+              onRecommended={setRecommendedMode}
             />
           )}
         {showPicker && (
@@ -286,31 +274,9 @@ export default function Screen() {
         {routeOption && hasDestination && !pickingOnMap && !routeLoading && (
           <RouteSummarySheet
             option={routeOption}
-            recommended={route?.options[0]?.id === routeOption.id}
-            startName={startLabel(start, registeredPlaces)}
+            recommended={recommendedMode !== undefined && routeMode(routeOption) === recommendedMode}
             destinationName={placeLabel(destination)}
-            warning={
-              riskyPoint && (
-                <div className="prepare-warning">
-                  <b><TriangleAlert size={17} aria-hidden="true" /> 헤매는 사람이 많은 구간이 있어요</b>
-                  <p>
-                    {riskyPoint.name}에서 {riskyPoint.passages}명 중{" "}
-                    {riskyPoint.confusions}명이 헤맸어요. 그 구간 앞에서 한 번
-                    더 확인해 주세요.
-                  </p>
-                  <div className="prepare-warning-footer">
-                    {isDemoRisk && <small>시연용 예시 기록 표본</small>}
-                    <button
-                      type="button"
-                      className="button secondary"
-                      onClick={() => go("confusion", { option: routeOption?.id ?? "" })}
-                    >
-                      자세히 보기
-                    </button>
-                  </div>
-                </div>
-              )
-            }
+            warning={<ConfusionStrip points={riskyPoints} demo={isDemoRisk} />}
           />
         )}
       </section>
