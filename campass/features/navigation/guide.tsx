@@ -48,7 +48,8 @@ export default function Screen() {
   const destinationName = displayDestination.building || displayDestination.name;
   // 지금 할 일을 동작으로 말하는 한 줄(단계 종류별 템플릿)
   const instruction = currentStep
-    ? guideInstruction(option, currentStep, nextStep, destinationName)
+    ? guideInstruction(option, currentStep, nextStep, destinationName,
+      session ? routeSteps[session.currentStep - 1] : undefined)
     : "";
   // 지금 단계 구간이 '확인'된 연결이 아닐 때만 확인 전 표시와 안내 표지 문구를 보여 줌
   const unverified = currentStep ? stepUnverified(option, currentStep) : false;

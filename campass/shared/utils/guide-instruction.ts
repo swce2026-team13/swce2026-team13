@@ -45,7 +45,21 @@ export function guideStepKind(option: RouteOption, step: Step, next?: Step): Gui
 }
 
 // 지금 할 일을 동작으로 말하는 한 줄. 예: 「본관 엘리베이터를 타고 5층으로 올라가세요」
+// 바로 앞 단계와 문장이 같으면(연결통로 앞 → 통로 위 등) 도착지를 말하는 문장으로 바꿈
 export function guideInstruction(
+  option: RouteOption | undefined,
+  step: Step,
+  next: Step | undefined,
+  destinationName: string,
+  previous?: Step,
+) {
+  const sentence = stepInstruction(option, step, next, destinationName);
+  if (next && previous && stepInstruction(option, previous, step, destinationName) === sentence)
+    return `통로를 따라 ${next.name}까지 걸어가세요`;
+  return sentence;
+}
+
+function stepInstruction(
   option: RouteOption | undefined,
   step: Step,
   next: Step | undefined,
@@ -72,7 +86,10 @@ export function guideInstruction(
         ? `${building.name} 계단으로 ${floorLabel(to)}까지 ${up ? "올라가세요" : "내려가세요"}`
         : `계단을 따라 ${toward(nextName)} 이동하세요`;
     case "passage":
-      return `${nodeLabel(from)} 연결통로로 걸어가세요`;
+      // 건물이 바뀌는 연결 구간은 들어갈 건물·층을 말함. 예: 「본관 2층으로 이어진 길로 걸어가세요」
+      return nodeArea(from) !== nodeArea(to) && buildingById(nodeArea(to))
+        ? `${toward(`${areaName(nodeArea(to))} ${floorLabel(to)}`)} 이어진 길로 걸어가세요`
+        : `${nodeLabel(from)} 연결통로로 걸어가세요`;
     case "entrance":
       return from.includes("|")
         ? `${areaName(nodeArea(from))} 출입구로 나가세요`
