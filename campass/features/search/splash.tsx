@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CampassLogo, CampassWordmark } from "@/components/ui/campass-logo";
 import {
   landPath,
@@ -93,6 +93,34 @@ function SplashMap() {
 
 export default function Splash({ onDone }: { onDone: () => void }) {
   const [leaving, setLeaving] = useState(false);
+  const routeLine = useRef<SVGPathElement>(null);
+  const movingLogo = useRef<SVGGElement>(null);
+
+  useEffect(() => {
+    const line = routeLine.current;
+    const logo = movingLogo.current;
+    if (
+      !line ||
+      !logo ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) return;
+
+    const length = line.getTotalLength();
+    let frame = 0;
+    const followLine = () => {
+      const offset = Number.parseFloat(
+        window.getComputedStyle(line).strokeDashoffset,
+      );
+      const progress = Number.isFinite(offset)
+        ? Math.max(0, Math.min(1, 1 - offset / 100))
+        : 0;
+      const point = line.getPointAtLength(progress * length);
+      logo.setAttribute("transform", `translate(${point.x} ${point.y})`);
+      if (progress < 1) frame = window.requestAnimationFrame(followLine);
+    };
+    frame = window.requestAnimationFrame(followLine);
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
 
   useEffect(() => {
     const reduceMotion = window.matchMedia(
@@ -147,19 +175,15 @@ export default function Splash({ onDone }: { onDone: () => void }) {
         <path d={ROUTE_D} pathLength={100} className="splash-route-glow" />
 
         {/* 실제 파란 경로 */}
-        <path d={ROUTE_D} pathLength={100} className="splash-route-line" />
+        <path
+          ref={routeLine}
+          d={ROUTE_D}
+          pathLength={100}
+          className="splash-route-line"
+        />
 
         {/* 같은 경로를 따라 이동하는 CAMPASS 나침반 */}
-        <g className="splash-moving-logo">
-          <animateMotion
-            path={ROUTE_D}
-            begin="0.25s"
-            dur="1.6s"
-            fill="freeze"
-            calcMode="spline"
-            keyTimes="0;1"
-            keySplines=".45 0 .3 1"
-          />
+        <g ref={movingLogo} className="splash-moving-logo">
           <g className="splash-logo-arrival">
             <foreignObject x={-36} y={-36} width={72} height={72}>
               <div className="splash-moving-logo-inner">
