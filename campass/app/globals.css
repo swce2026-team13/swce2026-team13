@@ -4635,11 +4635,9 @@ body::-webkit-scrollbar,
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.6);
 }
-/* #121 출발 칸은 파란 점선 */
-.route-endpoint-field.start {
-  border: 1.5px dashed #2860ed;
-}
+/* 지금 고르는 칸(출발 또는 도착)에만 파란 점선 */
 .route-endpoint-field.is-picking {
+  border: 1.5px dashed #2860ed;
   background: rgba(241, 246, 255, 0.85);
 }
 .route-endpoint-tag {
@@ -4714,8 +4712,17 @@ body::-webkit-scrollbar,
   box-shadow: 0 6px 18px rgba(40, 70, 130, .07), 0 0 0 1px #e3e6eb;
 }
 .prepare-screen .route-start-picker .endpoint-map-surface,
+/* #123 출발·도착 고르기 지도는 화면 높이에 맞춰, 처음 화면에서 지도 전체가 안내 시작 버튼 위에 다 보이게 */
 .prepare-screen .route-start-picker .endpoint-map-surface .overview-map {
-  height: 480px;
+  height: clamp(300px, calc(100dvh - 460px), 480px);
+  background: #e2ead8;
+}
+.prepare-screen .route-start-picker .endpoint-map-surface .overview-map > svg {
+  height: 100% !important;
+}
+/* 지도 헤더는 왼쪽에 「건물 · 캠퍼스 전체」 선택만 */
+.prepare-screen .map-picker .map-picker-toolbar {
+  justify-content: flex-start;
 }
 /* #121 카드 아래 안내와 빠르게 고르기 */
 .route-pick-guide {

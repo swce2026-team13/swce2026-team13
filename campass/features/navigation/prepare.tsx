@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { CameraIcon, CloseIcon, TapIcon } from "@/components/ui/icons";
 import { ArrowDownUp, Footprints, TriangleAlert } from "lucide-react";
-import { routeName } from "@/shared/utils/route-presentation";
+import { routeMode, routeName } from "@/shared/utils/route-presentation";
+import type { HillMode } from "@/shared/utils/campus3d/route";
 import { RouteSummarySheet } from "./route-summary-sheet";
 import { markerStarts } from "@/shared/utils/map-pick";
 import {
@@ -53,6 +54,8 @@ export default function Screen() {
   const unavailable = routeFailed && !pickingOnMap;
   const showPicker = !routeLoading && pickingOnMap;
   const [pickNotice, setPickNotice] = useState("");
+  // 길 고르기에서 정한 추천 길 종류(요약 카드의 「추천」 표시와 맞춤)
+  const [recommendedMode, setRecommendedMode] = useState<HillMode | undefined>();
   const setPicking = (target: "start" | "destination" | null) => {
     setPickNotice("");
     const url = new URL(window.location.href);
@@ -262,6 +265,7 @@ export default function Screen() {
               busy={busy}
               onOption={chooseOption}
               onElevator={(value) => void updateRoute(start, value)}
+              onRecommended={setRecommendedMode}
             />
           )}
         {showPicker && (
@@ -286,7 +290,7 @@ export default function Screen() {
         {routeOption && hasDestination && !pickingOnMap && !routeLoading && (
           <RouteSummarySheet
             option={routeOption}
-            recommended={route?.options[0]?.id === routeOption.id}
+            recommended={recommendedMode !== undefined && routeMode(routeOption) === recommendedMode}
             startName={startLabel(start, registeredPlaces)}
             destinationName={placeLabel(destination)}
             warning={

@@ -6,9 +6,9 @@ import type { HillMode } from "@/shared/utils/campus3d/route";
 import {
   routeMode,
   routeNames,
-  routeHints,
   displayedRouteOption,
 } from "@/shared/utils/route-presentation";
+import { routeHint } from "@/shared/utils/route-summary";
 
 // 길 카드 순서. 엘리베이터 길은 엘리베이터 조건 경로에서, 나머지는 일반 경로에서 찾음
 const modes: HillMode[] = ["elevator", "hill", "stairs"];
@@ -22,6 +22,7 @@ export function RouteModePicker({
   busy,
   onOption,
   onElevator,
+  onRecommended,
 }: {
   start: string;
   destination: string;
@@ -31,6 +32,8 @@ export function RouteModePicker({
   busy: boolean;
   onOption: (id: string) => void;
   onElevator: (value: boolean) => void;
+  // 추천한 길 종류. 요약 카드의 「추천」 표시도 같은 기준을 씀
+  onRecommended?: (mode: HillMode | undefined) => void;
 }) {
   const radioName = useId();
   const key = JSON.stringify([start, destination]);
@@ -76,7 +79,18 @@ export function RouteModePicker({
     ? "elevator"
     : normal[0] ? routeMode(normal[0]) : undefined;
 
-  const choose = (mode: HillMode) => {
+  // 처음 들어오면(출발·도착이 바뀔 때마다 한 번) 주소의 elevator 값과 상관없이 추천한 길을 고른 상태로 시작
+  const started = useRef("");
+  useEffect(() => {
+    onRecommended?.(recommended);
+    if (!loaded || !recommended || started.current === key || busy) return;
+    started.current = key;
+    if (current !== recommended) choose(recommended);
+    // 추천이 정해지는 시점에만 맞춤
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded, key, recommended]);
+
+  function choose(mode: HillMode) {
     const option = optionFor(mode);
     if (!option || busy) return;
     if (mode === "elevator") {
@@ -88,7 +102,7 @@ export function RouteModePicker({
       pending.current = mode;
       onElevator(false);
     } else onOption(option.id);
-  };
+  }
 
   return (
     <section className="route-choice" aria-labelledby={`${radioName}-title`}>
@@ -115,7 +129,7 @@ export function RouteModePicker({
                 {routeNames[mode]}
                 {recommended === mode && <em className="route-choice-badge">추천</em>}
               </span>
-              <span className="route-choice-hint">{routeHints[mode]}</span>
+              <span className="route-choice-hint">{option ? routeHint(option) : ""}</span>
               <span className="route-choice-radio" aria-hidden="true" />
             </label>
           );

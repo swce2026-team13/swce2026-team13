@@ -1,7 +1,7 @@
 "use client";
 
 import { GuideRiskNotice } from "@/features/navigation/guide-risk-notice";
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { createIntentRequest } from "@/shared/utils/intent-request";
 import { GuideMapViewport } from "@/features/navigation/guide-map-viewport";
 import {
@@ -37,6 +37,7 @@ export default function Screen() {
     displayDestination,
   } = useCampus();
   const [questionOpen, setQuestionOpen] = useState(false);
+  const headingRef = useRef<HTMLHeadingElement>(null);
   const guide = toGuideViewModel(session);
   const option = session?.route.options.find((item) => item.id === session.route.option)
     ?? session?.route.options[0];
@@ -62,17 +63,41 @@ export default function Screen() {
   const remainingDistance = session && option
     ? Math.max(0, Math.round(session.route.distance * (1 - (guideRouteMotion(option.nodes, guide.current?.node, nextStep?.node)?.from ?? 0))))
     : 0;
-  // 가운데 단계 표시는 안내 단계(묶음) 기준으로 골라 합쳐진 단계가 나오지 않게 함
-  const middleIndex = groups.length > 2 ? groups[Math.floor((groups.length - 1) / 2)].first : -1;
-  const milestones = [
-    { index: 0, label: routeSteps[0]?.name ?? "출발" },
-    ...(middleIndex > 0 ? [{ index: middleIndex, label: routeSteps[middleIndex].name }] : []),
-    { index: Math.max(0, routeSteps.length - 1), label: displayDestination.building || routeSteps.at(-1)?.name || "도착" },
+  // 단계 표시: 출발 + 안내 단계(묶음)마다 「다음」 칸·도착 버튼에 나오는 장소. 마지막은 도착 건물
+  const places = [
+    routeSteps[0]?.name ?? "출발",
+    ...groups.slice(0, -1).map((g) => placeName(routeSteps[g.last + 1]?.name ?? "", routeSteps[g.last]?.node)),
   ];
-  const activeMilestone = milestones.reduce(
-    (active, milestone, index) => guide.currentIndex >= milestone.index ? index : active,
-    0,
-  );
+  if (places.length > 1) places[places.length - 1] = displayDestination.building || places.at(-1)!;
+  // 단계가 많으면 지금 단계 앞뒤만 보여 주고 나머지는 「…」
+  const around = places.length > 5;
+  const milestones: { label: string; index: number | null }[] = around
+    ? [
+        ...(groupIndex > 1 ? [{ label: "…", index: null }] : []),
+        ...places.map((label, index) => ({ label, index }))
+          .filter(({ index }) => Math.abs(index - groupIndex) <= 1 || (groupIndex === 0 && index === 2) ||
+            (groupIndex === places.length - 1 && index === places.length - 3)),
+        ...(groupIndex < places.length - 2 ? [{ label: "…", index: null }] : []),
+      ]
+    : places.map((label, index) => ({ label, index }));
+  const activeMilestone = Math.max(0, milestones.findIndex((m) => m.index === groupIndex));
+
+  const heading = session?.recovered && session.recoveryDirection === "backward"
+    ? "되돌아가는 방향으로 이동해 주세요"
+    : instruction;
+  // 안내 문장은 19px로 두 줄까지. 19px에서 두 줄을 넘으면 17px로 줄임(잘라서 「…」로 숨기지 않음)
+  useLayoutEffect(() => {
+    const element = headingRef.current;
+    if (!element) return;
+    const fit = () => {
+      element.dataset.size = "";
+      const lines = element.scrollHeight / parseFloat(getComputedStyle(element).lineHeight);
+      element.dataset.size = lines > 2.1 ? "small" : "";
+    };
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, [heading]);
 
   return (
     <>
@@ -95,12 +120,18 @@ export default function Screen() {
               className="guide-live-milestones"
               aria-label="경로 진행 지점"
               data-count={milestones.length}
-              style={{ "--guide-line-fill": `${activeMilestone / Math.max(1, milestones.length - 1) * (milestones.length === 2 ? 50 : 66.66)}%` } as CSSProperties}
+              style={{
+                // 선은 첫 칸 가운데부터 마지막 칸 가운데까지. 채움은 지금 단계까지
+                "--guide-line-edge": `${50 / milestones.length}%`,
+                "--guide-line-fill": `${activeMilestone / Math.max(1, milestones.length - 1) * (100 - 100 / milestones.length)}%`,
+              } as CSSProperties}
             >
               {milestones.map((milestone, index) => {
-                const state = index === activeMilestone ? "current" : index < activeMilestone ? "passed" : "upcoming";
+                const state = milestone.index === null ? "more"
+                  : index === activeMilestone ? "current" : index < activeMilestone ? "passed" : "upcoming";
                 return (
-                  <li key={index} data-state={state} aria-current={state === "current" ? "step" : undefined}>
+                  <li key={index} data-state={state} aria-current={state === "current" ? "step" : undefined}
+                    aria-hidden={state === "more" ? true : undefined}>
                     <span className="guide-live-milestone-dot" aria-hidden="true" />
                     <strong title={milestone.label}>{milestone.label}</strong>
                   </li>
@@ -126,11 +157,7 @@ export default function Screen() {
                   </span>
                 )}
               </div>
-              <h1>
-                {session.recovered && session.recoveryDirection === "backward"
-                  ? "되돌아가는 방향으로 이동해 주세요"
-                  : instruction}
-              </h1>
+              <h1 ref={headingRef}>{heading}</h1>
               {unverified && guide.current?.detail && <p className="guide-live-detail">{guide.current.detail}</p>}
               <div className="guide-live-flow">
                 <p>

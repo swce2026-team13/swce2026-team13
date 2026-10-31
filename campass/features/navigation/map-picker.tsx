@@ -1,9 +1,10 @@
 "use client";
-import { useId, useRef, useState } from "react";
-import { campusMap, type CampusMapController } from "@/shared/utils/campus-map";
+import { useId, useState } from "react";
+import { campusMap } from "@/shared/utils/campus-map";
 import { LEGEND } from "@/shared/utils/campus-overview";
 import { CampusOverviewMap } from "./campus-overview-map";
-import { CampusMap } from "./campus-map";
+
+// 출발지·도착지 고르기 공통 지도. 모양은 같고 「출발/도착」 모드만 다름(2D만 씀)
 
 export function MapPicker({
   selected,
@@ -17,57 +18,19 @@ export function MapPicker({
   destination?: string;
   onSelect: (id: string, building: boolean) => void;
 }) {
-  const [chosenFlat, setFlat] = useState(false);
-  // 출발을 고를 때는 2D 지도만 보여 줌
   const startPick = target === "start";
-  const flat = startPick || chosenFlat;
   const [buildingFocus, setBuildingFocus] = useState("");
   const [overviewReset, setOverviewReset] = useState(0);
   const [legendOpen, setLegendOpen] = useState(false);
   const legendId = useId();
-  const mapController = useRef<CampusMapController | null>(null);
   const selectEntrance = (id: string) => onSelect(id, false);
   const selectBuilding = (id: string) => {
     setBuildingFocus(id);
     onSelect(id, true);
   };
-  const overview = (
-    <CampusOverviewMap
-      key={overviewReset}
-      pickerMode
-      height={480}
-      selected={selected}
-      destinationLabel={startPick ? destination : undefined}
-      onEntrance={selectEntrance}
-      onSelect={selectBuilding}
-      onResetView={() => setBuildingFocus("")}
-    />
-  );
   return (
-    <div className={`overview-card${startPick ? " map-picker-start" : ""}`}>
+    <div className={`overview-card map-picker map-picker-${target}`}>
       <div className="map-picker-toolbar">
-        {!startPick && (
-          <div
-            className="map-view-switch"
-            role="group"
-            aria-label="지도 표시 방식"
-          >
-            <button
-              type="button"
-              aria-pressed={!flat}
-              onClick={() => setFlat(false)}
-            >
-              3D
-            </button>
-            <button
-              type="button"
-              aria-pressed={flat}
-              onClick={() => setFlat(true)}
-            >
-              2D
-            </button>
-          </div>
-        )}
         <label className="map-building-select">
           건물
           <select
@@ -78,9 +41,6 @@ export function MapPicker({
               if (!id) {
                 setBuildingFocus("");
                 setOverviewReset((value) => value + 1);
-                mapController.current?.fitAll();
-              } else if (!flat && mapController.current) {
-                mapController.current.selectBuilding(id);
               } else selectBuilding(id);
             }}
           >
@@ -96,21 +56,16 @@ export function MapPicker({
         </label>
       </div>
       <div className="endpoint-map-surface">
-        {flat ? (
-          overview
-        ) : (
-          <CampusMap
-            embedded
-            designTheme
-            mapHeight={480}
-            controllerRef={mapController}
-            selectedBuildings={selected}
-            onBuilding={selectBuilding}
-            onFocusChange={setBuildingFocus}
-            onEntrance={selectEntrance}
-            fallback={overview}
-          />
-        )}
+        <CampusOverviewMap
+          key={overviewReset}
+          pickerMode
+          height={480}
+          selected={selected}
+          destinationLabel={startPick ? destination : undefined}
+          onEntrance={selectEntrance}
+          onSelect={selectBuilding}
+          onResetView={() => setBuildingFocus("")}
+        />
       </div>
       <p className="endpoint-map-caption">
         {startPick

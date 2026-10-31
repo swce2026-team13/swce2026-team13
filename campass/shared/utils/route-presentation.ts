@@ -20,12 +20,6 @@ export const routeNames = {
   stairs: "지름길",
   elevator: "엘리베이터 이용하는 길",
 };
-// 길 고르기 카드의 설명 한 줄
-export const routeHints = {
-  hill: "오르막이 조금 있어요",
-  stairs: "계단이 있어요",
-  elevator: "계단이 적어요",
-};
 export const routeColors = {
   hill: "#3f8a48",
   stairs: "#c76b12",
