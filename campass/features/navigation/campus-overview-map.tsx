@@ -713,7 +713,7 @@ export function CampusOverviewMap({
             <path d={path} fill="none" stroke="#2860ed" strokeWidth={5} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
             <circle cx={start[0]} cy={start[1]} r={7*labelScale} fill="#3f8a48" stroke="white" strokeWidth={2} vectorEffect="non-scaling-stroke" />
             <circle cx={end[0]} cy={end[1]} r={7*labelScale} fill="#2860ed" stroke="white" strokeWidth={2} vectorEffect="non-scaling-stroke" />
-            {pill(middle, routePreview.name, routePreview.color, -19)}
+            {pill(middle, routePreview.name, routePreview.color, Math.hypot(middle[0]-end[0], middle[1]-end[1]) / labelScale < 80 ? 24 : -19)}
             {pill(end, "도착", "#2860ed", -24)}
           </g>;
         })()}

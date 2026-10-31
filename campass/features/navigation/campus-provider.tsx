@@ -63,6 +63,7 @@ function useCampusState() {
   const selectedDestination =
   params.get("destination") || defaultDestination.id;
   const selectedStart = params.get("start") || "";
+  const hasSelectedDestination = params.get("destination") !== "";
   const selectedElevator = params.get("elevator") !== "false";
   const selectedBuilding = params.get("building") || "혜인관";
   const selectedQuery = params.get("q") || "";
@@ -99,7 +100,7 @@ function useCampusState() {
   const [routeConditions, setRouteConditions] = useState("");
   const routeRevision = useRef(0);
   const conditions = JSON.stringify([start, destination.id, elevator]);
-  const currentRoute = routeConditions === conditions &&
+  const currentRoute = hasSelectedDestination && routeConditions === conditions &&
     start === selectedStart && destination.id === selectedDestination &&
     elevator === selectedElevator ? route : null;
   const [session, setSession] = useState<Session | null>(null),
@@ -168,7 +169,7 @@ function useCampusState() {
   function go(next: View, values: Record<string, string> = {}) {
     setError("");
     const href = navigationHref(next, {
-      destination: destination.id,
+      destination: params.get("destination") === "" ? "" : destination.id,
       start,
       elevator: String(elevator),
       building,
@@ -203,7 +204,7 @@ function useCampusState() {
       setBuilding(selectedBuilding);
       setRecovering(view === "recovery" || recoveringParam === "true");
       if (view === "prepare") {
-        if (!selectedStart) return;
+        if (!selectedStart || !hasSelectedDestination) return;
         if (samePlace(selectedStart, destination.id)) {
           setError("출발지와 도착지가 같아요. 다른 장소를 선택해 주세요.");
           return;
@@ -234,6 +235,7 @@ function useCampusState() {
     view,
     recoveringParam,
     selectedDestination,
+    hasSelectedDestination,
     selectedStart,
     selectedElevator,
     selectedBuilding,

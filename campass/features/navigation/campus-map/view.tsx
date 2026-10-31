@@ -37,6 +37,7 @@ export default function MapView({
     controller.current?.showRoute(routeNodes ?? [], routeAnnotation);
   }, [routeNodes, routeAnnotation]);
   const onBuildingRef = useRef(onBuilding);
+  const showEntrances = Boolean(onEntrance);
   const onFocusChangeRef = useRef(onFocusChange);
   const highlightRef = useRef({
     ids: selectedBuildings,
@@ -69,7 +70,7 @@ export default function MapView({
         if (cancelled) return;
         controller.current = createCampusScene(three, host, {
           interactive: Boolean(onBuildingRef.current),
-          showEntrances: Boolean(onEntrance),
+          showEntrances,
           onEntrances: (pins) => { if (!cancelled) setEntrancePins(pins); },
           onSelect: (next) => {
             if (cancelled) return;
@@ -94,7 +95,7 @@ export default function MapView({
       controller.current = null;
       if (controllerRef) controllerRef.current = null;
     };
-  }, []);
+  }, [controllerRef, showEntrances]);
 
   if (status === "error")
     return (

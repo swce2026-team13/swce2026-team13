@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 
-export default async function MapPage({ searchParams }: {
+export default async function MapPage({
+  searchParams,
+}: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const values = await searchParams;

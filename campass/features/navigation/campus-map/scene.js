@@ -109,7 +109,9 @@ export function createCampusScene(THREE, container, events) {
     for (const label of routeLabels) {
       const p = label.position.clone().project(camera);
       const x = (p.x + 1) * width / 2;
-      const y = (1 - p.y) * height / 2;
+      let y = (1 - p.y) * height / 2;
+      const halfWidth = label.element.offsetWidth / 2;
+      if (occupied.some((box) => x + halfWidth > box.left && x - halfWidth < box.right && y > box.top && y - label.element.offsetHeight < box.bottom)) y += label.element.offsetHeight + 10;
       label.element.hidden = p.z < -1 || p.z > 1 || x < 0 || x > width || y < 0 || y > height;
       label.element.style.transform = `translate(${x}px, ${y}px) translate(-50%, -100%)`;
       if (!label.element.hidden) occupied.push({ left:x-label.element.offsetWidth/2, right:x+label.element.offsetWidth/2, top:y-label.element.offsetHeight, bottom:y });
@@ -235,7 +237,7 @@ export function createCampusScene(THREE, container, events) {
       }
       for (const p of segments.flat()) previewBounds.expandByPoint(point(p.east,p.north,p.elevation+5));
       previewBounds.expandByScalar(22);
-      for (const [p,text,color] of [[middle,annotation.name,annotation.color],[segments.at(-1)[1],"도착","#2860ed"]]) {
+      for (const [p,text,color] of [[segments.at(-1)[1],"도착","#2860ed"],[middle,annotation.name,annotation.color]]) {
         const element=document.createElement("span");
         element.className=styles.routePill;
         element.textContent=text;
