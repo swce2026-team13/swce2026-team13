@@ -11,6 +11,8 @@
 .designTheme .loading {
   background: linear-gradient(180deg, #eaf0ef 0%, #c5e4a5 28%, #c5e4a5 100%);
 }
+.designTheme .overlay { background: #d9eac0; }
+.guideLive .north { display: none; }
 .embedded .north { left: auto; right: 16px; top: 62px; }
 .embedded .overview { min-height: 44px; }
 .embedded .zoom button { width: 44px; height: 44px; }

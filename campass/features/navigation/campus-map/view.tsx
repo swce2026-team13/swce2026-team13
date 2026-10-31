@@ -18,6 +18,7 @@ export default function MapView({
   routeNodes,
   routeAnnotation,
   designTheme,
+  guideLive,
   position,
   fallback,
   embedded,
@@ -139,13 +140,13 @@ export default function MapView({
           </div>
         ) : (
           <>
-            <button
+            {!guideLive && <button
               type="button"
               className={styles.overview}
               onClick={() => controller.current?.fitAll()}
             >
               <Maximize size={14} /> 전체 보기
-            </button>
+            </button>}
             <div className={styles.zoom}>
               <button
                 type="button"

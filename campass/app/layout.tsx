@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "@fontsource-variable/noto-sans-kr";
 import "./globals.css";
+import "./guide-live.css";
 import { Suspense } from "react";
 import { CampusProvider } from "@/features/navigation/campus-provider";
 import { AppShell } from "@/components/app-shell";

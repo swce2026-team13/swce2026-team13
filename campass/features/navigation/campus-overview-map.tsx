@@ -682,7 +682,7 @@ export function CampusOverviewMap({
             { color: "#dc2626", width: 4 },
           ].map(({ color, width }) => (
             <g key={color} stroke={color} strokeWidth={width}>
-              {highlight?.segments.map(([from, to], index) => (
+              {!routePreview && highlight?.segments.map(([from, to], index) => (
                 <line
                   key={index}
                   x1={from[0]}

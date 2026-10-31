@@ -9,15 +9,15 @@ import {
   type GuideViewModel,
   toGuideViewModel,
 } from "@/shared/utils/guide-view";
-import { Sparkles } from "lucide-react";
+import { ArrowRight, MessageCircle, Sparkles } from "lucide-react";
 import {
   ArrowRightIcon,
   CameraIcon,
   CheckIcon,
-  MapIcon,
 } from "@/components/ui/icons";
 import { Notice } from "@/components/ui";
 import { api, useCampus } from "@/features/navigation/campus-provider";
+import { routeEnvironment, routeMode, routeName } from "@/shared/utils/route-presentation";
 import type { IntentResult } from "@/shared/types/recognition";
 export default function Screen() {
   const {
@@ -32,170 +32,137 @@ export default function Screen() {
     elevator,
     step,
     hasSession,
+    displayDestination,
   } = useCampus();
+  const [questionOpen, setQuestionOpen] = useState(false);
   const guide = toGuideViewModel(session);
+  const option = session?.route.options.find((item) => item.id === session.route.option)
+    ?? session?.route.options[0];
+  const mode = option ? routeMode(option) : null;
+  const environment = option ? routeEnvironment(option) : null;
+  const routeLabel = option
+    ? mode === "elevator"
+      ? routeName(option)
+      : (environment === "outdoor" ? "실외" : "실내") + " · " + routeName(option)
+    : "선택한 경로";
+  const routeSteps = session?.route.steps ?? [];
+  const middleIndex = routeSteps.length > 2 ? Math.floor((routeSteps.length - 1) / 2) : -1;
+  const milestones = [
+    { index: 0, label: routeSteps[0]?.name ?? "출발" },
+    ...(middleIndex > 0 ? [{ index: middleIndex, label: routeSteps[middleIndex].name }] : []),
+    { index: Math.max(0, routeSteps.length - 1), label: displayDestination.building || routeSteps.at(-1)?.name || "도착" },
+  ];
+  const activeMilestone = milestones.reduce(
+    (active, milestone, index) => guide.currentIndex >= milestone.index ? index : active,
+    0,
+  );
+
   return (
     <>
       {!hasSession && (
         <section className="content stack guide-screen">
           <Notice>진행 중인 안내가 없어요. 목적지를 선택해 주세요.</Notice>
-          <button className="button primary" onClick={() => go("home")}>
-            목적지 찾기
-          </button>
+          <button className="button primary" onClick={() => go("home")}>목적지 찾기</button>
         </section>
       )}
       {session && step && (
         <>
-          <section className="content stack">
+          <section className="content stack guide-screen guide-live-screen">
             {session.recovered && (
               <Notice tone="green">
-                <b className="row">
-                  <CheckIcon size={18} />
-                  선택한 위치에서 안내를 복구했어요
-                </b>
+                <b className="row"><CheckIcon size={18} />선택한 위치에서 안내를 복구했어요</b>
                 <p>현재 위치를 기준으로 목적지까지 경로를 다시 계산했어요.</p>
               </Notice>
             )}
-           <div className="guide-progress">
-  <div className="guide-progress-row">
-    <strong>
-      {guide.currentNumber} / {guide.totalSteps} 단계
-    </strong>
-
-    <span>지도 보며 이동 중</span>
-  </div>
-
-  <div
-    className="guide-progress-track"
-    role="progressbar"
-    aria-valuemin={1}
-    aria-valuemax={guide.totalSteps}
-    aria-valuenow={guide.currentNumber}
-  >
-    <div
-      className="guide-progress-value"
-      style={{
-        width: `${
-          (guide.currentNumber / guide.totalSteps) * 100
-        }%`,
-      }}
-    />
-  </div>
-</div>
-
-<GuideMapViewport
-  map={guide.map ?? undefined}
-  currentStep={guide.current}
-  nextStep={guide.next}
-  recoveredBackward={
-    session.recovered &&
-    session.recoveryDirection === "backward"
-  }
-/>
-
-<div className="card instruction">
-  <h1>
-    {session.recovered && session.recoveryDirection === "backward"
-      ? "되돌아가는 방향으로 이동해 주세요"
-      : guide.current?.instruction}
-  </h1>
-
-  <p>{guide.current?.detail}</p>
-
-  <div className="guide-location-flow">
-    <div className="guide-location-block">
-      <span className="guide-location-label">현재</span>
-      <strong>{guide.current?.name ?? "현재 위치"}</strong>
-    </div>
-
-    <div
-      className="guide-location-arrow"
-      aria-hidden="true"
-    >
-      ↓
-    </div>
-
-    <div className="guide-location-block">
-      <span className="guide-location-label">
-        {guide.next ? "다음" : "도착"}
-      </span>
-      <strong>
-        {guide.next?.name ?? session.destination}
-      </strong>
-    </div>
-  </div>
-</div>
+            <ol className="guide-live-milestones" aria-label="경로 진행 지점" data-count={milestones.length}>
+              {milestones.map((milestone, index) => {
+                const state = index === activeMilestone ? "current" : index < activeMilestone ? "passed" : "upcoming";
+                return (
+                  <li key={index} data-state={state} aria-current={state === "current" ? "step" : undefined}>
+                    <span className="guide-live-milestone-dot" aria-hidden="true" />
+                    <strong title={milestone.label}>{milestone.label}</strong>
+                  </li>
+                );
+              })}
+            </ol>
+            <GuideMapViewport
+              compact
+              map={guide.map ?? undefined}
+              currentStep={guide.current}
+              nextStep={guide.next}
+              recoveredBackward={session.recovered && session.recoveryDirection === "backward"}
+            />
+            <div className="guide-live-instruction">
+              <div className="guide-live-meta">
+                <div className="guide-live-chips">
+                  <span data-mode={mode ?? "default"}>{routeLabel}</span>
+                  {(option?.unverified || option?.approximate) && <span className="unverified">현장 확인 전</span>}
+                </div>
+                {session.route.distance > 0 && (
+                  <span className="guide-live-distance">
+                    {displayDestination.building || "목적지"}까지 약 {session.route.distance}m
+                  </span>
+                )}
+              </div>
+              <h1>
+                {session.recovered && session.recoveryDirection === "backward"
+                  ? "되돌아가는 방향으로 이동해 주세요"
+                  : guide.current?.instruction}
+              </h1>
+              {guide.current?.detail && <p className="guide-live-detail">{guide.current.detail}</p>}
+              <div className="guide-live-flow">
+                <div>
+                  <span>현재</span>
+                  <strong>{guide.current?.name ?? "현재 위치"}</strong>
+                </div>
+                <ArrowRight size={20} aria-hidden="true" />
+                <div>
+                  <span>{guide.next ? "다음" : "도착"}</span>
+                  <strong>{guide.next?.name ?? displayDestination.name}</strong>
+                </div>
+              </div>
+            </div>
+            <div className="guide-live-quick-actions">
+              <button type="button" onClick={lost} disabled={busy || session.status === "completed"}>
+                <CameraIcon size={20} aria-hidden="true" />
+                길을 잃었어요
+              </button>
+              <button
+                type="button"
+                aria-expanded={questionOpen}
+                aria-controls="guide-live-question"
+                onClick={() => setQuestionOpen((open) => !open)}
+              >
+                <MessageCircle size={20} aria-hidden="true" />
+                여기서 어디로 가요?
+              </button>
+            </div>
+            {questionOpen && (
+              <div id="guide-live-question">
+                <GuideQuestionCard key={session.id + "-" + session.currentStep} guide={guide} />
+              </div>
+            )}
             <GuideRiskNotice
-  currentWaypointId={guide.current?.id}
-  start={start}
-  destination={destination.id}
-  elevator={elevator}
-/>
-
-<div className="guide-recovery-card">
-  <div>
-    <strong>길을 잃었나요?</strong>
-    <p>
-      주변을 촬영하면 현재 위치를 다시 확인할 수 있어요.
-    </p>
-  </div>
-
-  <button
-    type="button"
-    className="button secondary"
-    onClick={lost}
-    disabled={busy || session.status === "completed"}
-  >
-    <CameraIcon size={18} />
-    길을 잃었어요
-  </button>
-</div>
-            <div className="guide-tools">
-  <GuideQuestionCard key={`${session.id}-${session.currentStep}`} guide={guide} />
-
-  <button
-    type="button"
-    className="guide-map-button"
-    onClick={() => go("guide-map")}
-  >
-    <MapIcon size={18} />
-    <span>
-      <strong>3D 지도 크게 보기</strong>
-      <small>전체 경로와 현재 위치를 확인해요</small>
-    </span>
-  </button>
-</div>
+              currentWaypointId={guide.current?.id}
+              start={start}
+              destination={destination.id}
+              elevator={elevator}
+            />
           </section>
-          <div className="actions guide-actions">
-  <div className="guide-step-actions">
-    <button
-      className="button secondary"
-      disabled={busy || guide.isFirstStep}
-      onClick={previous}
-    >
-      이전 단계
-    </button>
-
-    <button
-      className="button primary"
-      disabled={busy}
-      onClick={
-        session.status === "completed"
-          ? () => go("arrival")
-          : advance
-      }
-    >
-      {session.status === "completed"
-        ? "목적지에 도착했어요"
-        : "다음 지점에 도착했어요"}
-      <CheckIcon size={18} />
-    </button>
-  </div>
-
-  <span className="fine-print">
-    자동 위치 추적 없이 직접 도착을 확인합니다.
-  </span>
-</div>
+          <div className="actions guide-actions guide-live-actions">
+            <div className="guide-step-actions">
+              <button className="button secondary" disabled={busy || guide.isFirstStep} onClick={previous}>
+                이전
+              </button>
+              <button
+                className="button primary"
+                disabled={busy}
+                onClick={session.status === "completed" ? () => go("arrival") : advance}
+              >
+                {session.status === "completed" ? "목적지에 도착했어요" : "다음 지점에 도착했어요"}
+              </button>
+            </div>
+          </div>
         </>
       )}
     </>

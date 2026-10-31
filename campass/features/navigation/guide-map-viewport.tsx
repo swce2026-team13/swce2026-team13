@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { Maximize2 } from "lucide-react";
 import { Photo, Tag } from "@/components/ui";
 import { CampusOverviewMap } from "@/features/navigation/campus-overview-map";
 import { CampusMap } from "@/features/navigation/campus-map";
+import { useCampus } from "@/features/navigation/campus-provider";
 import { mapRouteBuildings } from "@/shared/utils/map-route";
 import { currentPosition } from "@/shared/utils/campus-map";
 import {
@@ -18,13 +20,15 @@ type GuideMapViewportProps = {
   nextStep: GuideStepViewModel | null;
   recoveredBackward?: boolean;
   map?: GuideMapData;
+  compact?: boolean;
 };
+const guideRoutePreview = { name: "", color: "#2860ed" };
 
-function RouteMap({ map }: { map: GuideMapData }) {
+function RouteMap({ map, compact = false }: { map: GuideMapData; compact?: boolean }) {
   const [flat, setFlat] = useState(false);
+  const { go } = useCampus();
   const highlight = overviewRouteHighlight(map);
   const buildings = mapRouteBuildings(map);
-  // 안내 중일 때만(지금 단계가 있을 때) 내 위치 점을 찍어요. 미리보기는 경로만 보여요.
   const position = currentPosition(map.nodes, map.current);
   if (!map.nodes.length) {
     return (
@@ -34,35 +38,62 @@ function RouteMap({ map }: { map: GuideMapData }) {
       </div>
     );
   }
-  const overview = <CampusOverviewMap highlight={highlight} />;
+
+  const overview = <CampusOverviewMap
+    highlight={highlight}
+    routePreview={{ ...guideRoutePreview, nodes: map.nodes }}
+    height={compact ? 344 : undefined}
+  />;
+  const mapView = flat ? overview : (
+    <CampusMap
+      embedded={compact}
+      designTheme
+      guideLive={compact}
+      mapHeight={compact ? 344 : undefined}
+      routeNodes={map.nodes}
+      routeAnnotation={guideRoutePreview}
+      position={position}
+      selectedBuildings={buildings.ids}
+      currentBuilding={buildings.currentId}
+      fallback={overview}
+    />
+  );
+
+  if (compact) {
+    return (
+      <div className="guide-live-map">
+        {mapView}
+        <button
+          type="button"
+          className="guide-live-map-expand"
+          aria-label="지도 크게 보기"
+          onClick={() => go("guide-map")}
+        >
+          <Maximize2 size={20} aria-hidden="true" />
+        </button>
+        <div className="guide-live-map-switch" role="group" aria-label="지도 표시 방식">
+          <button type="button" aria-pressed={!flat} onClick={() => setFlat(false)}>3D</button>
+          <button type="button" aria-pressed={flat} onClick={() => setFlat(true)}>2D</button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
-      {flat ? (
-  overview
-) : (
-  <CampusMap
-    designTheme
-    routeNodes={map.nodes}
-    position={position}
-    selectedBuildings={buildings.ids}
-    currentBuilding={buildings.currentId}
-    fallback={overview}
-  />
-)}
-
-<div className="guide-map-controls">
-  <button
-    type="button"
-    className="button secondary guide-map-toggle"
-    onClick={() => setFlat(!flat)}
-  >
-    {flat ? "3D 지도 보기" : "2D 경로 보기"}
-  </button>
-
-  <p className="guide-map-viewport-next">
-    파란 선이 선택한 경로예요. 건물 내부 이동 유형은 추상적으로 표시해요.
-  </p>
-</div>
+      {mapView}
+      <div className="guide-map-controls">
+        <button
+          type="button"
+          className="button secondary guide-map-toggle"
+          onClick={() => setFlat(!flat)}
+        >
+          {flat ? "3D 지도 보기" : "2D 경로 보기"}
+        </button>
+        <p className="guide-map-viewport-next">
+          파란 선이 선택한 경로예요. 건물 내부 이동 유형은 추상적으로 표시해요.
+        </p>
+      </div>
     </>
   );
 }
@@ -72,18 +103,16 @@ export function GuideMapViewport({
   nextStep,
   recoveredBackward = false,
   map,
+  compact = false,
 }: GuideMapViewportProps) {
   const [photoStep, setPhotoStep] = useState<string | null>(null);
-  // 지도 모드: 지금 단계 없이 경로 전체만 보여 줌 (B4 경로 미리보기)
   if (!currentStep && map) {
     return (
       <section className="guide-map-viewport" aria-label="경로 미리보기 지도">
         {map.unverified && (
-          <div className="guide-map-heading">
-            <Tag>현장 확인 전 길</Tag>
-          </div>
+          <div className="guide-map-heading"><Tag>현장 확인 전 길</Tag></div>
         )}
-        <RouteMap map={map} />
+        <RouteMap map={map} compact={compact} />
       </section>
     );
   }
@@ -104,10 +133,27 @@ export function GuideMapViewport({
       direction={recoveredBackward ? "backward" : currentStep.direction}
     />
   ) : null;
-
   if (!map && photo) return photo;
   const showPhoto = photoStep === currentStep.id && Boolean(photo);
   const legLabel = map ? guideLegLabel(map) : "";
+
+  if (compact) {
+    return (
+      <section className="guide-map-viewport guide-live-viewport" aria-label="길안내 지도">
+        {map && (showPhoto ? photo : <RouteMap map={map} compact />)}
+        {photo && (
+          <button
+            type="button"
+            className="guide-live-photo-toggle"
+            aria-pressed={showPhoto}
+            onClick={() => setPhotoStep(showPhoto ? null : currentStep.id)}
+          >
+            {showPhoto ? "지도 보기" : "사진 보기"}
+          </button>
+        )}
+      </section>
+    );
+  }
 
   return (
     <section className="guide-map-viewport" aria-label="길안내 지도">
@@ -135,7 +181,6 @@ export function GuideMapViewport({
             <strong>{currentStep.instruction}</strong>
             <span>{currentStep.name}</span>
           </div>
-
           {nextStep && (
             <p className="guide-map-viewport-next">다음 · {nextStep.name}</p>
           )}

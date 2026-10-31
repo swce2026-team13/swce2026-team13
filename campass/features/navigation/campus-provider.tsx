@@ -552,6 +552,12 @@ function useCampusState() {
     go("guide");
   });
 }
+  function endGuide() {
+    try { sessionStorage.removeItem("campass-session"); } catch { /* 저장 공간을 사용할 수 없어도 종료해요. */ }
+    setSession(null);
+    setRecovering(false);
+    go("home");
+  }
   async function lost() {
     if (!session) return;
     await run(async () => {
@@ -829,6 +835,7 @@ function cancelRecognition() {
     begin,
     advance,
     previous,
+    endGuide,
     lost,
     upload,
     cancelRecognition,
