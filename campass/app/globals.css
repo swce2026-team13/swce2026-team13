@@ -1779,11 +1779,40 @@ body:has(.sheet-modal[open]) .phone > .app-header {
   display: flex;
   flex-direction: column;
 
-  /* 하늘색 그라데이션(.phone) 위에 아주 옅은 등고선 무늬 */
+  /* 등고선 층을 담는 틀 */
+  position: relative;
+  overflow: clip;
+}
+
+/* 하늘색 그라데이션(.phone) 위에 아주 옅은 등고선 무늬. 무늬 한 칸(520px)을 60초에 걸쳐 천천히 올림.
+   배경 위치 대신 transform으로 움직여 화면 전체를 다시 그리지 않게 함 */
+.home-screen::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: calc(100% + 520px);
+
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='390' height='520' viewBox='0 0 390 520' fill='none' stroke='%232860ED' stroke-opacity='0.055' stroke-width='1'%3E%3Cpath d='M-20 92C40 60 96 104 150 82S250 18 320 46S400 120 420 104'/%3E%3Cpath d='M-20 120C44 90 100 132 156 110S252 50 322 76S398 146 420 132'/%3E%3Cpath d='M-20 148C48 122 106 160 162 140S256 84 326 108S396 172 420 160'/%3E%3Cpath d='M300 300C300 260 340 236 372 246S420 296 404 330S344 372 316 352S300 322 300 300Z'/%3E%3Cpath d='M276 302C274 244 330 210 378 222S440 296 420 344S340 398 302 374S278 336 276 302Z'/%3E%3Cpath d='M-30 410C30 380 84 420 140 402S240 340 300 366S380 440 420 430'/%3E%3Cpath d='M-30 440C34 412 90 450 146 432S244 372 304 396S382 468 420 460'/%3E%3Cpath d='M40 250C40 226 64 212 86 218S118 248 108 266S72 290 56 280S40 262 40 250Z'/%3E%3C/svg%3E");
   background-size: 390px 520px;
   background-repeat: repeat-y;
   background-position: top center;
+
+  pointer-events: none;
+  will-change: transform;
+  animation: home-contour-drift 60s linear infinite;
+}
+
+.home-screen > * {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes home-contour-drift {
+  to {
+    transform: translateY(-520px);
+  }
 }
 
 .home-topbar {
@@ -1855,6 +1884,8 @@ body:has(.sheet-modal[open]) .phone > .app-header {
   width: 260px;
   height: 260px;
   border-radius: 50%;
+  /* 그림자를 SVG 필터 대신 버튼에 둬서, 눈금이 돌 때 다이얼 전체를 다시 그리지 않게 함 */
+  box-shadow: 0 8px 18px rgba(23, 79, 214, 0.12);
   display: block;
   transition: transform 0.15s ease;
 }
@@ -1873,7 +1904,6 @@ body:has(.sheet-modal[open]) .phone > .app-header {
   width: 100%;
   height: 100%;
   overflow: visible;
-  filter: drop-shadow(0 8px 18px rgba(23, 79, 214, 0.12));
 }
 
 .home-compass-face {
@@ -1882,10 +1912,14 @@ body:has(.sheet-modal[open]) .phone > .app-header {
   stroke-width: 1;
 }
 
-/* 눈금은 고정. 무한 회전은 다이얼 전체를 계속 다시 그려 미세하게 흔들려 보여서 뺌 */
+/* 바깥 눈금은 60초에 한 바퀴. 다이얼에 필터가 없어 눈금 층만 움직임 */
 .home-compass-ticks {
   stroke: #174fd6;
   stroke-linecap: round;
+  transform-box: view-box;
+  transform-origin: 130px 130px;
+  will-change: transform;
+  animation: home-compass-spin 60s linear infinite;
 }
 
 .home-compass-cardinal {
@@ -1932,6 +1966,12 @@ body:has(.sheet-modal[open]) .phone > .app-header {
 .home-compass-hint strong {
   color: var(--blue);
   font-weight: 700;
+}
+
+@keyframes home-compass-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes home-compass-settle {
@@ -1992,6 +2032,8 @@ body:has(.sheet-modal[open]) .phone > .app-header {
 
 @media (prefers-reduced-motion: reduce) {
   .home-rise,
+  .home-screen::before,
+  .home-compass-ticks,
   .home-compass-needle,
   .home-compass-pulse,
   .home-compass-button {
