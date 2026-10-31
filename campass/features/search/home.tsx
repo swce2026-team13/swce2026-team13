@@ -26,7 +26,6 @@ import {
   landPath,
   overviewFrame,
   overviewRoads,
-  overviewTrees,
   plazaPath,
 } from "@/shared/utils/campus-overview-design";
 
@@ -88,6 +87,15 @@ const gate = toDial(
     overviewFrame.cy,
   ],
 );
+// 청사진 격자. 지도 좌표 25 간격
+const gridPath = Array.from(
+  { length: Math.ceil(mapSide / 25) + 1 },
+  (_, i) => {
+    const x = Math.floor(mapLeft / 25) * 25 + i * 25;
+    const y = Math.floor(mapTop / 25) * 25 + i * 25;
+    return `M${x} ${mapTop}V${mapTop + mapSide}M${mapLeft} ${y}H${mapLeft + mapSide}`;
+  },
+).join("");
 const ticks = Array.from({ length: 72 }, (_, i) => i * 5);
 const cardinals = [
   { label: "N", angle: 0 },
@@ -162,25 +170,46 @@ function CompassDial() {
           height={MAP_RADIUS * 2}
           viewBox={`${mapLeft} ${mapTop} ${mapSide} ${mapSide}`}
         >
-          <rect x={mapLeft} y={mapTop} width={mapSide} height={mapSide} fill="#eef3f8" />
-          <path d={landPath} fill="#e3ecda" />
+          {/* 청사진: 진파랑 바탕, 옅은 격자, 흰 선 건물 */}
+          <rect x={mapLeft} y={mapTop} width={mapSide} height={mapSide} fill="#123c9e" />
+          <path
+            d={gridPath}
+            fill="none"
+            stroke="rgba(255, 255, 255, 0.13)"
+            strokeWidth={0.8}
+          />
+          <path
+            d={landPath}
+            fill="none"
+            stroke="rgba(255, 255, 255, 0.35)"
+            strokeWidth={1.5}
+            strokeDasharray="4 4"
+          />
           {overviewRoads.map((road, i) => (
-            <g key={i} fill="none" strokeLinecap="round" strokeLinejoin="round">
-              <path d={road.path} stroke="#d9cfba" strokeWidth={7} />
-              <path d={road.path} stroke="#f6f1e6" strokeWidth={5} />
-            </g>
+            <path
+              key={i}
+              d={road.path}
+              fill="none"
+              stroke="rgba(255, 255, 255, 0.55)"
+              strokeWidth={3}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           ))}
-          {overviewTrees.map((tree, i) => (
-            <circle key={i} cx={tree.x} cy={tree.y} r={tree.r} fill={tree.color} />
-          ))}
-          <path d={plazaPath} fill="#d6ebcf" stroke="#bad7b0" strokeWidth={1} />
+          <path
+            d={plazaPath}
+            fill="rgba(255, 255, 255, 0.08)"
+            stroke="rgba(255, 255, 255, 0.5)"
+            strokeWidth={1.2}
+            strokeDasharray="3 3"
+          />
           {buildingPaths.map((path, i) => (
             <path
               key={i}
               d={path}
-              fill="white"
-              stroke="#c3d0e4"
-              strokeWidth={1.2}
+              fill="rgba(255, 255, 255, 0.14)"
+              stroke="white"
+              strokeWidth={1.6}
               strokeLinejoin="round"
             />
           ))}
@@ -195,21 +224,28 @@ function CompassDial() {
         stroke="#174fd6"
         strokeWidth={3}
       />
+      {/* 진파랑 지도와 파란 링이 붙어 보이지 않게 안쪽에 흰 선 */}
+      <circle
+        cx={CENTER}
+        cy={CENTER}
+        r={MAP_RADIUS - 0.5}
+        fill="none"
+        stroke="rgba(255, 255, 255, 0.6)"
+        strokeWidth={1}
+      />
 
       {/* 정문 현재 위치 */}
       <circle cx={gate[0]} cy={gate[1]} r={5} className="home-compass-pulse" />
-      <circle cx={gate[0]} cy={gate[1]} r={5} fill="#174fd6" stroke="white" strokeWidth={2} />
+      <circle cx={gate[0]} cy={gate[1]} r={5} fill="#ffd166" stroke="white" strokeWidth={2} />
 
       <g className="home-compass-needle">
         <path
           d={`M${CENTER} ${CENTER - 46} L${CENTER + 6} ${CENTER} H${CENTER - 6} Z`}
-          fill="#174fd6"
+          fill="white"
         />
         <path
           d={`M${CENTER} ${CENTER + 46} L${CENTER + 6} ${CENTER} H${CENTER - 6} Z`}
-          fill="white"
-          stroke="#b9c7e0"
-          strokeWidth={1}
+          fill="rgba(255, 255, 255, 0.35)"
         />
         <circle cx={CENTER} cy={CENTER} r={5} fill="white" stroke="#174fd6" strokeWidth={2} />
       </g>

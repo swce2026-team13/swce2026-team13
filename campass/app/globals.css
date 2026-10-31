@@ -1828,7 +1828,7 @@ progress::-moz-progress-bar {
 }
 
 .home-compass-pulse {
-  fill: #174fd6;
+  fill: #ffd166;
   transform-box: fill-box;
   transform-origin: center;
   animation: home-compass-pulse 2s ease-out infinite;
