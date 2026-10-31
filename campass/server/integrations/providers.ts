@@ -2,11 +2,12 @@ import type { Candidate, Recognition, Intent, IntentResult } from "../../shared/
 export type { Candidate, Recognition, Intent, IntentResult } from "../../shared/types/recognition.ts";
 import { AppError, waypoints } from "../../shared/utils/routing.ts";
 import { places, type Place } from "../../shared/utils/catalog.ts";
-import { findPlace } from "../services/rooms.ts";
+import { allPlaces, findPlace } from "../services/rooms.ts";
 import { askGemini, type AskGemini, type GeminiConfig, type GeminiIntentResponse } from "./gemini.ts";
 import { graphNodes } from "../../shared/utils/campus3d/route.ts";
 import {
   hasDestinationRequest,
+  refersToPrevious,
   resolveIntentPlaces,
   resolveStartPoint,
   shouldComplementIntent,
@@ -17,7 +18,7 @@ const geminiCandidateLimit = 5;
 const retrySearchMessage = "질문을 이해하지 못했어요. 장소 이름으로 다시 검색해 주세요.";
 
 const elevatorTravel =
-  /(?:엘리베이터|승강기)\s*(?:말고|으?로|(?:[를가]\s*)?(?:타고|이용(?:해서|해요)?|써서|필요(?:해요|해|합니다)?))/;
+  /(?:엘리베이터|승강기)\s*(?:말고|없이|으?로|(?:[를가]\s*)?(?:타고|이용(?:해서|해요)?|써서|필요(?:해요|해|합니다)?))/;
 const mobilityAid =
   /(?:휠체어|유모차|캐리어|(?<![가-힣])짐(?=이|을|은|도|\s|$|[.,!?]))(?:이라서|라서|이\s*있(?:어요|어서)|이\s*많(?:아요|아서))?/;
 const legPain = /다리가\s*아파(?:요|서)?/;
@@ -43,7 +44,7 @@ function extractConditions(query: string) {
         return phrase;
       // '엘리베이터 말고'는 제거만 하고 조건을 바꾸지 않는다.
       if (!/말고$/.test(phrase) || phrase.startsWith("계단"))
-        conditions.elevator = !/^계단\s*(?:을\s*)?(?:으로|타고|이용)/.test(
+        conditions.elevator = !/^계단\s*(?:을\s*)?(?:으로|타고|이용)|^(?:엘리베이터|승강기)\s*없이/.test(
           phrase,
         );
       return " ";
@@ -55,6 +56,12 @@ function extractConditions(query: string) {
 
 export function classifyIntent(query: string, matchedPlaces?: Place[]) {
   const { conditions, searchQuery } = extractConditions(query);
+  // '그럼 엘리베이터로는?'처럼 조건만 바꾸는 말은 앞 대화의 목적지·출발지를 이어요.
+  if (conditions.elevator !== undefined && (refersToPrevious(query) || !hasDestinationRequest(searchQuery)))
+    return { intent: "condition" as Intent, conditions, places: [] };
+  // 장소 확인에 '다른 곳이에요'라고 하면 건물을 다시 고르게 해요(앞 목적지는 대화 상태에서 빼요).
+  if (/^\s*(?:다른\s*곳이?(?:에요|예요|요)?|아니(?:에요|요)|틀렸어요|여기\s*아니에요)[.!?]?\s*$/.test(query))
+    return { intent: "destination" as Intent, conditions, places: allPlaces().filter((p) => p.category === "building"), rejected: true };
   const journey = splitJourney(searchQuery);
   // 출발 지점만 답한 경우(예: 출발을 묻자 '학교 정문')는 출발만 바꿔요.
   const startOnly = journey ? undefined : resolveStartPoint(searchQuery);
@@ -73,7 +80,7 @@ export function classifyIntent(query: string, matchedPlaces?: Place[]) {
     ? "destination"
     : conditions.elevator !== undefined && !hasDestinationRequest(searchQuery)
       ? "condition"
-      : /여기서|다음에|이제\s*어디|어느\s*쪽|어디로\s*가야/.test(searchQuery)
+      : /여기서|다음에|다음\s*이동|이제\s*어디|어느\s*쪽|어디로\s*가야/.test(searchQuery)
         ? "next" : "destination";
   return {
     intent, conditions, places: candidates,

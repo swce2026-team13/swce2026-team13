@@ -136,6 +136,18 @@ const followups: Followup[] = [
   ["다음 이동은 뭐예요?", "facility-chungwoon-3", "bon", undefined, "facility-chungwoon-3", undefined, "next"],
 ];
 
+// 대화형 검색 화면 흐름 그대로 이어지는 후속 질문(빠른 답 버튼 포함)
+const conversationFlow: Array<[string, string[], Partial<EvaluationCase>]> = [
+  ["엘리베이터로 갈래요", [], { intent: "condition", elevator: true }],
+  ["혜인관", ["hyein"], { elevator: true, prior: { elevator: true, candidateIds: [], pending: false } }],
+  ["맞아요", ["hyein"], { prior: { destinationPlaceId: "hyein", candidateIds: [], pending: false } }],
+  ["학교 정문", ["hyein"], { startId: "gate", prior: { destinationPlaceId: "hyein", candidateIds: [], pending: false } }],
+  ["다른 곳이에요", [], { startId: "gate", clarify: true,
+    prior: { startPlaceId: "gate", destinationPlaceId: "hyein", candidateIds: [], pending: false } }],
+  ["본관 ↔ 혜인관", ["hyein"], { startId: "bon" }],
+  ["본관 혜인관", ["hyein"], { startId: "bon" }],
+];
+
 const ambiguous: Array<[string, string[]]> = [
   ["301호 가고 싶어요", room301],
   ["302호 수업 어디서 해요?", room302],
@@ -245,6 +257,8 @@ export const evaluationCases: EvaluationCase[] = [
       },
     },
   )),
+  ...conversationFlow.map(([query, ids, extra], index) => make(
+    `F${String(followups.length + index + 1).padStart(2, "0")}`, "후속 질문", query, ids, { clarify: false, ...extra })),
   ...ambiguous.map(([query, ids], index) => make(`A${String(index + 1).padStart(2, "0")}`, "모호한 질문", query, ids)),
   ...semantic.map(([query, ids], index) => make(`M${String(index + 1).padStart(2, "0")}`, "의미·오타·별칭", query, ids)),
   ...outside.map(([query, unregistered], index) => make(`O${String(index + 1).padStart(2, "0")}`, "범위 밖·미등록", query, [], {
