@@ -54,7 +54,7 @@ function useCampusState() {
   // 고른 경로 후보 id. 주소에만 두고 바꿔도 경로를 다시 받지 않음
   const selectedOption = params.get("option") || "";
   const recoveringParam = params.get("recovering");
-  const [query, setQuery] = useState(""),
+  const [query, setQuery] = useState(selectedQuery),
     [results, setResults] = useState<Place[]>([]),
     [searchNote, setSearchNote] = useState("");
   const intentRequest = useRef(createIntentRequest((query, signal) => api<IntentResult>("intent", { query }, signal)));
@@ -73,6 +73,12 @@ function useCampusState() {
     null,
   );
   const [searchRevision, setSearchRevision] = useState(0);
+  const [resolvedSearchKey, setResolvedSearchKey] = useState("");
+  const searchKey = JSON.stringify([selectedQuery, selectedCategory, selectedTurn]);
+  const hasSearchRequest = Boolean(selectedQuery.trim() || selectedCategory);
+  const searchLoading = view === "search" && hasSearchRequest &&
+    (resolvedSearchKey !== searchKey ||
+      !conversationReady);
   const [destination, setDestination] =
   useState<Place>(defaultDestination),
     [start, setStart] = useState(""),
@@ -282,6 +288,7 @@ function useCampusState() {
       setClassroomBuilding(null);
       setSearchNote("검색 결과");
       if (!selectedQuery && !selectedCategory) {
+        setResolvedSearchKey(searchKey);
         finishSubmission();
         return;
       }
@@ -296,6 +303,7 @@ function useCampusState() {
           if (saved.startPlaceId) setStart(saved.startPlaceId);
           if (saved.elevator !== undefined) setElevator(saved.elevator);
           setSearchRevision((value) => value + 1);
+          setResolvedSearchKey(searchKey);
           finishSubmission();
           return;
         }
@@ -375,6 +383,7 @@ function useCampusState() {
             : "질문을 이해하지 못했어요. 장소 이름으로 다시 검색해 주세요.");
         }
       } finally {
+        if (!cancelled) setResolvedSearchKey(searchKey);
         finishSubmission();
       }
     });
@@ -543,6 +552,12 @@ function useCampusState() {
     go("guide");
   });
 }
+  function endGuide() {
+    try { sessionStorage.removeItem("campass-session"); } catch { /* 저장 공간을 사용할 수 없어도 종료해요. */ }
+    setSession(null);
+    setRecovering(false);
+    go("home");
+  }
   async function lost() {
     if (!session) return;
     await run(async () => {
@@ -762,6 +777,7 @@ function cancelRecognition() {
     setClassroomBuilding,
     searchRevision,
     setSearchRevision,
+    searchLoading,
     destination,
     setDestination,
     start,
@@ -819,6 +835,7 @@ function cancelRecognition() {
     begin,
     advance,
     previous,
+    endGuide,
     lost,
     upload,
     cancelRecognition,

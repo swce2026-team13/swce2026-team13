@@ -547,35 +547,6 @@ progress::-moz-progress-bar {
   display: block;
   margin-top: 8px;
 }
-.route-list {
-  list-style: none;
-  margin: 18px 0 10px;
-  padding: 0 0 0 15px;
-  font-size: 11px;
-}
-.route-list li {
-  position: relative;
-  padding: 0 0 15px 12px;
-  border-left: 1px solid #cad7f0;
-}
-.route-list li:before {
-  position: absolute;
-  content: "";
-  width: 7px;
-  height: 7px;
-  border: 1px solid var(--blue);
-  background: white;
-  border-radius: 50%;
-  left: -4px;
-  top: 5px;
-}
-.route-list li:last-child {
-  padding-bottom: 0;
-  border: 0;
-}
-.route-list li:last-child:before {
-  background: var(--blue);
-}
 .actions {
   position: sticky;
   bottom: 0;
@@ -2272,6 +2243,19 @@ progress::-moz-progress-bar {
   font-weight: 700;
 }
 
+.ai-search-loading-bar {
+  width: 100%;
+  height: 4px;
+  margin-top: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #dbe7ff, #2860ed, #dbe7ff);
+  background-size: 200% 100%;
+  animation: loading 1.2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ai-search-loading-bar { animation: none; }
+}
+
 .ai-place-card {
   display: flex;
   flex-direction: column;
@@ -3178,94 +3162,6 @@ progress::-moz-progress-bar {
   }
 }
 
-/* 지도에서 출발·도착 고르기 */
-.map-pick-screen h1 {
-  color: #354863;
-  text-shadow: 0 2px 4px rgba(58, 101, 173, 0.18);
-}
-
-.map-pick-screen h1 + p {
-  margin-top: 6px;
-  color: #667389;
-  line-height: 20px;
-}
-
-.map-pick-card {
-  padding: 14px 16px 16px;
-  border-radius: 14px;
-}
-
-.map-pick-card > .between {
-  min-height: 24px;
-  margin-bottom: 8px;
-  font-size: 13px;
-}
-
-.map-pick-card > .between b {
-  font-weight: 500;
-  color: #192334;
-}
-
-.map-pick-card .text-button {
-  min-height: 24px;
-  font-size: 12px;
-}
-
-.map-pick-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 44px;
-  font-size: 13px;
-  color: #667389;
-}
-
-.map-pick-row + .map-pick-row {
-  border-top: 1px solid #dfe7f4;
-}
-
-.map-pick-row.turn,
-.map-pick-row strong {
-  color: #192334;
-  font-weight: 500;
-}
-
-.map-pick-row strong {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.map-pick-row strong svg {
-  color: #2563eb;
-}
-
-.map-pick-tag {
-  padding: 4px 9px;
-  border-radius: 8px;
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 17px;
-}
-
-.map-pick-tag.start {
-  background: #eaf7f0;
-  color: #17845d;
-}
-
-.map-pick-tag.destination {
-  background: #e3edff;
-  color: #2563eb;
-}
-
-.map-pick-dot {
-  width: 6px;
-  height: 6px;
-  margin-right: -4px;
-  border-radius: 3px;
-  background: #2563eb;
-}
-
 .overview-card {
   overflow: hidden;
   border: 1px solid #dfe7f4;
@@ -3343,13 +3239,6 @@ progress::-moz-progress-bar {
   font-size: 11px;
 }
 .overview-legend[hidden] { display: none; }
-.map-picker-caption {
-  margin-top: -10px;
-  color: #667389;
-  font-size: 10px;
-  line-height: 1.5;
-}
-
 .map-entrance-layer {
   position: absolute;
   inset: 0;
@@ -3418,35 +3307,9 @@ progress::-moz-progress-bar {
   border: 1px solid white;
   transform: translate(-50%, -50%);
 }
-.map-entrance-notice {
-  padding: 8px 12px;
-  color: #8a570f;
-  font-size: 12px;
-}
 .map-picker-surface .zoom,
 .map-picker-surface .overview-north,
 .map-fit-all { z-index: 2; }
-
-.overview-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 53px;
-  padding: 0 15px 0 13px;
-  background: rgba(255, 255, 255, 0.32);
-  font-size: 13px;
-  color: #192334;
-}
-
-.overview-heading span {
-  padding: 4px 9px;
-  border-radius: 8px;
-  background: #e3edff;
-  color: #2563eb;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 17px;
-}
 
 .overview-map {
   position: relative;
@@ -3516,81 +3379,10 @@ progress::-moz-progress-bar {
   border-radius: 2px;
 }
 
-.map-pick-actions > p {
-  color: #667389;
-  font-size: 12px;
-  line-height: 18px;
-  text-align: center;
-}
-
-.map-pick-actions > .map-pick-message {
-  color: #b45309;
-  font-weight: 600;
-}
-
-.map-pick-actions .button.primary:disabled {
-  background: #c7d1de;
-  box-shadow: none;
-  opacity: 1;
-}
-
-/* 길찾기 준비(B4) */
-.prepare-request {
-  padding: 13px 16px 14px;
-  border-radius: 16px;
-}
-
-.prepare-request p {
-  color: #354863;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 21.5px;
-}
-
-.prepare-request small {
-  display: block;
-  margin-top: 6px;
-  color: var(--blue);
-  font-size: 12px;
-}
-
-.prepare-screen .choice small {
-  font-size: 12px;
-}
-
-.route-endpoints,
 .route-start-picker {
   display: flex;
   flex-direction: column;
   gap: 14px;
-}
-
-.route-endpoint {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  font-size: 13px;
-}
-
-.route-endpoint + .route-endpoint {
-  border-top: 1px solid #dce5f2;
-  padding-top: 14px;
-}
-
-.route-endpoint strong {
-  overflow-wrap: anywhere;
-}
-
-.route-endpoint .text-button {
-  white-space: nowrap;
-}
-
-.route-endpoint small {
-  display: block;
-  margin-top: 5px;
-  color: #667389;
-  font-size: 11px;
 }
 
 .actions.route-start-actions::before {
@@ -3605,131 +3397,6 @@ progress::-moz-progress-bar {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
-}
-
-.route-start-actions > p {
-  color: #667389;
-  font-size: 12px;
-  text-align: center;
-}
-
-.route-options {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.route-options > .between small {
-  color: #667389;
-  font-size: 12px;
-}
-
-.route-option-card {
-  padding: 16px;
-  border-radius: 14px;
-}
-
-/* 계단 여부 문구가 길어도 한 줄에 들어가도록 아래 줄 전체를 씀 */
-.route-option-head {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  grid-template-areas:
-    "name count meta"
-    "note note note";
-  align-items: center;
-  column-gap: 12px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid #dfe7f4;
-}
-
-.route-option-head strong {
-  grid-area: name;
-  color: #354863;
-  font-size: 15px;
-  font-weight: 500;
-  line-height: 23.5px;
-}
-
-.route-option-head small {
-  grid-area: note;
-  overflow: hidden;
-  color: #667389;
-  font-size: 10px;
-  line-height: 15.5px;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.route-option-head > b {
-  grid-area: count;
-  color: var(--blue);
-  font-size: 26px;
-  letter-spacing: -0.5px;
-  line-height: 1.2;
-}
-
-.route-option-head > span {
-  grid-area: meta;
-  color: #667389;
-  font-size: 12px;
-}
-
-.route-legs {
-  list-style: none;
-  margin: 14px 0 6px;
-  padding: 0;
-}
-
-.route-legs li {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 7px 0 7px 24px;
-  color: #192334;
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.route-legs li:before {
-  content: "";
-  position: absolute;
-  z-index: 1;
-  left: 0;
-  top: 50%;
-  width: 12px;
-  height: 12px;
-  margin-top: -6px;
-  border: 2px solid var(--blue);
-  border-radius: 50%;
-  background: white;
-}
-
-.route-legs li:last-child:before {
-  background: var(--blue);
-}
-
-.route-legs li:not(:last-child):after {
-  content: "";
-  position: absolute;
-  left: 5px;
-  top: 50%;
-  width: 2px;
-  height: 100%;
-  background: #dde6f5;
-}
-
-.route-legs small {
-  color: #667389;
-  font-size: 10px;
-}
-
-.route-steps {
-  margin: 4px 0 8px;
-  padding-left: 40px;
-  color: #667389;
-  font-size: 12px;
-  line-height: 1.8;
 }
 
 .prepare-warning {
@@ -3899,19 +3566,6 @@ progress::-moz-progress-bar {
   color: #354863;
   font-size: 13px;
   text-align: right;
-}
-
-.route-unverified {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 12px;
-}
-
-.route-unverified p {
-  color: #8a5a0c;
-  font-size: 12px;
-  line-height: 18px;
 }
 
 .ai-place-open {
@@ -4472,6 +4126,19 @@ progress::-moz-progress-bar {
   flex-direction: column;
 }
 
+/* 앱 화면은 계속 스크롤할 수 있게 두고, 모바일·데스크톱의 막대만 숨긴다. */
+html,
+body,
+.phone > main {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+.phone > main::-webkit-scrollbar {
+  display: none;
+}
+
 .home-transition {
   flex: 1;
   min-height: 0;
@@ -4488,10 +4155,6 @@ progress::-moz-progress-bar {
   opacity: 1;
   transform: translateY(0);
 }
-/* 통합 길찾기: 선택 중인 줄과 기존 지도 카드 */
-.endpoint-picking { display:flex; align-items:center; gap:8px; padding:10px; min-height:44px; background:#f1f6ff; border:1.5px dashed #9dbaf7; border-radius:12px; color:#416ba8; font-size:12px; }
-.endpoint-picking i { flex:none; width:7px; height:7px; border-radius:50%; background:#568cf0; box-shadow:0 0 0 5px #568cf01a,0 0 13px 7px #568cf016; }
-.route-endpoint .endpoint-cancel { color:#818894; }
 .endpoint-map-surface { position:relative; }
 .endpoint-map-hint { position:absolute; z-index:5; top:12px; left:12px; max-width:calc(100% - 130px); margin:0; padding:7px 11px; border-radius:20px; background:#fffffff0; box-shadow:0 2px 8px #10223f12; color:#45618a; font-size:11px; pointer-events:none; }
 .prepare-screen .map-picker-toolbar { height:46px; padding:0 10px; border-bottom:1px solid #edf0f4; background:white; }
@@ -4542,12 +4205,256 @@ progress::-moz-progress-bar {
 .route-timeline li > div { flex:1; }
 .route-timeline strong { font-size:13px; }
 .route-timeline p { margin:4px 0 0; color:#7b8798; font-size:11px; line-height:1.7; }
-.actions.route-start-actions.prepare-fixed-actions { position:fixed; bottom:0; left:50%; transform:translateX(-50%); z-index:20; display:flex; flex-direction:row; gap:10px; width:100%; max-width:390px; padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px)); background:#fffffff5; border-top:1px solid #edf0f4; }
+.actions.route-start-actions.prepare-fixed-actions { position:fixed; bottom:0; left:50%; transform:translateX(-50%); z-index:20; display:flex; flex-direction:row; gap:10px; width:100%; max-width:390px; padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px)); background:transparent; border:0; }
 .prepare-fixed-actions .button { min-height:56px; margin:0; }
 .prepare-fixed-actions .primary { flex:1; font-size:14px; }
 .prepare-fixed-actions .route-camera-button { flex:0 0 56px; width:56px; padding:0; }
 
 .route-mode-tabs input:focus-visible + span { outline:2px solid #2860ed; outline-offset:3px; }
 
-.prepare-screen .zoom button { min-width:44px; min-height:44px; }
 .route-mode-tabs label:first-child span svg { border-bottom:1.5px solid currentColor; padding-bottom:1px; }
+
+/* #111 길찾기 화면: 좁은 두 줄 출발·도착 카드 */
+.prepare-screen.content {
+  gap: 12px;
+  padding: 2px 16px 120px;
+}
+.prepare-screen .route-endpoints {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 8px;
+  margin: 0 12px;
+  padding: 8px 6px 8px 12px;
+  border-radius: 18px;
+  background: white;
+  box-shadow: 0 8px 22px rgba(40, 70, 130, .09), 0 0 0 1px #e6ecf6;
+}
+.route-endpoint-line {
+  flex: none;
+  width: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 17px 0 15px;
+}
+.route-start-dot {
+  width: 10px;
+  height: 10px;
+  border: 3px solid #1d9e75;
+  border-radius: 50%;
+  background: white;
+}
+.route-endpoint-dash {
+  flex: 1;
+  width: 0;
+  margin: 4px 0;
+  border-left: 2px dotted #c3cfe3;
+}
+.route-destination-pin { display: block; flex: none; }
+.route-endpoint-fields {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.route-endpoint-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 42px;
+  padding: 0 6px 0 12px;
+  border-radius: 12px;
+  background: #f4f6fa;
+}
+.route-endpoint-field.is-picking {
+  background: #f1f6ff;
+  box-shadow: inset 0 0 0 1.5px #8fb0f6;
+}
+.route-endpoint-field-button {
+  flex: 1;
+  min-width: 0;
+  height: 42px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+  color: #8a929e;
+  font-size: 14px;
+  font-weight: 500;
+}
+.route-endpoint-field.has-place .route-endpoint-field-button {
+  color: #1f2a3c;
+  font-size: 14.5px;
+  font-weight: 700;
+}
+.route-endpoint-field.is-picking .route-endpoint-field-button { color: #3b5fc4; }
+.route-endpoint-cancel {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #dbe6fd;
+  color: #3b5fc4;
+}
+.route-endpoint-cancel::after { content: ""; position: absolute; inset: -8px; }
+.route-endpoint-swap {
+  position: relative;
+  flex: none;
+  align-self: center;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  color: #646c78;
+}
+.route-endpoint-swap::before {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: 12px;
+}
+.route-endpoint-swap:hover::before { background: #f4f6fa; }
+.route-endpoint-swap svg { position: relative; }
+.prepare-screen .route-start-picker { gap: 0; }
+.prepare-screen .overview-card,
+.prepare-screen .route-preview-card {
+  border: 0;
+  border-radius: 20px;
+  background: white;
+  box-shadow: 0 6px 18px rgba(40, 70, 130, .07), 0 0 0 1px #e3e6eb;
+}
+.prepare-screen .route-start-picker .endpoint-map-surface,
+.prepare-screen .route-start-picker .endpoint-map-surface .overview-map {
+  height: 400px;
+}
+.prepare-screen .endpoint-map-hint {
+  position: absolute;
+  z-index: 5;
+  top: auto;
+  bottom: 14px;
+  left: 50%;
+  max-width: calc(100% - 24px);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  margin: 0;
+  padding: 0 14px 0 11px;
+  transform: translateX(-50%);
+  border-radius: 99px;
+  background: rgba(31, 42, 60, .86);
+  box-shadow: 0 4px 14px rgba(20, 30, 50, .25);
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.prepare-screen .endpoint-map-hint svg { flex: none; color: #9dbaf7; }
+.route-pick-notice { padding: 8px 4px 0; color: #9a5400; font-size: 12px; }
+.prepare-screen > .button.secondary {
+  min-height: 48px;
+  border: 0;
+  background: rgba(255, 255, 255, .85);
+  box-shadow: 0 0 0 1px #e3e8f0;
+  font-size: 14px;
+  font-weight: 700;
+}
+.prepare-screen .route-preview-heading {
+  min-height: 48px;
+  padding: 0 10px 0 16px;
+}
+.prepare-screen .route-preview-heading strong { font-size: 15px; font-weight: 800; }
+.prepare-screen .route-preview-card .overview-map { height: 378px; }
+.prepare-screen .route-summary-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0 -16px;
+  padding: 10px 20px 20px;
+  box-shadow: 0 -6px 20px rgba(40, 70, 130, .08);
+}
+.prepare-screen .route-sheet-handle { width: 36px; margin: 0 auto; background: #d5dbe5; }
+.prepare-screen .route-sheet-intro { display: flex; flex-direction: column; gap: 4px; }
+.prepare-screen .route-sheet-title { margin: 0; font-size: 15px; font-weight: 800; }
+.prepare-screen .route-height-summary {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  color: #1f2a3c;
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -.02em;
+}
+.route-height-summary .route-height-label { color: #5c6574; font-size: 15px; font-weight: 400; letter-spacing: 0; }
+.route-height-summary .route-height-divider { color: #a3abb8; font-size: 18px; font-weight: 400; }
+.route-height-summary b { font-weight: 800; }
+.prepare-screen .route-summary-chips { gap: 6px; }
+.prepare-screen .route-summary-chips > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 11px 0 9px;
+  border-radius: 99px;
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.route-summary-chips [data-chip="경사 있음"] { background: #fdf0dd; color: #9a5400; }
+.route-summary-chips [data-chip="실외 길"] { background: #e6f3e7; color: #3f8a48; }
+.route-summary-chips [data-chip="현장 확인 전"] { background: #fff6d8; color: #8a6100; }
+.prepare-screen .route-counts {
+  gap: 0;
+  margin: 0;
+  padding: 6px 0;
+  border: 0;
+}
+.prepare-screen .route-counts > span { gap: 8px; color: #5c6574; }
+.route-counts > span > span { display: flex; flex-direction: column; line-height: 1.15; }
+.prepare-screen .route-counts b { color: #1f2a3c; font-size: 20px; font-weight: 800; }
+.route-counts small { color: #5c6574; font-size: 12px; font-weight: 400; }
+.prepare-screen .route-elevation-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 14px 10px;
+  border-radius: 16px;
+  background: #f6f8fb;
+}
+.prepare-screen .route-elevation-heading strong { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 800; }
+.prepare-screen .route-elevation-heading small { color: #6b7480; font-size: 12px; }
+.prepare-screen .route-elevation-bars { height: 48px; gap: 3px; padding: 0; }
+.prepare-screen .route-elevation-bars span { border-radius: 4px; }
+.prepare-screen .route-elevation-labels { margin: 0; font-size: 11.5px; color: #6b7480; }
+.route-elevation-labels span:nth-child(2):not(:last-child) { text-align: center; }
+.prepare-screen .prepare-warning { gap: 6px; padding: 14px 14px 12px; border-radius: 16px; background: #fff6e6; }
+.prepare-screen .prepare-warning b { display: flex; align-items: center; gap: 6px; color: #9a5400; font-size: 14.5px; font-weight: 800; }
+.prepare-screen .prepare-warning p { margin: 0; color: #5c4a2c; font-size: 13px; line-height: 1.55; }
+.prepare-warning-footer { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 8px; margin-top: 2px; }
+.prepare-warning-footer small { color: #9a8466; font-size: 11.5px; }
+.prepare-screen .prepare-warning .button { min-height: 32px; margin: 0 0 0 auto; border: 0; border-radius: 10px; box-shadow: 0 0 0 1px #f1dcb6; color: #9a5400; font-size: 12.5px; font-weight: 700; }
+.prepare-screen .route-timeline { margin: 0; }
+.prepare-screen .route-timeline li { gap: 12px; padding-bottom: 16px; }
+.prepare-screen .route-timeline li:not(:last-child)::before { background: #dfe5ee; }
+.prepare-screen .route-step-icon { color: white; background: #3f8a48; }
+.prepare-screen .route-timeline li[data-kind="start"] .route-step-icon { background: #24856d; }
+.prepare-screen .route-timeline li[data-kind="hill"] .route-step-icon { background: #e39a2f; }
+.prepare-screen .route-timeline li[data-kind="destination"] .route-step-icon { background: #2860ed; }
+.prepare-screen .route-timeline li[data-kind="elevator"] .route-step-icon { background: #10223f; }
+.prepare-screen .route-timeline li > div { padding-top: 5px; }
+.prepare-screen .route-timeline strong { color: #1f2a3c; font-size: 15px; font-weight: 700; }
+.prepare-screen .route-timeline p { margin: 0; color: #6b7480; font-size: 12.5px; }
+.actions.route-start-actions.prepare-fixed-actions { gap: 8px; padding: 12px 16px calc(24px + env(safe-area-inset-bottom, 0px)); }
+.prepare-fixed-actions .button { min-height: 54px; border-radius: 16px; }
+.prepare-fixed-actions .primary { background: linear-gradient(90deg, #3d6ff2, #6b98ff); box-shadow: 0 8px 18px rgba(40, 96, 237, .3); font-size: 16px; font-weight: 800; }
+.prepare-fixed-actions .primary:disabled { background: #c9d6f3; box-shadow: none; opacity: 1; }
+.prepare-fixed-actions .route-camera-button { height: 54px; border-color: #dce2ec; color: #2860ed; }

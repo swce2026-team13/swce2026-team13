@@ -7,6 +7,12 @@
 }
 
 .embedded { width: 100%; }
+.designTheme .stage,
+.designTheme .loading {
+  background: linear-gradient(180deg, #eaf0ef 0%, #c5e4a5 28%, #c5e4a5 100%);
+}
+.designTheme .overlay { background: #d9eac0; }
+.guideLive .north { display: none; }
 .embedded .north { left: auto; right: 16px; top: 62px; }
 .embedded .overview { min-height: 44px; }
 .embedded .zoom button { width: 44px; height: 44px; }
@@ -31,8 +37,7 @@
 .stage,
 .loading {
   position: relative;
-  height: 420px;
-  height: clamp(320px, 55svh, 500px);
+  height: var(--campus-map-height, clamp(320px, 55svh, 500px));
   background: #e8effd;
   overflow: hidden;
 }
@@ -104,6 +109,41 @@
 }
 .me[hidden] {
   display: none;
+}
+.guideArrow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 4;
+  width: 30px;
+  height: 30px;
+  pointer-events: none;
+}
+.guideArrow[hidden] { display: none; }
+.guideArrow::before {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  background: #2860ed55;
+  animation: guideArrowPing 1.6s ease-out infinite;
+}
+.guideArrow span {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 2px 8px #10286455;
+}
+.guideArrow svg { width: 18px; height: 18px; fill: #2860ed; }
+@keyframes guideArrowPing {
+  to { transform: scale(1.8); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .guideArrow::before { animation: none; }
 }
 @keyframes me-pulse {
   from {
@@ -278,3 +318,7 @@
 
 .routePill { position:absolute; top:0; left:0; padding:3px 12px; border:2px solid white; border-radius:18px; color:white; font-size:12px; font-weight:700; white-space:nowrap; box-shadow:0 2px 6px #10223f20; z-index:1; }
 .routePill[hidden] { display:none; }
+.routeStartPill { border: 0; border-radius: 8px; background: #1d9e75; font-size: 11.5px; font-weight: 800; }
+.routeGradePill { border: 1.5px solid white; border-radius: 8px; background: #fff3dc; color: #9a5400; font-size: 11.5px; font-weight: 800; }
+.routeFlagPin { position: absolute; top: 0; left: 0; width: 30px; height: 40px; z-index: 2; filter: drop-shadow(0 2px 5px rgba(16, 40, 100, .22)); }
+.routeFlagPin[hidden] { display: none; }

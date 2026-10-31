@@ -29,6 +29,7 @@ export function MapPicker({
     <CampusOverviewMap
       key={overviewReset}
       pickerMode
+      height={400}
       selected={selected}
       onEntrance={selectEntrance}
       onSelect={selectBuilding}
@@ -86,14 +87,13 @@ export function MapPicker({
         </label>
       </div>
       <div className="endpoint-map-surface">
-        <p className="endpoint-map-hint" role="status">
-          {target === "start" ? "출발할" : "도착할"} 건물이나 입구를 눌러 주세요
-        </p>
         {flat ? (
           overview
         ) : (
           <CampusMap
             embedded
+            designTheme
+            mapHeight={400}
             controllerRef={mapController}
             selectedBuildings={selected}
             onBuilding={selectBuilding}
@@ -102,6 +102,14 @@ export function MapPicker({
             fallback={overview}
           />
         )}
+        <p className="endpoint-map-hint" role="status">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V11" />
+            <path d="M12 10.5V9a1.5 1.5 0 0 1 3 0v2" />
+            <path d="M15 10.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-1a6 6 0 0 1-4.6-2.2L4 15.5a1.5 1.5 0 0 1 2.3-1.9L9 16" />
+          </svg>
+          지도에서 {target === "start" ? "출발지" : "도착지"}를 눌러 주세요
+        </p>
       </div>
       <button
         type="button"

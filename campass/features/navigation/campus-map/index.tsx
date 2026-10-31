@@ -1,6 +1,6 @@
 "use client";
 
-import { Component, type ReactNode, type RefObject } from "react";
+import { Component, type CSSProperties, type ReactNode, type RefObject } from "react";
 import type { CampusMapController } from "@/shared/utils/campus-map";
 import dynamic from "next/dynamic";
 import type { CampusCoordinate } from "@/shared/utils/campus-map";
@@ -31,6 +31,9 @@ class MapBoundary extends Component<
 
 export type CampusMapProps = {
   embedded?: boolean;
+  mapHeight?: number;
+  designTheme?: boolean;
+  guideLive?: boolean;
   controllerRef?: RefObject<CampusMapController | null>;
   onEntrance?: (id: string) => void;
   onFocusChange?: (id: string) => void;
@@ -40,25 +43,37 @@ export type CampusMapProps = {
   selectedBuildings?: string[];
   currentBuilding?: string;
   routeNodes?: string[];
-  routeAnnotation?: { name: string; color: string };
+  routeAnnotation?: { name: string; color: string; guide?: import("@/shared/utils/guide-route-motion").GuideRouteMotion };
   /** 안내 중 내 위치(지금 단계). 있으면 동그란 점으로 표시해요. */
   position?: CampusCoordinate;
   fallback: ReactNode;
 };
 
-export function CampusMap({ fallback, ...props }: CampusMapProps) {
+export function CampusMap({ fallback, mapHeight, ...props }: CampusMapProps) {
   if (props.embedded)
     return (
-      <div className={styles.embedded}>
+      <div
+        className={`${styles.embedded} ${props.designTheme ? styles.designTheme : ""} ${props.guideLive ? styles.guideLive : ""}`}
+        style={mapHeight ? { "--campus-map-height": `${mapHeight}px` } as CSSProperties : undefined}
+      >
         <MapBoundary fallback={fallback}>
           <MapView {...props} fallback={fallback} />
         </MapBoundary>
       </div>
     );
   return (
-    <section className={styles.card} aria-label="캠퍼스 3D 지도">
+    <section
+      className={`${styles.card} ${props.designTheme ? styles.designTheme : ""}`}
+      aria-label="캠퍼스 3D 지도"
+    >
       <div className={styles.heading}>
-        <b>{props.onBuilding ? "캠퍼스 3D 지도" : "3D 경로 미리보기"}</b>
+        <b>
+          {props.onBuilding
+            ? "캠퍼스 3D 지도"
+            : props.position || props.routeAnnotation?.guide
+              ? "3D 길안내 지도"
+              : "3D 경로 미리보기"}
+        </b>
         <span>서경대학교</span>
       </div>
       <MapBoundary fallback={fallback}>

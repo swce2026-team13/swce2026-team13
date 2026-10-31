@@ -41,6 +41,7 @@ export function guideLegLabel(map: GuideMapData): string {
 
 export type GuideStepViewModel = {
   id: string;
+  node?: string;
   name: string;
   instruction: string;
   detail?: string;
@@ -99,6 +100,7 @@ export function toGuideViewModel(
     current: currentStep
       ? {
           id: currentStep.id,
+          node: currentStep.node,
           name: currentStep.name,
           instruction: currentStep.instruction,
           detail: currentStep.detail,
@@ -109,6 +111,7 @@ export function toGuideViewModel(
     next: nextStep
       ? {
           id: nextStep.id,
+          node: nextStep.node,
           name: nextStep.name,
           instruction: nextStep.instruction,
           detail: nextStep.detail,

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { routeSegments, type CampusCoordinate } from "@/shared/utils/campus-map";
-import { placeRouteBadge } from "@/shared/utils/map-labels";
+import { sliceRouteSegments, type GuideRouteMotion } from "@/shared/utils/guide-route-motion";
 import { EntrancePins } from "./entrance-pins";
 import { layoutEntrancePins, mapEntrances } from "./map-entrances";
 import { DoorOpen, ArrowUpDown, Maximize, Minus, Plus } from "lucide-react";
@@ -99,8 +99,16 @@ export function CampusOverviewMap({
     "id" | "name" | "entrances" | "elevator"
   >;
     backgroundOnly?: boolean;
-  routePreview?: { nodes: string[]; name: string; color: string };
+  routePreview?: { nodes: string[]; name: string; color: string; guide?: GuideRouteMotion };
 }) {
+  const [reduceMotion, setReduceMotion] = useState(false);
+  useEffect(() => {
+    const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReduceMotion(preference.matches);
+    update();
+    preference.addEventListener("change", update);
+    return () => preference.removeEventListener("change", update);
+  }, []);
   const viewOnly = Boolean(pins || highlight || focusBuilding || routePreview);
   const destinationArea = routePreview?.nodes.at(-1)?.split("|")[0];
   const state = (area: string) =>
@@ -286,7 +294,9 @@ export function CampusOverviewMap({
             ? `${focused.name} 건물과 입구 지도`
             : highlight
               ? "캠퍼스 개요도. 선택한 경로와 현재 위치"
-              : viewOnly
+              : routePreview
+                ? "캠퍼스 경로 미리보기. 초록 출발점과 파란 도착 깃발"
+                : viewOnly
                 ? "캠퍼스 개요도. 편의시설 핀을 눌러 보세요"
                 : buildingPicker
                   ? "캠퍼스 지도. 건물을 눌러 상세 안내를 보세요"
@@ -681,7 +691,7 @@ export function CampusOverviewMap({
             { color: "#dc2626", width: 4 },
           ].map(({ color, width }) => (
             <g key={color} stroke={color} strokeWidth={width}>
-              {highlight?.segments.map(([from, to], index) => (
+              {!routePreview && highlight?.segments.map(([from, to], index) => (
                 <line
                   key={index}
                   x1={from[0]}
@@ -698,6 +708,14 @@ export function CampusOverviewMap({
           const path = previewSegments.map(([a, b]) => `M${toPoint(a).join(" ")} L${toPoint(b).join(" ")}`).join(" ");
           const start = toPoint(previewSegments[0][0]);
           const end = toPoint(previewSegments.at(-1)![1]);
+          const guide = routePreview.guide;
+          const linePath = (pieces: typeof previewSegments) => pieces.length
+            ? `M${toPoint(pieces[0][0]).join(" ")} ${pieces.map(([, b]) => `L${toPoint(b).join(" ")}`).join(" ")}`
+            : "";
+          const passedPath = guide ? linePath(sliceRouteSegments(previewSegments, 0, guide.from)) : "";
+          const activeSegments = guide ? sliceRouteSegments(previewSegments, guide.from, guide.to) : [];
+          const activePath = linePath(activeSegments);
+          const activeStart = activeSegments.length ? toPoint(activeSegments[0][0]) : end;
           const lengths = previewSegments.map(([a, b]) => Math.hypot(b.east-a.east, b.north-a.north, b.elevation-a.elevation));
           let remaining = lengths.reduce((a,b) => a+b,0)/2;
           let middle = start;
@@ -705,25 +723,38 @@ export function CampusOverviewMap({
             if (remaining <= lengths[i]) { const [a,b]=previewSegments[i]; const t=lengths[i] ? remaining/lengths[i] : 0; middle=toPoint({ east:a.east+(b.east-a.east)*t, north:a.north+(b.north-a.north)*t, elevation:0 }); break; }
             remaining -= lengths[i];
           }
-          const routeLabelOffset = Math.hypot(middle[0]-end[0], middle[1]-end[1]) / labelScale < 80 ? 24 : -19;
-          const arrivalLabel = placeRouteBadge(end, 52*labelScale, 28*labelScale,
-            [...overviewBuildings.map((building,index) => {
-              const [x,y] = buildingLabelPositions[index];
-              const half = (building.label.length*11+18)/2*labelScale;
-              return {left:x-half,right:x+half,top:y-14*labelScale,bottom:y+14*labelScale};
-            }), {left:middle[0]-(routePreview.name.length*12+28)/2*labelScale, right:middle[0]+(routePreview.name.length*12+28)/2*labelScale, top:middle[1]+(routeLabelOffset-16)*labelScale, bottom:middle[1]+(routeLabelOffset+16)*labelScale}], {left:viewLeft+4*labelScale,right:viewLeft+width-4*labelScale,top:viewTop+4*labelScale,bottom:viewTop+height-4*labelScale});
-          const pill = (at: number[], text: string, color: string, dy: number) => <g transform={`translate(${at.join(" ")}) scale(${labelScale})`}>
-            <rect x={-(text.length*12+24)/2} y={dy-14} width={text.length*12+24} height={28} rx={14} fill={color} stroke="white" strokeWidth={2} />
-            <text textAnchor="middle" y={dy+4} fontSize={12} fontWeight={700} fill="white">{text}</text>
-          </g>;
-          return <g pointerEvents="none" aria-label={`${routePreview.name} 경로, 초록 출발점과 파란 도착점`}>
-            <path d={path} fill="none" stroke="white" strokeWidth={9} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-            <path d={path} fill="none" stroke="#2860ed" strokeWidth={5} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-            <circle cx={start[0]} cy={start[1]} r={7*labelScale} fill="#3f8a48" stroke="white" strokeWidth={2} vectorEffect="non-scaling-stroke" />
-            <circle cx={end[0]} cy={end[1]} r={7*labelScale} fill="#2860ed" stroke="white" strokeWidth={2} vectorEffect="non-scaling-stroke" />
-            {pill(middle, routePreview.name, routePreview.color, routeLabelOffset)}
-            <line x1={end[0]} y1={end[1]} x2={arrivalLabel[0]} y2={arrivalLabel[1]} stroke="#2860ed" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
-            {pill(arrivalLabel, "도착", "#2860ed", 0)}
+          const waypoint = guide && activeSegments.length
+            ? toPoint(activeSegments.at(-1)![1])
+            : toPoint(previewSegments[Math.floor(previewSegments.length / 2)][1]);
+          return <g pointerEvents="none" aria-label="경로: 초록 출발점, 흰 중간 지점, 파란 도착 깃발">
+            {!guide && <path d={path} fill="none" stroke="rgba(16, 40, 100, 0.18)" strokeWidth={13} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" transform={`translate(0 ${2*labelScale})`} />}
+            {!guide && <path d={path} fill="none" stroke="white" strokeWidth={11} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />}
+            <path d={path} fill="none" stroke={guide ? "#b8c8e2" : "#2860ed"} strokeWidth={guide ? 4.5 : 6.5} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+            {passedPath && <path d={passedPath} fill="none" stroke="#b9c1cd" strokeWidth={6.5} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />}
+            {activePath && <path d={activePath} fill="none" stroke="rgba(16, 40, 100, 0.18)" strokeWidth={13} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" transform={`translate(0 ${2*labelScale})`} />}
+            {activePath && <path d={activePath} fill="none" stroke="white" strokeWidth={11} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />}
+            {activePath && <path d={activePath} fill="none" stroke="#2860ed" strokeWidth={7} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />}
+            {activePath && <path className="guide-route-flow" d={activePath} fill="none" stroke="white" strokeWidth={2} strokeDasharray="2 4" strokeLinecap="round" vectorEffect="non-scaling-stroke" />}
+            <circle cx={start[0]} cy={start[1]} r={6.5*labelScale} fill="#1d9e75" stroke="white" strokeWidth={3} vectorEffect="non-scaling-stroke" />
+            {(!guide || activePath) && <circle cx={waypoint[0]} cy={waypoint[1]} r={5.5*labelScale} fill="white" stroke="#2860ed" strokeWidth={3} vectorEffect="non-scaling-stroke" />}
+            <g transform={`translate(${start.join(" ")}) scale(${labelScale})`}>
+              <rect x={-19} y={12} width={38} height={24} rx={8} fill="#1d9e75" />
+              <text textAnchor="middle" y={29} fontSize={11.5} fontWeight={800} fill="white">출발</text>
+            </g>
+            {routePreview.name && <g transform={`translate(${middle.join(" ")}) scale(${labelScale})`}>
+              <rect x={-(routePreview.name.length*10+18)/2} y={-31} width={routePreview.name.length*10+18} height={24} rx={8} fill="#fff3dc" stroke="white" strokeWidth={1.5} />
+              <text textAnchor="middle" y={-15} fontSize={11.5} fontWeight={800} fill="#9a5400">{routePreview.name}</text>
+            </g>}
+            <g transform={`translate(${end.join(" ")}) scale(${labelScale})`}>
+              <path d="M0 0S-13-15-13-24a13 13 0 0 1 26 0C13-15 0 0 0 0z" fill="#2860ed" stroke="white" strokeWidth={2.5} />
+              <path d="M-4-31v12m.5-11h8l-2 3 2 3h-8z" fill="white" stroke="white" strokeWidth={1.4} strokeLinecap="round" />
+            </g>
+            {guide && <g className="guide-route-arrow" transform={reduceMotion || !activePath ? `translate(${activeStart.join(" ")})` : undefined}>
+              {!reduceMotion && activePath && <animateMotion path={activePath} dur="2.6s" calcMode="spline" keyTimes="0;1" keySplines="0.42 0 0.58 1" rotate="auto" repeatCount="indefinite" />}
+              <circle r={15 * labelScale} fill="#2860ed" opacity="0.18" />
+              <circle r={11 * labelScale} fill="white" stroke="#dfe8ff" strokeWidth={1.5} />
+              <path d="M-4 -5 L6 0 L-4 5 L-2 0 Z" fill="#2860ed" transform={`scale(${labelScale})`} />
+            </g>}
           </g>;
         })()}
         {highlight?.position && (
@@ -736,7 +767,7 @@ export function CampusOverviewMap({
           </g>
         )}
       </svg>
-      {!backgroundOnly && !buildingPicker && !focused && (
+      {!backgroundOnly && !buildingPicker && !focused && !routePreview && (
         <EntrancePins
           pins={entrancePositions}
           selected={selected}

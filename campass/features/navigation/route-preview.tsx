@@ -1,31 +1,31 @@
 "use client";
 import { useMemo, useState } from "react";
 import type { RouteOption } from "@/shared/utils/routing";
-import {
-  routeColors,
-  routeMode,
-  routeName,
-} from "@/shared/utils/route-presentation";
+import { routeSummary } from "@/shared/utils/route-summary";
+import { routeMode } from "@/shared/utils/route-presentation";
 import { CampusOverviewMap } from "./campus-overview-map";
 import { CampusMap } from "./campus-map";
 
 export function RoutePreview({ option }: { option: RouteOption }) {
   const [flat, setFlat] = useState(false);
-  const annotation = useMemo(
-    () => ({ name: routeName(option), color: routeColors[routeMode(option)] }),
-    [option],
-  );
+  const annotation = useMemo(() => {
+    const grade = routeSummary(option).grade;
+    return {
+      name: routeMode(option) === "hill" && grade !== null ? `언덕길 ${grade}%` : "",
+      color: "#fff3dc",
+    };
+  }, [option]);
   const overview = (
     <CampusOverviewMap
       key={option.id}
-      height={360}
+      height={378}
       routePreview={{ nodes: option.nodes, ...annotation }}
     />
   );
   return (
     <section className="route-preview-card" aria-label="경로 미리보기 지도">
       <div className="route-preview-heading">
-        <strong>{flat ? "2D" : "3D"} 경로 미리보기</strong>
+        <strong>경로 미리보기</strong>
         <div
           className="map-view-switch"
           role="group"
@@ -52,6 +52,8 @@ export function RoutePreview({ option }: { option: RouteOption }) {
       ) : (
         <CampusMap
           embedded
+          designTheme
+          mapHeight={378}
           routeNodes={option.nodes}
           routeAnnotation={annotation}
           selectedBuildings={[

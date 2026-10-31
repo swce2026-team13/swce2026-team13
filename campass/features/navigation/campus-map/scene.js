@@ -21,12 +21,13 @@ import { mapEntrances, layoutEntrancePins } from "../map-entrances.ts";
  * @param {HTMLDivElement} container
  * @param {{ onSelect: (selection: import('../../../shared/utils/campus-map.ts').MapSelection | null) => void,
  *   onError: () => void, interactive?: boolean, onMarker?: (id: string) => void,
- *   showEntrances?: boolean,
+ *   showEntrances?: boolean, designTheme?: boolean,
  *   onEntrances?: (pins: import('../map-entrances.ts').PlacedEntrancePin[]) => void }} events
  * @returns {import('../../../shared/utils/campus-map.ts').CampusMapController}
  */
 export function createCampusScene(THREE, container, events) {
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+  const designTheme = Boolean(events.designTheme);
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: designTheme });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   // 해와 건물은 움직이지 않으므로 그림자 지도는 처음 한 번만 그린다(회전·확대 때 다시 그리지 않음).
   // 휴대폰(터치 화면)은 화소마다 한 번만 확인하는 가벼운 그림자, 데스크톱은 부드러운 그림자.
@@ -41,8 +42,8 @@ export function createCampusScene(THREE, container, events) {
   );
   canvas.setAttribute("role", "img");
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color("#dfe7f1");
-  scene.fog = new THREE.Fog("#dfe7f1", 900, 2600);
+  scene.background = designTheme ? null : new THREE.Color("#dfe7f1");
+  scene.fog = new THREE.Fog(designTheme ? "#d5e9c5" : "#dfe7f1", 900, 2600);
   const camera = new THREE.PerspectiveCamera(36, 1, 1, 5000);
   const controls = new THREE.OrbitControls(camera, canvas);
   controls.enableDamping = !window.matchMedia(
@@ -81,6 +82,15 @@ export function createCampusScene(THREE, container, events) {
   me.hidden = true;
   labelLayer.appendChild(me);
   let mePosition = null;
+  const guideArrow = document.createElement("div");
+  guideArrow.className = styles.guideArrow;
+  guideArrow.hidden = true;
+  guideArrow.innerHTML = '<span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12 5 4.5 8.2 12 5 19.5Z"/></svg></span>';
+  labelLayer.appendChild(guideArrow);
+  let guideTrack = null;
+  let guideFrame = 0;
+  let guideStarted = 0;
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const compass = document.createElement("div");
   compass.className = styles.north;
   compass.setAttribute("aria-hidden", "true");
@@ -101,9 +111,17 @@ export function createCampusScene(THREE, container, events) {
   let disposed = false;
   let observer;
 
-  // 건물 재질: 평소에는 불투명한 콘크리트 벽 + 창문 띠, 지붕은 회색.
+  // 건물 재질: 평소에는 불투명한 콘크리트 벽 + 창문 띠.
   // 고르거나 경로에 든 건물만 층마다 가진 반투명 강조 재질로 바꿔 끼운다.
-  const WALL_COLOR = "#e9e5dc";
+  const designRoofs = {
+    bukak: "#c4dbff", munye: "#d9c9fc", daeil: "#d9c9fc",
+    bon: "#e3e8ed", eunju1: "#fcc7cc", hyein: "#ffdbad",
+    sangseung: "#e3e8ed", chungwoon: "#e3e8ed",
+    hallim: "#faf2b2", yudam: "#facced", eunju2: "#bae5e0",
+    suin: "#d1ebc7", creative: "#e4e8ee",
+  };
+  const plazaColor = designTheme ? "#d9cfb4" : "#e7d6ae";
+  const WALL_COLOR = designTheme ? "#e6edf5" : "#e9e5dc";
   const WINDOW_REPEAT_M = 6;
   function windowTexture() {
     const c = document.createElement("canvas");
@@ -112,9 +130,9 @@ export function createCampusScene(THREE, container, events) {
     g.fillStyle = WALL_COLOR;
     g.fillRect(0, 0, 64, 64);
     // 한 층(세로 64px) 안의 창문 띠와 창틀
-    g.fillStyle = "#8d9aab";
+    g.fillStyle = designTheme ? "#91a9c9" : "#8d9aab";
     g.fillRect(0, 20, 64, 26);
-    g.fillStyle = "#a9b5c4";
+    g.fillStyle = designTheme ? "#b7c9e0" : "#a9b5c4";
     g.fillRect(0, 20, 64, 5);
     g.fillStyle = WALL_COLOR;
     for (let x = 0; x < 64; x += 16) g.fillRect(x, 20, 3, 26);
@@ -131,7 +149,16 @@ export function createCampusScene(THREE, container, events) {
   const roofMaterial = new THREE.MeshLambertMaterial({ color: litAs("#b9bfc9") });
   const wallMaterial = new THREE.MeshLambertMaterial({ color: "#ffffff", map: wallTexture });
   const baseMaterials = [roofMaterial, wallMaterial];
-  const plinthMaterial = new THREE.MeshLambertMaterial({ color: "#d6d1c6" });
+  const themedRoofs = new Map();
+  const materialsFor = (id) => {
+    if (!designTheme) return baseMaterials;
+    if (!themedRoofs.has(id))
+      themedRoofs.set(id, new THREE.MeshLambertMaterial({
+        color: litAs(designRoofs[id] ?? "#e4e8ee"),
+      }));
+    return [themedRoofs.get(id), wallMaterial];
+  };
+  const plinthMaterial = new THREE.MeshLambertMaterial({ color: designTheme ? "#d8e2ee" : "#d6d1c6" });
   // 지하층: 면 없이 점선 테두리만. 땅을 뚫고 보이도록 깊이 검사 없이 지형 다음·건물 전에 그린다.
   const dashedMaterials = new Map();
   function dashed(color) {
@@ -239,6 +266,7 @@ export function createCampusScene(THREE, container, events) {
         me.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%)`;
       }
     }
+    updateGuideArrow(performance.now());
     // 모든 건물·광장 이름을 두고, 겹칠 때 현재 건물과 경로 건물을 먼저 남긴다.
     const ordered = [...labels].sort(
       (a, b) =>
@@ -285,6 +313,60 @@ export function createCampusScene(THREE, container, events) {
       events.onEntrances?.(layoutEntrancePins(projectedPins, width, height, occupied));
     }
   }
+  function guidePoint(progress, elevationOffset = 4) {
+    if (!guideTrack) return null;
+    const target = progress * guideTrack.total;
+    let travelled = 0;
+    for (const [a, b] of guideTrack.segments) {
+      const length = Math.hypot(b.east - a.east, b.north - a.north, b.elevation - a.elevation);
+      if (target <= travelled + length || travelled + length >= guideTrack.total) {
+        const t = length ? Math.max(0, Math.min(1, (target - travelled) / length)) : 0;
+        return point(
+          a.east + (b.east - a.east) * t,
+          a.north + (b.north - a.north) * t,
+          a.elevation + (b.elevation - a.elevation) * t + elevationOffset,
+        );
+      }
+      travelled += length;
+    }
+    return null;
+  }
+  function updateGuideArrow(time) {
+    if (!guideTrack) { guideArrow.hidden = true; return; }
+    const { from, to } = guideTrack;
+    const fraction = reducedMotion.matches || to <= from
+      ? 0
+      : (1 - Math.cos(Math.PI * (((time - guideStarted) % 2600) / 2600))) / 2;
+    const progress = from + (to - from) * fraction;
+    const at = guidePoint(progress)?.project(camera);
+    const ahead = guidePoint(Math.min(to, progress + 0.003))?.project(camera);
+    if (!at || at.z < -1 || at.z > 1) { guideArrow.hidden = true; return; }
+    const width = container.clientWidth;
+    const height = container.clientHeight;
+    const x = (at.x + 1) * width / 2;
+    const y = (1 - at.y) * height / 2;
+    guideArrow.hidden = x < 0 || x > width || y < 0 || y > height;
+    if (guideArrow.hidden) return;
+    const angle = ahead && progress < to - 0.003
+      ? Math.atan2(at.y - ahead.y, ahead.x - at.x) * 180 / Math.PI
+      : 0;
+    guideArrow.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%) rotate(${angle}deg)`;
+  }
+  function animateGuide(time) {
+    guideFrame = 0;
+    if (disposed || !guideTrack || reducedMotion.matches) return;
+    updateGuideArrow(time);
+    guideFrame = window.requestAnimationFrame(animateGuide);
+  }
+  function motionPreferenceChanged() {
+    window.cancelAnimationFrame(guideFrame);
+    guideFrame = 0;
+    guideStarted = performance.now();
+    if (guideTrack && !reducedMotion.matches && guideTrack.to > guideTrack.from)
+      guideFrame = window.requestAnimationFrame(animateGuide);
+    else scheduleRender();
+  }
+  reducedMotion.addEventListener("change", motionPreferenceChanged);
   function fitBox(box) {
     const sphere = box.getBoundingSphere(new THREE.Sphere());
     const vertical = THREE.MathUtils.degToRad(camera.fov);
@@ -293,7 +375,7 @@ export function createCampusScene(THREE, container, events) {
       controls.maxDistance,
       Math.max(
         controls.minDistance,
-        (sphere.radius / Math.sin(Math.min(vertical, horizontal) / 2)) * 1.13,
+        (sphere.radius / Math.sin(Math.min(vertical, horizontal) / 2)) * (designTheme ? 1.06 : 1.13),
       ),
     );
     // 전체 보기로 돌아갈 때 남아 있는 회전 관성을 정리해요.
@@ -328,7 +410,7 @@ export function createCampusScene(THREE, container, events) {
         floor.edge.material = dashed(on ? color : UNDERGROUND_COLOR);
         continue;
       }
-      floor.mesh.material = on ? floor.highlight : baseMaterials;
+      floor.mesh.material = on ? floor.highlight : floor.baseMaterials;
       floor.mesh.renderOrder = on ? 1 : 0;
       if (on) floor.highlight.color.set(color);
     }
@@ -346,12 +428,17 @@ export function createCampusScene(THREE, container, events) {
           ? "#1747b5"
           : routeIds.includes("스콘스퀘어")
             ? "#5c8cf1"
-            : "#e7d6ae",
+            : plazaColor,
       );
     }
     scheduleRender();
   }
   function showRoute(nodes, annotation) {
+    window.cancelAnimationFrame(guideFrame);
+    guideFrame = 0;
+    guideTrack = null;
+    guideArrow.hidden = true;
+    const routeChanged = nodes.length !== routeNodes.length || nodes.some((node, index) => node !== routeNodes[index]);
     routeNodes = nodes;
     for (const label of routeLabels) label.element.remove();
     routeLabels.length = 0;
@@ -368,15 +455,36 @@ export function createCampusScene(THREE, container, events) {
       }
       for (const p of segments.flat()) previewBounds.expandByPoint(point(p.east,p.north,p.elevation+5));
       previewBounds.expandByScalar(22);
-      for (const [p,text,color] of [[segments.at(-1)[1],"도착","#2860ed"],[middle,annotation.name,annotation.color]]) {
-        const element=document.createElement("span");
-        element.className=styles.routePill;
-        element.textContent=text;
-        element.style.background=color;
+      const addRouteLabel = (position, className, text, elevationOffset = 5) => {
+        const element = document.createElement("span");
+        element.className = className;
+        element.textContent = text;
         labelLayer.appendChild(element);
-        routeLabels.push({element,position:point(p.east,p.north,p.elevation+5)});
-      }
-      fitBox(previewBounds);
+        routeLabels.push({ element, position: point(position.east, position.north, position.elevation + elevationOffset) });
+        return element;
+      };
+      if (!annotation.guide)
+        addRouteLabel(segments[0][0], `${styles.routePill} ${styles.routeStartPill}`, "출발", 2);
+      if (annotation.name)
+        addRouteLabel(middle, `${styles.routePill} ${styles.routeGradePill}`, annotation.name);
+      const flag = addRouteLabel(segments.at(-1)[1], styles.routeFlagPin, "", 1.2);
+      const flagIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      flagIcon.setAttribute("viewBox", "0 0 30 40");
+      flagIcon.setAttribute("width", "30");
+      flagIcon.setAttribute("height", "40");
+      const pin = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      pin.setAttribute("d", "M15 39S1 24 1 15a14 14 0 0 1 28 0C29 24 15 39 15 39z");
+      pin.setAttribute("fill", "#2860ed");
+      pin.setAttribute("stroke", "white");
+      pin.setAttribute("stroke-width", "2.5");
+      const pennant = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      pennant.setAttribute("d", "M11 9v13m.5-12h9l-2.5 3 2.5 3h-9z");
+      pennant.setAttribute("fill", "white");
+      pennant.setAttribute("stroke", "white");
+      pennant.setAttribute("stroke-width", "1.5");
+      flagIcon.append(pin, pennant);
+      flag.appendChild(flagIcon);
+      if (routeChanged) fitBox(previewBounds);
     }
     for (const child of [...routeLayer.children]) {
       child.geometry.dispose();
@@ -384,17 +492,19 @@ export function createCampusScene(THREE, container, events) {
       routeLayer.remove(child);
     }
     const joints = new Map();
+    const lineLayers = annotation?.guide
+      ? [[0.7, "#b8c8e2", 5]]
+      : annotation
+        ? [[2.1, "#102864", 4], [1.7, "#ffffff", 5], [1, "#2860ed", 6]]
+        : [[1.5, "#ffffff", 5], [0.95, "#dc2626", 6]];
     for (const [from, to] of segments) {
       const a = point(from.east, from.north, from.elevation + 1.2);
       const b = point(to.east, to.north, to.elevation + 1.2);
       const delta = b.clone().sub(a);
       if (delta.length() < 0.01) continue;
       for (const endpoint of [a, b]) joints.set(endpoint.toArray().join(","), endpoint);
-      // 흰 외곽선과 굵은 빨간 선을 건물 위에 겹쳐 실내 구간도 보이게 한다.
-      for (const [radius, color, order] of [
-        [1.5, "#ffffff", 5],
-        [0.95, annotation ? "#2860ed" : "#dc2626", 6],
-      ]) {
+      // 경로 미리보기에는 그림자·흰 테두리·파란 선을 겹친다.
+      for (const [radius, color, order] of lineLayers) {
         const mesh = new THREE.Mesh(
           new THREE.CylinderGeometry(radius, radius, delta.length(), 16),
           new THREE.MeshBasicMaterial({
@@ -402,6 +512,7 @@ export function createCampusScene(THREE, container, events) {
             depthTest: false,
             depthWrite: false,
             transparent: true,
+            opacity: order === 4 ? 0.18 : 1,
             fog: false,
           }),
         );
@@ -416,17 +527,90 @@ export function createCampusScene(THREE, container, events) {
     }
     // 끝점과 공유 꼭짓점을 구로 마감해 원통 사이의 틈과 각진 단면을 없앤다.
     for (const position of joints.values()) {
-      for (const [radius, color, order] of [
-        [1.5, "#ffffff", 5],
-        [0.95, annotation ? "#2860ed" : "#dc2626", 6],
-      ]) {
+      for (const [radius, color, order] of lineLayers) {
         const cap = new THREE.Mesh(
           new THREE.SphereGeometry(radius, 16, 12),
-          new THREE.MeshBasicMaterial({ color, depthTest: false, depthWrite: false, transparent: true, fog: false }),
+          new THREE.MeshBasicMaterial({ color, opacity: order === 4 ? 0.18 : 1, depthTest: false, depthWrite: false, transparent: true, fog: false }),
         );
         cap.position.copy(position);
         cap.renderOrder = order;
         routeLayer.add(cap);
+      }
+    }
+    if (annotation?.guide && segments.length) {
+      const lengths = segments.map(([a, b]) => Math.hypot(b.east-a.east, b.north-a.north, b.elevation-a.elevation));
+      const total = lengths.reduce((sum, length) => sum + length, 0);
+      const { from, to } = annotation.guide;
+      let travelled = 0;
+      const overlay = (a, b, color, order, radius) => {
+        const start = point(a.east, a.north, a.elevation + 1.4);
+        const end = point(b.east, b.north, b.elevation + 1.4);
+        const delta = end.clone().sub(start);
+        if (delta.length() < 0.01) return;
+        const material = new THREE.MeshBasicMaterial({ color, depthTest: false, depthWrite: false, transparent: true, opacity: 1, fog: false });
+        const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, delta.length(), 12), material);
+        mesh.position.copy(start).add(end).multiplyScalar(0.5);
+        mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), delta.normalize());
+        mesh.renderOrder = order;
+        routeLayer.add(mesh);
+        for (const endPoint of [start, end]) {
+          const cap = new THREE.Mesh(new THREE.SphereGeometry(radius, 12, 8), material.clone());
+          cap.position.copy(endPoint);
+          cap.renderOrder = order;
+          routeLayer.add(cap);
+        }
+      };
+      segments.forEach(([a, b], index) => {
+        const length = lengths[index];
+        const at = (part) => {
+          const t = length ? (part - travelled) / length : 0;
+          return { east:a.east+(b.east-a.east)*t, north:a.north+(b.north-a.north)*t, elevation:a.elevation+(b.elevation-a.elevation)*t };
+        };
+        for (const [lower, upper, color, order, radius] of [
+          [0, from, "#b9c1cd", 7, 1.1],
+          [from, to, "#ffffff", 7, 1.8],
+          [from, to, "#2860ed", 8, 1.15],
+        ]) {
+          const start = Math.max(travelled, lower * total);
+          const end = Math.min(travelled + length, upper * total);
+          if (end > start) overlay(at(start), at(end), color, order, radius);
+        }
+        travelled += length;
+      });
+      guideTrack = { segments, total, from, to };
+      guideStarted = performance.now();
+      if (!reducedMotion.matches && to > from)
+        guideFrame = window.requestAnimationFrame(animateGuide);
+    }
+    if (annotation && segments.length) {
+      const total = segments.reduce((sum, [a, b]) =>
+        sum + Math.hypot(b.east-a.east, b.north-a.north, b.elevation-a.elevation), 0);
+      let remaining = total / 2;
+      let middle = segments[0][1];
+      for (const [a, b] of segments) {
+        const length = Math.hypot(b.east-a.east, b.north-a.north, b.elevation-a.elevation);
+        if (remaining <= length) {
+          const t = length ? remaining / length : 0;
+          middle = { east: a.east+(b.east-a.east)*t, north: a.north+(b.north-a.north)*t, elevation: a.elevation+(b.elevation-a.elevation)*t };
+          break;
+        }
+        remaining -= length;
+      }
+      const dotPositions = [
+        [point(segments[0][0].east, segments[0][0].north, segments[0][0].elevation + 2), "#ffffff", "#1d9e75"],
+        [annotation.guide ? guidePoint(annotation.guide.to, 2) : point(middle.east, middle.north, middle.elevation + 2), "#2860ed", "#ffffff"],
+      ];
+      for (const [position, outer, inner] of dotPositions) {
+        if (!position) continue;
+        for (const [radius, color, order] of [[3.1, outer, 9], [2.1, inner, 10]]) {
+          const dot = new THREE.Mesh(
+            new THREE.SphereGeometry(radius, 16, 12),
+            new THREE.MeshBasicMaterial({ color, depthTest: false, depthWrite: false, transparent: true, opacity: 1 }),
+          );
+          dot.position.copy(position);
+          dot.renderOrder = order;
+          routeLayer.add(dot);
+        }
       }
     }
     highlight();
@@ -516,6 +700,8 @@ export function createCampusScene(THREE, container, events) {
     if (disposed) return;
     disposed = true;
     window.cancelAnimationFrame(frame);
+    window.cancelAnimationFrame(guideFrame);
+    reducedMotion.removeEventListener("change", motionPreferenceChanged);
     observer?.disconnect();
     controls.removeEventListener("change", scheduleRender);
     controls.dispose();
@@ -535,6 +721,7 @@ export function createCampusScene(THREE, container, events) {
       }
     });
     for (const floor of floors) floor.highlight.dispose();
+    for (const material of themedRoofs.values()) material.dispose();
     for (const material of dashedMaterials.values()) material.dispose();
     wallTexture.dispose();
     renderer.dispose();
@@ -562,7 +749,7 @@ export function createCampusScene(THREE, container, events) {
           new THREE.Line(
             new THREE.BufferGeometry().setFromPoints(run),
             new THREE.LineBasicMaterial({
-              color: "#b39a74",
+              color: designTheme ? "#90a98c" : "#b39a74",
               transparent: true,
               opacity: contour.m ? 0.35 : 0.14,
             }),
@@ -570,11 +757,11 @@ export function createCampusScene(THREE, container, events) {
         );
       }
     }
-    // 바닥: 등고선으로 만든 지형을 둥근 판(디오라마)으로. 가장자리는 지형을 따라 8m 두께로 잘라
-    // 흙색 옆면을 붙인다. 판 밖은 배경이 보인다.
+    // 바닥: 등고선으로 만든 지형을 둥근 판(디오라마)으로.
+    // 시안 지도의 판 옆면은 숨겨 배경의 녹색과 이어 보이게 한다.
     const disc = terrainDisc();
     const groundMaterial = new THREE.MeshLambertMaterial({
-      color: litAs("#cfd8c4"),
+      color: litAs(designTheme ? "#c5e4a5" : "#cfd8c4"),
       // 등고선·광장이 지형과 겹쳐 깜빡이지 않게 지형을 살짝 뒤로 민다.
       polygonOffset: true,
       polygonOffsetFactor: 1,
@@ -611,27 +798,30 @@ export function createCampusScene(THREE, container, events) {
     const ground = new THREE.Mesh(groundGeometry, groundMaterial);
     ground.renderOrder = -2;
     ground.receiveShadow = true;
-    // 옆면: 가장 바깥 고리에서 8m 아래까지
-    const wall = [];
-    const wallFaces = [];
-    for (let k = 0; k <= SEGMENTS; k++) {
-      const top = at(disc.radius, (k / SEGMENTS) * Math.PI * 2);
-      wall.push(...top.toArray(), top.x, top.y - 8 * MAP_HEIGHT_SCALE, top.z);
-      if (k < SEGMENTS) {
-        const a = k * 2;
-        wallFaces.push(a, a + 1, a + 2, a + 2, a + 1, a + 3);
+    world.add(ground);
+    if (!designTheme) {
+      // 기존 지도는 지형 판의 8m 두께 옆면을 유지한다.
+      const wall = [];
+      const wallFaces = [];
+      for (let k = 0; k <= SEGMENTS; k++) {
+        const top = at(disc.radius, (k / SEGMENTS) * Math.PI * 2);
+        wall.push(...top.toArray(), top.x, top.y - 8 * MAP_HEIGHT_SCALE, top.z);
+        if (k < SEGMENTS) {
+          const a = k * 2;
+          wallFaces.push(a, a + 1, a + 2, a + 2, a + 1, a + 3);
+        }
       }
+      const wallGeometry = new THREE.BufferGeometry();
+      wallGeometry.setAttribute("position", new THREE.Float32BufferAttribute(wall, 3));
+      wallGeometry.setIndex(wallFaces);
+      wallGeometry.computeVertexNormals();
+      const side = new THREE.Mesh(
+        wallGeometry,
+        new THREE.MeshLambertMaterial({ color: "#c2b8a3", side: THREE.DoubleSide }),
+      );
+      side.renderOrder = -2;
+      world.add(side);
     }
-    const wallGeometry = new THREE.BufferGeometry();
-    wallGeometry.setAttribute("position", new THREE.Float32BufferAttribute(wall, 3));
-    wallGeometry.setIndex(wallFaces);
-    wallGeometry.computeVertexNormals();
-    const side = new THREE.Mesh(
-      wallGeometry,
-      new THREE.MeshLambertMaterial({ color: "#c2b8a3", side: THREE.DoubleSide }),
-    );
-    side.renderOrder = -2;
-    world.add(ground, side);
     const plazaGeometry = new THREE.ShapeGeometry(
       shape(campusMap.plaza.polygon),
     );
@@ -639,7 +829,7 @@ export function createCampusScene(THREE, container, events) {
     const plaza = new THREE.Mesh(
       plazaGeometry,
       new THREE.MeshLambertMaterial({
-        color: "#e7d6ae",
+        color: plazaColor,
         side: THREE.DoubleSide,
       }),
     );
@@ -654,6 +844,7 @@ export function createCampusScene(THREE, container, events) {
     );
 
     for (const building of campusMap.buildings) {
+      const buildingMaterials = materialsFor(building.id);
       const elevations = getFloorElevations(building);
       const roof = elevations[elevations.length - 1] + 4;
       const box = new THREE.Box3();
@@ -694,7 +885,7 @@ export function createCampusScene(THREE, container, events) {
           opacity: 0.95,
           depthWrite: false,
         });
-        const mesh = new THREE.Mesh(geometry, baseMaterials);
+        const mesh = new THREE.Mesh(geometry, buildingMaterials);
         mesh.position.y = point(0, 0, elevations[i]).y;
         mesh.userData = { buildingId: building.id, floor: floor.floor };
         mesh.castShadow = mesh.receiveShadow = true;
@@ -715,6 +906,7 @@ export function createCampusScene(THREE, container, events) {
           edge,
           opacity,
           highlight: highlightMaterial,
+          baseMaterials: buildingMaterials,
           underground: underground[i],
         });
       });

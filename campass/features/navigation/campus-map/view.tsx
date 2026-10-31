@@ -17,6 +17,8 @@ export default function MapView({
   currentBuilding,
   routeNodes,
   routeAnnotation,
+  designTheme,
+  guideLive,
   position,
   fallback,
   embedded,
@@ -47,7 +49,7 @@ export default function MapView({
   }, [position?.east, position?.north, position?.elevation]);
   const onBuildingRef = useRef(onBuilding);
   const onFocusChangeRef = useRef(onFocusChange);
-  const showEntrances = Boolean(onEntrance || routeNodes?.length);
+  const showEntrances = Boolean(onEntrance || (routeNodes?.length && !routeAnnotation));
   const onMarkerRef = useRef(onMarker);
   useEffect(() => {
     onMarkerRef.current = onMarker;
@@ -83,6 +85,7 @@ export default function MapView({
         if (cancelled) return;
         controller.current = createCampusScene(three, host, {
           interactive: Boolean(onBuildingRef.current),
+          designTheme,
           showEntrances,
           onEntrances: (pins) => { if (!cancelled) setEntrancePins(pins); },
           onSelect: (next) => {
@@ -112,7 +115,7 @@ export default function MapView({
       controller.current = null;
       if (controllerRef) controllerRef.current = null;
     };
-  }, [controllerRef, showEntrances]);
+  }, [controllerRef, showEntrances, designTheme]);
 
   if (status === "error")
     return (
@@ -137,13 +140,13 @@ export default function MapView({
           </div>
         ) : (
           <>
-            <button
+            {!guideLive && <button
               type="button"
               className={styles.overview}
               onClick={() => controller.current?.fitAll()}
             >
               <Maximize size={14} /> 전체 보기
-            </button>
+            </button>}
             <div className={styles.zoom}>
               <button
                 type="button"

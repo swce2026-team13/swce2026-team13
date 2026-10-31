@@ -1,0 +1,210 @@
+/* 안내 중 화면: 선택한 경로의 지점과 다음 이동을 한눈에 보여 준다. */
+@keyframes guideRouteFlow {
+  to { stroke-dashoffset: -12; }
+}
+.guide-route-flow { animation: guideRouteFlow .9s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .guide-route-flow { animation: none; }
+}
+.guide-live-header { height: 48px; padding: 0 20px; }
+.guide-live-header > strong { font-size: 18px; }
+.guide-live-end {
+  min-height: 44px;
+  padding: 0 13px;
+  border-radius: 12px;
+  background: #ffffffb8;
+  color: #4b5565;
+  font-size: 12px;
+  font-weight: 700;
+}
+.guide-live-screen.content {
+  gap: 10px;
+  padding: 8px 16px 18px;
+}
+.guide-live-milestones {
+  position: relative;
+  display: flex;
+  gap: 0;
+  padding: 2px 0 0;
+  margin: 0;
+  list-style: none;
+}
+.guide-live-milestones::before {
+  content: "";
+  position: absolute;
+  top: 14px;
+  left: 16.66%;
+  right: 16.66%;
+  height: 2px;
+  background: #d3ddeb;
+}
+.guide-live-milestones::after {
+  content: "";
+  position: absolute;
+  top: 14px;
+  left: 16.66%;
+  width: var(--guide-line-fill, 0%);
+  height: 2px;
+  background: #2860ed;
+  transition: width .9s ease-in-out;
+}
+.guide-live-milestones[data-count="2"]::before { left: 25%; right: 25%; }
+.guide-live-milestones[data-count="2"]::after { left: 25%; }
+.guide-live-milestones li {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  flex-direction: column;
+  gap: 4px;
+  text-align: center;
+}
+.guide-live-milestone-dot {
+  width: 16px;
+  height: 16px;
+  margin: 4px 0 5px;
+  border: 2px solid #c2cfe3;
+  border-radius: 50%;
+  background: white;
+}
+.guide-live-milestones li[data-state="current"] .guide-live-milestone-dot {
+  border: 4px solid #2860ed;
+  background: #2860ed;
+  box-shadow: 0 0 0 5px #2860ed26, inset 0 0 0 2px white;
+}
+.guide-live-milestones li[data-state="passed"] .guide-live-milestone-dot {
+  border-color: #2860ed;
+  background: #2860ed;
+}
+.guide-live-milestones strong {
+  width: 100%;
+  overflow: hidden;
+  color: #8b96a7;
+  font-size: 11px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.guide-live-milestones li[data-state="current"] strong { color: #2860ed; }
+.guide-live-milestones li[data-state="passed"] strong { color: #526787; }
+.guide-live-viewport { position: relative; min-width: 0; }
+.guide-live-map {
+  position: relative;
+  height: 380px;
+  overflow: hidden;
+  border-radius: 20px;
+  background: #c5e4a5;
+  box-shadow: 0 6px 16px #27405b12, 0 0 0 1px #d8e1dd;
+}
+.guide-live-map .guide-live-map-expand,
+.guide-live-map .guide-live-map-switch {
+  position: absolute;
+  z-index: 8;
+}
+.guide-live-map-expand {
+  display: grid;
+  place-items: center;
+  top: 10px;
+  right: 10px;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #fffef8;
+  box-shadow: 0 2px 8px #1a3a4550;
+}
+.guide-live-map-switch {
+  display: flex;
+  left: 10px;
+  bottom: 10px;
+  padding: 2px;
+  border-radius: 10px;
+  background: #fffffff0;
+  box-shadow: 0 2px 8px #1a3a4530;
+}
+.guide-live-map-switch button {
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 8px;
+  color: #4d5a70;
+  font-size: 12px;
+  font-weight: 700;
+}
+.guide-live-map-switch button[aria-pressed="true"] { background: #2860ed; color: white; }
+.guide-live-instruction {
+  padding: 14px 15px 12px;
+  border: 1px solid #dfe5ed;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 6px 18px #2846820c;
+}
+.guide-live-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.guide-live-chips { display: flex; flex-wrap: wrap; gap: 5px; min-width: 0; }
+.guide-live-chips span {
+  padding: 3px 7px;
+  border-radius: 8px;
+  background: #e6f4ee;
+  color: #247c62;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.guide-live-chips span[data-mode="stairs"] { background: #fff0df; color: #a65d13; }
+.guide-live-chips span[data-mode="elevator"] { background: #e8eef9; color: #243c68; }
+.guide-live-chips span.unverified { background: #fff2d9; color: #a16a11; }
+.guide-live-distance { flex: none; color: #747e8c; font-size: 10px; white-space: nowrap; }
+.guide-live-instruction h1 {
+  margin: 9px 0 3px;
+  color: #1f2a3c;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.35;
+  letter-spacing: -.5px;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.guide-live-detail { margin: 0 0 12px; color: #7b8798; font-size: 10px; line-height: 1.45; }
+.guide-live-flow { display: grid; grid-template-columns: minmax(0,1fr) 20px minmax(0,1fr); align-items: center; gap: 10px; }
+.guide-live-flow > div { min-width: 0; padding: 8px 10px; border-radius: 12px; background: #f3f5f9; }
+.guide-live-flow > div:last-child { background: #edf3ff; }
+.guide-live-flow > svg { color: #2860ed; }
+.guide-live-flow span { display: block; color: #7d8796; font-size: 10px; }
+.guide-live-flow > div:last-child span { color: #4671c9; }
+.guide-live-flow strong { display: block; overflow: hidden; color: #1f2a3c; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.guide-live-flow > div:last-child strong { color: #2053c7; }
+.guide-live-quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.guide-live-quick-actions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 4px 7px;
+  border: 1px solid #dce4f1;
+  border-radius: 13px;
+  background: #fff;
+  color: #1f2a3c;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.guide-live-quick-actions svg { color: #2860ed; }
+.guide-live-actions.actions {
+  gap: 0;
+  padding: 10px 16px calc(16px + env(safe-area-inset-bottom));
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+.guide-live-actions.actions::before { content: none; }
+.guide-live-actions .guide-step-actions { grid-template-columns: minmax(0,.35fr) minmax(0,1fr); gap: 7px; }
+.guide-live-actions .button { min-height: 52px; border-radius: 15px; font-size: 13px; font-weight: 800; }
+.guide-live-actions .button.primary { background: #2860ed; box-shadow: 0 8px 18px #2860ed30; }
+.guide-live-actions .button.secondary { background: white; }
+
+@media (max-width: 360px) {
+  .guide-live-meta { align-items: flex-start; flex-direction: column; }
+  .guide-live-quick-actions button { font-size: 10px; }
+}
