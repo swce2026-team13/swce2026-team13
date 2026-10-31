@@ -44,19 +44,78 @@ export function guideStepKind(option: RouteOption, step: Step, next?: Step): Gui
   return "walk";
 }
 
+// 화면에 보여 줄 장소 이름. 「본관 5층↔한림관 3층 연결통로」는 지금 있는 건물 반대쪽만 남겨 「한림관 3층 연결통로」로
+export function placeName(name: string, fromNode?: string) {
+  if (!name.includes("↔")) return name;
+  const sides = name.replace(/\s*연결통로$/, "").split("↔").map((side) => side.trim());
+  const here = fromNode ? areaName(nodeArea(fromNode)) : "";
+  const far = sides.find((side) => !here || !side.startsWith(here)) ?? sides.at(-1);
+  return `${far} 연결통로`;
+}
+
+// '○○을' / '○○를'
+const object = (word: string) => {
+  const code = (word.trim().at(-1) ?? "").charCodeAt(0) - 0xac00;
+  return `${word}${code >= 0 && code < 11172 && code % 28 !== 0 ? "을" : "를"}`;
+};
+
+// 화면에 보여 주는 안내 단계. 서버 단계 first~last를 하나로 묶고, 끝나면 steps[last + 1]에 도착
+export type GuideStepGroup = { first: number; last: number; instruction: string };
+
+// 서버 단계를 안내 단계로 묶는다. 경로마다 따로 적지 않고 모든 경로에 같은 규칙을 씀
+// - 복도 → 같은 건물 엘리베이터 앞: 「{건물} 엘리베이터 앞으로 걸어가세요」 한 단계
+// - 같은 건물 출입구로 들어갔다 바로 나감: 「{건물}을 지나 반대편 출입구로 나가세요」 한 단계
+// - 바로 앞 단계와 문장이 같음: 「통로를 따라 {다음 장소}까지 걸어가세요」
+export function guideStepGroups(
+  option: RouteOption | undefined,
+  steps: Step[],
+  destinationName: string,
+): GuideStepGroup[] {
+  const sentences = steps.map((step, i) => stepInstruction(option, step, steps[i + 1], destinationName));
+  const groups: GuideStepGroup[] = [];
+  for (let i = 0; i < steps.length; i++) {
+    const step = steps[i], next = steps[i + 1], after = steps[i + 2];
+    const building = step.node ? areaName(nodeArea(step.node)) : "";
+    const walkInside = (a?: Step, b?: Step) => Boolean(a?.node && b?.node && a.node.includes("|") &&
+      nodeArea(a.node) === nodeArea(b.node) && floorIndex(a.node) === floorIndex(b.node));
+    if (option && next && after && walkInside(step, next) && walkInside(next, after) &&
+        /엘리베이터/.test(after.name) && !/엘리베이터/.test(next.name)) {
+      groups.push({ first: i, last: i + 1, instruction: `${building} 엘리베이터 앞으로 걸어가세요` });
+      i++;
+      continue;
+    }
+    if (option && next && after && step.node && next.node && after.node &&
+        !step.node.includes("|") && next.node.includes("|") && !after.node.includes("|") &&
+        guideStepKind(option, step, next) === "entrance" && guideStepKind(option, next, after) === "entrance") {
+      groups.push({ first: i, last: i + 1, instruction: `${object(areaName(nodeArea(next.node)))} 지나 반대편 출입구로 나가세요` });
+      i++;
+      continue;
+    }
+    const previous = groups.at(-1);
+    groups.push({
+      first: i,
+      last: i,
+      instruction: next && previous && previous.instruction === sentences[i]
+        ? `통로를 따라 ${placeName(next.name, step.node)}까지 걸어가세요`
+        : sentences[i],
+    });
+  }
+  return groups;
+}
+
+// 서버 단계 번호가 속한 안내 단계
+export function groupIndexOf(groups: GuideStepGroup[], step: number) {
+  return Math.max(0, groups.findIndex((g) => step >= g.first && step <= g.last));
+}
+
 // 지금 할 일을 동작으로 말하는 한 줄. 예: 「본관 엘리베이터를 타고 5층으로 올라가세요」
-// 바로 앞 단계와 문장이 같으면(연결통로 앞 → 통로 위 등) 도착지를 말하는 문장으로 바꿈
 export function guideInstruction(
   option: RouteOption | undefined,
   step: Step,
   next: Step | undefined,
   destinationName: string,
-  previous?: Step,
 ) {
-  const sentence = stepInstruction(option, step, next, destinationName);
-  if (next && previous && stepInstruction(option, previous, step, destinationName) === sentence)
-    return `통로를 따라 ${next.name}까지 걸어가세요`;
-  return sentence;
+  return stepInstruction(option, step, next, destinationName);
 }
 
 function stepInstruction(
@@ -77,7 +136,11 @@ function stepInstruction(
   const nextName = next.name || nodeLabel(to);
   // 같은 층 안에서 다음 지점(엘리베이터 앞 등)으로 가는 단계는 걷기
   const sameFloor = from === to || (nodeArea(from) === nodeArea(to) && floorIndex(from) === floorIndex(to));
-  if (sameFloor) return `${toward(nextName)} 걸어가세요`;
+  if (sameFloor)
+    // 「A↔B 연결통로」 앞으로 갈 때는 기호 없이 가는 쪽 이름만 씀
+    return nextName.includes("↔")
+      ? `${placeName(nextName, from)}로 걸어가세요`
+      : `${toward(nextName)} 걸어가세요`;
   switch (kind) {
     case "elevator":
       return `${building?.name ?? ""} 엘리베이터를 타고 ${toward(floorLabel(to))} ${up ? "올라가세요" : "내려가세요"}`.trim();

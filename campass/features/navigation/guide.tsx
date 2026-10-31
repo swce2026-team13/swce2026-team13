@@ -18,7 +18,7 @@ import {
 import { Notice } from "@/components/ui";
 import { api, useCampus } from "@/features/navigation/campus-provider";
 import { routeMode, routeName } from "@/shared/utils/route-presentation";
-import { guideInstruction, stepUnverified } from "@/shared/utils/guide-instruction";
+import { groupIndexOf, guideStepGroups, placeName, stepUnverified } from "@/shared/utils/guide-instruction";
 import { guideRouteMotion } from "@/shared/utils/guide-route-motion";
 import type { IntentResult } from "@/shared/types/recognition";
 export default function Screen() {
@@ -43,20 +43,27 @@ export default function Screen() {
   const mode = option ? routeMode(option) : null;
   const routeLabel = option ? routeName(option) : "선택한 경로";
   const routeSteps = session?.route.steps ?? [];
-  const currentStep = session ? routeSteps[session.currentStep] : undefined;
-  const nextStep = session ? routeSteps[session.currentStep + 1] : undefined;
   const destinationName = displayDestination.building || displayDestination.name;
+  // 서버 단계를 안내 단계로 묶음(복도 → 엘리베이터 앞, 출입구 들어갔다 나가기 등). 화면은 묶음 기준
+  const groups = guideStepGroups(option, routeSteps, destinationName);
+  const groupIndex = session ? groupIndexOf(groups, session.currentStep) : 0;
+  const group = groups[groupIndex];
+  const currentStep = session ? routeSteps[session.currentStep] : undefined;
+  const nextStep = group ? routeSteps[group.last + 1] : undefined;
+  const nextName = nextStep ? placeName(nextStep.name, routeSteps[group.last]?.node) : "";
   // 지금 할 일을 동작으로 말하는 한 줄(단계 종류별 템플릿)
-  const instruction = currentStep
-    ? guideInstruction(option, currentStep, nextStep, destinationName,
-      session ? routeSteps[session.currentStep - 1] : undefined)
-    : "";
+  const instruction = group?.instruction ?? "";
+  const nextView = nextStep ? { id: nextStep.id, node: nextStep.node, name: nextName, instruction: nextStep.instruction } : null;
+  // 도착: 묶음 끝까지 한 번에 진행. 이전: 앞 묶음 처음으로
+  const advanceSteps = session && group ? group.last - session.currentStep + 1 : 1;
+  const previousSteps = session && groupIndex > 0 ? session.currentStep - groups[groupIndex - 1].first : 1;
   // 지금 단계 구간이 '확인'된 연결이 아닐 때만 확인 전 표시와 안내 표지 문구를 보여 줌
   const unverified = currentStep ? stepUnverified(option, currentStep) : false;
   const remainingDistance = session && option
-    ? Math.max(0, Math.round(session.route.distance * (1 - (guideRouteMotion(option.nodes, guide.current?.node, guide.next?.node)?.from ?? 0))))
+    ? Math.max(0, Math.round(session.route.distance * (1 - (guideRouteMotion(option.nodes, guide.current?.node, nextStep?.node)?.from ?? 0))))
     : 0;
-  const middleIndex = routeSteps.length > 2 ? Math.floor((routeSteps.length - 1) / 2) : -1;
+  // 가운데 단계 표시는 안내 단계(묶음) 기준으로 골라 합쳐진 단계가 나오지 않게 함
+  const middleIndex = groups.length > 2 ? groups[Math.floor((groups.length - 1) / 2)].first : -1;
   const milestones = [
     { index: 0, label: routeSteps[0]?.name ?? "출발" },
     ...(middleIndex > 0 ? [{ index: middleIndex, label: routeSteps[middleIndex].name }] : []),
@@ -104,7 +111,7 @@ export default function Screen() {
               compact
               map={guide.map ?? undefined}
               currentStep={guide.current}
-              nextStep={guide.next}
+              nextStep={nextView}
               recoveredBackward={session.recovered && session.recoveryDirection === "backward"}
             />
             <div className="guide-live-instruction">
@@ -132,8 +139,8 @@ export default function Screen() {
                 </p>
                 <ArrowRightIcon size={18} />
                 <p>
-                  <span>{guide.next ? "다음" : "도착"}</span>
-                  <strong>{guide.next?.name ?? displayDestination.name}</strong>
+                  <span>{nextStep ? "다음" : "도착"}</span>
+                  <strong>{nextName || displayDestination.name}</strong>
                 </p>
               </div>
             </div>
@@ -166,16 +173,16 @@ export default function Screen() {
           </section>
           <div className="actions guide-actions guide-live-actions">
             <div className="guide-step-actions">
-              <button className="button secondary" disabled={busy || guide.isFirstStep} onClick={previous}>
+              <button className="button secondary" disabled={busy || groupIndex === 0} onClick={() => previous(previousSteps)}>
                 이전
               </button>
               <button
                 className="button primary"
                 disabled={busy}
-                onClick={session.status === "completed" ? () => go("arrival") : advance}
+                onClick={session.status === "completed" ? () => go("arrival") : () => advance(advanceSteps)}
               >
                 <CheckIcon size={18} />
-                {session.status === "completed" || !guide.next ? "도착했어요" : `${guide.next.name}에 도착했어요`}
+                {session.status === "completed" || !nextStep ? "도착했어요" : `${nextName}에 도착했어요`}
               </button>
             </div>
           </div>
