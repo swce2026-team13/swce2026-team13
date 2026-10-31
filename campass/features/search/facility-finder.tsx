@@ -20,7 +20,15 @@ const filters = [
   { kind: "cafe", label: "카페" },
   { kind: "store", label: "편의점" },
   { kind: "dining", label: "식당" },
+  { kind: "etc", label: "기타" },
 ] as const;
+type FilterKind = (typeof filters)[number]["kind"];
+
+// 「기타」 칩은 AED와 분류 없는 시설을 함께 모음
+const filterOf = (p: Place): FilterKind =>
+  p.kind === "cafe" || p.kind === "store" || p.kind === "dining"
+    ? p.kind
+    : "etc";
 
 const kindNames: Record<NonNullable<Place["kind"]>, string> = {
   cafe: "카페",
@@ -59,10 +67,12 @@ export function FacilityFinder({ facilities }: { facilities: Place[] }) {
   const router = useRouter();
   const { busy, choose } = useCampus();
   const now = useNow();
-  const kind = filters.find((f) => f.kind === params.get("kind"))?.kind ?? "";
+  // 주소에 kind가 없거나 잘못되면 카페로 봄
+  const kind =
+    filters.find((f) => f.kind === params.get("kind"))?.kind ?? "cafe";
   const area = params.get("area") ?? "";
   const place = facilities.find((p) => p.id === params.get("place"));
-  const shown = facilities.filter((p) => !kind || p.kind === kind);
+  const shown = facilities.filter((p) => filterOf(p) === kind);
   const listed = area ? shown.filter((p) => p.building === area) : shown;
 
   // 빈 값은 주소에서 지움
@@ -172,11 +182,9 @@ export function FacilityFinder({ facilities }: { facilities: Place[] }) {
             key={f.label}
             className={kind === f.kind ? "active" : ""}
             aria-pressed={kind === f.kind}
-            onClick={() => replace({ kind: kind === f.kind ? "" : f.kind, area: "" })}
+            onClick={() => replace({ kind: f.kind, area: "" })}
           >
-            {f.kind && (
-              <i style={{ background: pinColors[f.kind] }} aria-hidden="true" />
-            )}
+            <i style={{ background: pinColors[f.kind] }} aria-hidden="true" />
             {f.label}
           </button>
         ))}
@@ -199,7 +207,7 @@ export function FacilityFinder({ facilities }: { facilities: Place[] }) {
         </div>
       )}
       {listed.length === 0 && (
-        <p className="muted">이 종류의 편의시설은 아직 등록되지 않았어요.</p>
+        <p className="muted">이 종류의 시설이 아직 없어요</p>
       )}
       {listed.map((p) => (
         <button
