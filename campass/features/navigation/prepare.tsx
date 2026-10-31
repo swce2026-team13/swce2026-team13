@@ -235,18 +235,18 @@ export default function Screen() {
             엘리베이터 없는 길로 찾기
           </button>
         )}
+        {/* 길을 바꾸면 경로를 다시 불러오는데, 그동안에도 길 카드를 그대로 둬서 깜빡이지 않게 함 */}
         {!pickingOnMap &&
           hasDestination &&
-          !routeLoading &&
           !routeFailed &&
-          routeOption && (
+          (routeOption || routeLoading) && (
             <RouteModePicker
               start={start}
               destination={destination.id}
               elevator={elevator}
-              route={route}
-              selected={routeOption}
-              busy={busy}
+              route={routeLoading ? null : route}
+              selected={routeLoading ? undefined : routeOption}
+              busy={busy || routeLoading}
               onOption={chooseOption}
               onElevator={(value) => void updateRoute(start, value)}
               onRecommended={setRecommendedMode}

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { api } from "./campus-provider";
 import type { Route, RouteOption } from "@/shared/utils/routing";
 import type { HillMode } from "@/shared/utils/campus3d/route";
@@ -12,6 +12,11 @@ import { routeHint } from "@/shared/utils/route-summary";
 
 // 길 카드 순서. 엘리베이터 길은 엘리베이터 조건 경로에서, 나머지는 일반 경로에서 찾음
 const modes: HillMode[] = ["elevator", "hill", "stairs"];
+
+// 경로를 다시 불러오는 동안 이 컴포넌트는 화면에서 빠졌다가 다시 그려짐.
+// 그래서 「추천을 이미 적용한 출발·도착」과 「사용자가 고른 길 종류」는 컴포넌트 밖에 기억해 둠
+let recommendedFor = "";
+let pendingMode: "hill" | "stairs" | null = null;
 
 export function RouteModePicker({
   start,
@@ -42,7 +47,6 @@ export function RouteModePicker({
     normal: RouteOption[];
     lift: RouteOption[];
   }>({ key: "", normal: [], lift: [] });
-  const pending = useRef<"hill" | "stairs" | null>(null);
   useEffect(() => {
     if (!start || !destination) return;
     let cancelled = false;
@@ -66,25 +70,37 @@ export function RouteModePicker({
   // 조건을 바꾼 뒤 새 후보가 도착했을 때만 기존 후보 선택 함수를 호출한다.
   useEffect(() => {
     if (!route || !selected) return;
-    const option = displayedRouteOption(route.options, selected, elevator, pending.current);
-    pending.current = null;
+    const option = displayedRouteOption(route.options, selected, elevator, pendingMode);
+    pendingMode = null;
     if (option && option.id !== selected.id) onOption(option.id);
   }, [route, selected, elevator, onOption]);
 
+  // 방금 누른 길. 경로를 다시 불러오는 동안에도 그 카드가 선택된 채로 보이게 함
+  const [choosing, setChoosing] = useState<{ key: string; mode: HillMode } | null>(null);
   const optionFor = (mode: HillMode) =>
     (mode === "elevator" ? lift : normal).find((o) => routeMode(o) === mode);
-  const current = elevator ? "elevator" : selected ? routeMode(selected) : null;
+  const settled = elevator ? "elevator" : selected ? routeMode(selected) : null;
+  // 다시 불러오는 동안(또는 고른 길로 바뀌기 직전까지)만 방금 누른 카드를 보여 줌
+  const current = choosing?.key === key && (busy || !selected || choosing.mode !== settled)
+    ? choosing.mode
+    : settled;
+  useEffect(() => {
+    if (!choosing || busy || !selected || !route) return;
+    // 고른 길로 실제로 바뀌었거나, 이 구간에 그 길이 없을 때만 방금 누른 표시를 지움
+    // (중간에 다른 길이 잠깐 잡혀도 표시가 흔들리지 않게)
+    if (routeMode(selected) === choosing.mode || !route.options.some((o) => routeMode(o) === choosing.mode))
+      Promise.resolve().then(() => setChoosing(null));
+  }, [choosing, busy, selected, route]);
   // 추천: 엘리베이터 조건으로 찾은 첫 길이 엘리베이터 길이면 그 길, 아니면 일반 경로의 첫 길
   const recommended: HillMode | undefined = lift.some((o) => routeMode(o) === "elevator")
     ? "elevator"
     : normal[0] ? routeMode(normal[0]) : undefined;
 
   // 처음 들어오면(출발·도착이 바뀔 때마다 한 번) 주소의 elevator 값과 상관없이 추천한 길을 고른 상태로 시작
-  const started = useRef("");
   useEffect(() => {
     onRecommended?.(recommended);
-    if (!loaded || !recommended || started.current === key || busy) return;
-    started.current = key;
+    if (!loaded || !recommended || recommendedFor === key || busy) return;
+    recommendedFor = key;
     if (current !== recommended) choose(recommended);
     // 추천이 정해지는 시점에만 맞춤
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -93,13 +109,14 @@ export function RouteModePicker({
   function choose(mode: HillMode) {
     const option = optionFor(mode);
     if (!option || busy) return;
+    setChoosing({ key, mode });
     if (mode === "elevator") {
       if (!elevator) onElevator(true);
       else onOption(option.id);
       return;
     }
     if (elevator) {
-      pending.current = mode;
+      pendingMode = mode;
       onElevator(false);
     } else onOption(option.id);
   }

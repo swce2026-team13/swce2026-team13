@@ -5369,16 +5369,12 @@ body::-webkit-scrollbar,
   -webkit-backdrop-filter: blur(6px);
   box-shadow: 0 3px 10px rgba(40, 70, 130, 0.05);
   cursor: pointer;
-  transition: border-color 0.2s ease, box-shadow 0.25s ease, background-color 0.2s ease;
 }
-.route-choice-card:active:not(.is-disabled) {
-  transform: scale(0.97);
-}
+/* 선택하면 색만 바뀜(누를 때 움직이는 애니메이션 없음) */
 .route-choice-card.is-checked {
   border-color: #2860ed;
   background: rgba(255, 255, 255, 0.72);
   box-shadow: 0 6px 16px rgba(40, 96, 237, 0.16);
-  animation: route-choice-pop 0.32s cubic-bezier(0.3, 1.4, 0.5, 1);
 }
 .route-choice-card.is-disabled {
   opacity: 0.45;
@@ -5423,7 +5419,6 @@ body::-webkit-scrollbar,
   border: 2px solid #c4cfe2;
   border-radius: 50%;
   background: white;
-  transition: border-color 0.2s ease, background-color 0.2s ease;
 }
 .route-choice-radio::after {
   content: "";
@@ -5432,7 +5427,6 @@ body::-webkit-scrollbar,
   border-radius: 50%;
   background: white;
   transform: scale(0);
-  transition: transform 0.22s cubic-bezier(0.3, 1.6, 0.5, 1);
 }
 .route-choice-card.is-checked .route-choice-radio {
   border-color: #2860ed;
@@ -5445,25 +5439,6 @@ body::-webkit-scrollbar,
   margin: 0 4px;
   font-size: 11px;
   color: #7f8da3;
-}
-@keyframes route-choice-pop {
-  0% { transform: scale(0.97); }
-  60% { transform: scale(1.015); }
-  100% { transform: none; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .route-choice-card,
-  .route-choice-radio,
-  .route-choice-radio::after {
-    transition: none;
-    animation: none;
-  }
-  .route-choice-card:active:not(.is-disabled) {
-    transform: none;
-  }
-  .route-choice-card.is-checked {
-    animation: none;
-  }
 }
 
 /* #121 경로 미리보기: 거쳐 가는 곳 한 줄 */

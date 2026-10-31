@@ -6,7 +6,6 @@ import {
   Footprints,
   Mountain,
   MoveUpRight,
-  ArrowUpRight,
   TriangleAlert,
   PersonStanding,
 } from "lucide-react";
@@ -118,7 +117,6 @@ export function RouteSummarySheet({
                 <strong>{item.title}</strong>
                 <p>{item.instruction}</p>
               </div>
-              {item.kind === "destination" && <ArrowUpRight size={16} aria-hidden="true" />}
             </li>
           );
         })}
