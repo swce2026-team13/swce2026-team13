@@ -21,12 +21,13 @@ import { mapEntrances, layoutEntrancePins } from "../map-entrances.ts";
  * @param {HTMLDivElement} container
  * @param {{ onSelect: (selection: import('../../../shared/utils/campus-map.ts').MapSelection | null) => void,
  *   onError: () => void, interactive?: boolean, onMarker?: (id: string) => void,
- *   showEntrances?: boolean,
+ *   showEntrances?: boolean, designTheme?: boolean,
  *   onEntrances?: (pins: import('../map-entrances.ts').PlacedEntrancePin[]) => void }} events
  * @returns {import('../../../shared/utils/campus-map.ts').CampusMapController}
  */
 export function createCampusScene(THREE, container, events) {
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+  const designTheme = Boolean(events.designTheme);
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: designTheme });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   // 해와 건물은 움직이지 않으므로 그림자 지도는 처음 한 번만 그린다(회전·확대 때 다시 그리지 않음).
   // 휴대폰(터치 화면)은 화소마다 한 번만 확인하는 가벼운 그림자, 데스크톱은 부드러운 그림자.
@@ -41,8 +42,8 @@ export function createCampusScene(THREE, container, events) {
   );
   canvas.setAttribute("role", "img");
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color("#dfe7f1");
-  scene.fog = new THREE.Fog("#dfe7f1", 900, 2600);
+  scene.background = designTheme ? null : new THREE.Color("#dfe7f1");
+  scene.fog = new THREE.Fog(designTheme ? "#d5e9c5" : "#dfe7f1", 900, 2600);
   const camera = new THREE.PerspectiveCamera(36, 1, 1, 5000);
   const controls = new THREE.OrbitControls(camera, canvas);
   controls.enableDamping = !window.matchMedia(
@@ -101,9 +102,17 @@ export function createCampusScene(THREE, container, events) {
   let disposed = false;
   let observer;
 
-  // 건물 재질: 평소에는 불투명한 콘크리트 벽 + 창문 띠, 지붕은 회색.
+  // 건물 재질: 평소에는 불투명한 콘크리트 벽 + 창문 띠.
   // 고르거나 경로에 든 건물만 층마다 가진 반투명 강조 재질로 바꿔 끼운다.
-  const WALL_COLOR = "#e9e5dc";
+  const designRoofs = {
+    bukak: "#c4dbff", munye: "#d9c9fc", daeil: "#d9c9fc",
+    bon: "#e3e8ed", eunju1: "#fcc7cc", hyein: "#ffdbad",
+    sangseung: "#e3e8ed", chungwoon: "#e3e8ed",
+    hallim: "#faf2b2", yudam: "#facced", eunju2: "#bae5e0",
+    suin: "#d1ebc7", creative: "#e4e8ee",
+  };
+  const plazaColor = designTheme ? "#d9cfb4" : "#e7d6ae";
+  const WALL_COLOR = designTheme ? "#e6edf5" : "#e9e5dc";
   const WINDOW_REPEAT_M = 6;
   function windowTexture() {
     const c = document.createElement("canvas");
@@ -112,9 +121,9 @@ export function createCampusScene(THREE, container, events) {
     g.fillStyle = WALL_COLOR;
     g.fillRect(0, 0, 64, 64);
     // 한 층(세로 64px) 안의 창문 띠와 창틀
-    g.fillStyle = "#8d9aab";
+    g.fillStyle = designTheme ? "#91a9c9" : "#8d9aab";
     g.fillRect(0, 20, 64, 26);
-    g.fillStyle = "#a9b5c4";
+    g.fillStyle = designTheme ? "#b7c9e0" : "#a9b5c4";
     g.fillRect(0, 20, 64, 5);
     g.fillStyle = WALL_COLOR;
     for (let x = 0; x < 64; x += 16) g.fillRect(x, 20, 3, 26);
@@ -131,7 +140,16 @@ export function createCampusScene(THREE, container, events) {
   const roofMaterial = new THREE.MeshLambertMaterial({ color: litAs("#b9bfc9") });
   const wallMaterial = new THREE.MeshLambertMaterial({ color: "#ffffff", map: wallTexture });
   const baseMaterials = [roofMaterial, wallMaterial];
-  const plinthMaterial = new THREE.MeshLambertMaterial({ color: "#d6d1c6" });
+  const themedRoofs = new Map();
+  const materialsFor = (id) => {
+    if (!designTheme) return baseMaterials;
+    if (!themedRoofs.has(id))
+      themedRoofs.set(id, new THREE.MeshLambertMaterial({
+        color: litAs(designRoofs[id] ?? "#e4e8ee"),
+      }));
+    return [themedRoofs.get(id), wallMaterial];
+  };
+  const plinthMaterial = new THREE.MeshLambertMaterial({ color: designTheme ? "#d8e2ee" : "#d6d1c6" });
   // 지하층: 면 없이 점선 테두리만. 땅을 뚫고 보이도록 깊이 검사 없이 지형 다음·건물 전에 그린다.
   const dashedMaterials = new Map();
   function dashed(color) {
@@ -293,7 +311,7 @@ export function createCampusScene(THREE, container, events) {
       controls.maxDistance,
       Math.max(
         controls.minDistance,
-        (sphere.radius / Math.sin(Math.min(vertical, horizontal) / 2)) * 1.13,
+        (sphere.radius / Math.sin(Math.min(vertical, horizontal) / 2)) * (designTheme ? 1.06 : 1.13),
       ),
     );
     // 전체 보기로 돌아갈 때 남아 있는 회전 관성을 정리해요.
@@ -328,7 +346,7 @@ export function createCampusScene(THREE, container, events) {
         floor.edge.material = dashed(on ? color : UNDERGROUND_COLOR);
         continue;
       }
-      floor.mesh.material = on ? floor.highlight : baseMaterials;
+      floor.mesh.material = on ? floor.highlight : floor.baseMaterials;
       floor.mesh.renderOrder = on ? 1 : 0;
       if (on) floor.highlight.color.set(color);
     }
@@ -346,7 +364,7 @@ export function createCampusScene(THREE, container, events) {
           ? "#1747b5"
           : routeIds.includes("스콘스퀘어")
             ? "#5c8cf1"
-            : "#e7d6ae",
+            : plazaColor,
       );
     }
     scheduleRender();
@@ -582,6 +600,7 @@ export function createCampusScene(THREE, container, events) {
       }
     });
     for (const floor of floors) floor.highlight.dispose();
+    for (const material of themedRoofs.values()) material.dispose();
     for (const material of dashedMaterials.values()) material.dispose();
     wallTexture.dispose();
     renderer.dispose();
@@ -609,7 +628,7 @@ export function createCampusScene(THREE, container, events) {
           new THREE.Line(
             new THREE.BufferGeometry().setFromPoints(run),
             new THREE.LineBasicMaterial({
-              color: "#b39a74",
+              color: designTheme ? "#90a98c" : "#b39a74",
               transparent: true,
               opacity: contour.m ? 0.35 : 0.14,
             }),
@@ -617,11 +636,11 @@ export function createCampusScene(THREE, container, events) {
         );
       }
     }
-    // 바닥: 등고선으로 만든 지형을 둥근 판(디오라마)으로. 가장자리는 지형을 따라 8m 두께로 잘라
-    // 흙색 옆면을 붙인다. 판 밖은 배경이 보인다.
+    // 바닥: 등고선으로 만든 지형을 둥근 판(디오라마)으로.
+    // 시안 지도의 판 옆면은 숨겨 배경의 녹색과 이어 보이게 한다.
     const disc = terrainDisc();
     const groundMaterial = new THREE.MeshLambertMaterial({
-      color: litAs("#cfd8c4"),
+      color: litAs(designTheme ? "#c5e4a5" : "#cfd8c4"),
       // 등고선·광장이 지형과 겹쳐 깜빡이지 않게 지형을 살짝 뒤로 민다.
       polygonOffset: true,
       polygonOffsetFactor: 1,
@@ -658,27 +677,30 @@ export function createCampusScene(THREE, container, events) {
     const ground = new THREE.Mesh(groundGeometry, groundMaterial);
     ground.renderOrder = -2;
     ground.receiveShadow = true;
-    // 옆면: 가장 바깥 고리에서 8m 아래까지
-    const wall = [];
-    const wallFaces = [];
-    for (let k = 0; k <= SEGMENTS; k++) {
-      const top = at(disc.radius, (k / SEGMENTS) * Math.PI * 2);
-      wall.push(...top.toArray(), top.x, top.y - 8 * MAP_HEIGHT_SCALE, top.z);
-      if (k < SEGMENTS) {
-        const a = k * 2;
-        wallFaces.push(a, a + 1, a + 2, a + 2, a + 1, a + 3);
+    world.add(ground);
+    if (!designTheme) {
+      // 기존 지도는 지형 판의 8m 두께 옆면을 유지한다.
+      const wall = [];
+      const wallFaces = [];
+      for (let k = 0; k <= SEGMENTS; k++) {
+        const top = at(disc.radius, (k / SEGMENTS) * Math.PI * 2);
+        wall.push(...top.toArray(), top.x, top.y - 8 * MAP_HEIGHT_SCALE, top.z);
+        if (k < SEGMENTS) {
+          const a = k * 2;
+          wallFaces.push(a, a + 1, a + 2, a + 2, a + 1, a + 3);
+        }
       }
+      const wallGeometry = new THREE.BufferGeometry();
+      wallGeometry.setAttribute("position", new THREE.Float32BufferAttribute(wall, 3));
+      wallGeometry.setIndex(wallFaces);
+      wallGeometry.computeVertexNormals();
+      const side = new THREE.Mesh(
+        wallGeometry,
+        new THREE.MeshLambertMaterial({ color: "#c2b8a3", side: THREE.DoubleSide }),
+      );
+      side.renderOrder = -2;
+      world.add(side);
     }
-    const wallGeometry = new THREE.BufferGeometry();
-    wallGeometry.setAttribute("position", new THREE.Float32BufferAttribute(wall, 3));
-    wallGeometry.setIndex(wallFaces);
-    wallGeometry.computeVertexNormals();
-    const side = new THREE.Mesh(
-      wallGeometry,
-      new THREE.MeshLambertMaterial({ color: "#c2b8a3", side: THREE.DoubleSide }),
-    );
-    side.renderOrder = -2;
-    world.add(ground, side);
     const plazaGeometry = new THREE.ShapeGeometry(
       shape(campusMap.plaza.polygon),
     );
@@ -686,7 +708,7 @@ export function createCampusScene(THREE, container, events) {
     const plaza = new THREE.Mesh(
       plazaGeometry,
       new THREE.MeshLambertMaterial({
-        color: "#e7d6ae",
+        color: plazaColor,
         side: THREE.DoubleSide,
       }),
     );
@@ -701,6 +723,7 @@ export function createCampusScene(THREE, container, events) {
     );
 
     for (const building of campusMap.buildings) {
+      const buildingMaterials = materialsFor(building.id);
       const elevations = getFloorElevations(building);
       const roof = elevations[elevations.length - 1] + 4;
       const box = new THREE.Box3();
@@ -741,7 +764,7 @@ export function createCampusScene(THREE, container, events) {
           opacity: 0.95,
           depthWrite: false,
         });
-        const mesh = new THREE.Mesh(geometry, baseMaterials);
+        const mesh = new THREE.Mesh(geometry, buildingMaterials);
         mesh.position.y = point(0, 0, elevations[i]).y;
         mesh.userData = { buildingId: building.id, floor: floor.floor };
         mesh.castShadow = mesh.receiveShadow = true;
@@ -762,6 +785,7 @@ export function createCampusScene(THREE, container, events) {
           edge,
           opacity,
           highlight: highlightMaterial,
+          baseMaterials: buildingMaterials,
           underground: underground[i],
         });
       });

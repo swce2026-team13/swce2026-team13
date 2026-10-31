@@ -92,6 +92,7 @@ export function MapPicker({
         ) : (
           <CampusMap
             embedded
+            designTheme
             mapHeight={400}
             controllerRef={mapController}
             selectedBuildings={selected}

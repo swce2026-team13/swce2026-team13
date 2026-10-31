@@ -17,6 +17,7 @@ export default function MapView({
   currentBuilding,
   routeNodes,
   routeAnnotation,
+  designTheme,
   position,
   fallback,
   embedded,
@@ -83,6 +84,7 @@ export default function MapView({
         if (cancelled) return;
         controller.current = createCampusScene(three, host, {
           interactive: Boolean(onBuildingRef.current),
+          designTheme,
           showEntrances,
           onEntrances: (pins) => { if (!cancelled) setEntrancePins(pins); },
           onSelect: (next) => {
@@ -112,7 +114,7 @@ export default function MapView({
       controller.current = null;
       if (controllerRef) controllerRef.current = null;
     };
-  }, [controllerRef, showEntrances]);
+  }, [controllerRef, showEntrances, designTheme]);
 
   if (status === "error")
     return (

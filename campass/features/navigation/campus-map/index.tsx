@@ -32,6 +32,7 @@ class MapBoundary extends Component<
 export type CampusMapProps = {
   embedded?: boolean;
   mapHeight?: number;
+  designTheme?: boolean;
   controllerRef?: RefObject<CampusMapController | null>;
   onEntrance?: (id: string) => void;
   onFocusChange?: (id: string) => void;
@@ -51,7 +52,7 @@ export function CampusMap({ fallback, mapHeight, ...props }: CampusMapProps) {
   if (props.embedded)
     return (
       <div
-        className={styles.embedded}
+        className={`${styles.embedded} ${props.designTheme ? styles.designTheme : ""}`}
         style={mapHeight ? { "--campus-map-height": `${mapHeight}px` } as CSSProperties : undefined}
       >
         <MapBoundary fallback={fallback}>

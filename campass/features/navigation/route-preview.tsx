@@ -52,6 +52,7 @@ export function RoutePreview({ option }: { option: RouteOption }) {
       ) : (
         <CampusMap
           embedded
+          designTheme
           mapHeight={378}
           routeNodes={option.nodes}
           routeAnnotation={annotation}
