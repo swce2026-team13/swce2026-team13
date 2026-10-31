@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { routeSegments, type CampusCoordinate } from "@/shared/utils/campus-map";
+import { sliceRouteSegments, type GuideRouteMotion } from "@/shared/utils/guide-route-motion";
 import { EntrancePins } from "./entrance-pins";
 import { layoutEntrancePins, mapEntrances } from "./map-entrances";
 import { DoorOpen, ArrowUpDown, Maximize, Minus, Plus } from "lucide-react";
@@ -98,8 +99,16 @@ export function CampusOverviewMap({
     "id" | "name" | "entrances" | "elevator"
   >;
     backgroundOnly?: boolean;
-  routePreview?: { nodes: string[]; name: string; color: string };
+  routePreview?: { nodes: string[]; name: string; color: string; guide?: GuideRouteMotion };
 }) {
+  const [reduceMotion, setReduceMotion] = useState(false);
+  useEffect(() => {
+    const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReduceMotion(preference.matches);
+    update();
+    preference.addEventListener("change", update);
+    return () => preference.removeEventListener("change", update);
+  }, []);
   const viewOnly = Boolean(pins || highlight || focusBuilding || routePreview);
   const destinationArea = routePreview?.nodes.at(-1)?.split("|")[0];
   const state = (area: string) =>
@@ -699,6 +708,14 @@ export function CampusOverviewMap({
           const path = previewSegments.map(([a, b]) => `M${toPoint(a).join(" ")} L${toPoint(b).join(" ")}`).join(" ");
           const start = toPoint(previewSegments[0][0]);
           const end = toPoint(previewSegments.at(-1)![1]);
+          const guide = routePreview.guide;
+          const linePath = (pieces: typeof previewSegments) => pieces.length
+            ? `M${toPoint(pieces[0][0]).join(" ")} ${pieces.map(([, b]) => `L${toPoint(b).join(" ")}`).join(" ")}`
+            : "";
+          const passedPath = guide ? linePath(sliceRouteSegments(previewSegments, 0, guide.from)) : "";
+          const activeSegments = guide ? sliceRouteSegments(previewSegments, guide.from, guide.to) : [];
+          const activePath = linePath(activeSegments);
+          const activeStart = activeSegments.length ? toPoint(activeSegments[0][0]) : end;
           const lengths = previewSegments.map(([a, b]) => Math.hypot(b.east-a.east, b.north-a.north, b.elevation-a.elevation));
           let remaining = lengths.reduce((a,b) => a+b,0)/2;
           let middle = start;
@@ -710,7 +727,10 @@ export function CampusOverviewMap({
           return <g pointerEvents="none" aria-label="경로: 초록 출발점, 흰 중간 지점, 파란 도착 깃발">
             <path d={path} fill="none" stroke="rgba(16, 40, 100, 0.18)" strokeWidth={13} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" transform={`translate(0 ${2*labelScale})`} />
             <path d={path} fill="none" stroke="white" strokeWidth={11} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-            <path d={path} fill="none" stroke="#2860ed" strokeWidth={6.5} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+            <path d={path} fill="none" stroke={guide ? "#a9c3f7" : "#2860ed"} strokeWidth={6.5} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+            {passedPath && <path d={passedPath} fill="none" stroke="#b9c1cd" strokeWidth={6.5} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />}
+            {activePath && <path d={activePath} fill="none" stroke="#2860ed" strokeWidth={7} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />}
+            {activePath && <path className="guide-route-flow" d={activePath} fill="none" stroke="white" strokeWidth={2} strokeDasharray="2 4" strokeLinecap="round" vectorEffect="non-scaling-stroke" />}
             <circle cx={start[0]} cy={start[1]} r={6.5*labelScale} fill="#1d9e75" stroke="white" strokeWidth={3} vectorEffect="non-scaling-stroke" />
             <circle cx={waypoint[0]} cy={waypoint[1]} r={5.5*labelScale} fill="white" stroke="#2860ed" strokeWidth={3} vectorEffect="non-scaling-stroke" />
             <g transform={`translate(${start.join(" ")}) scale(${labelScale})`}>
@@ -725,6 +745,12 @@ export function CampusOverviewMap({
               <path d="M0 0S-13-15-13-24a13 13 0 0 1 26 0C13-15 0 0 0 0z" fill="#2860ed" stroke="white" strokeWidth={2.5} />
               <path d="M-4-31v12m.5-11h8l-2 3 2 3h-8z" fill="white" stroke="white" strokeWidth={1.4} strokeLinecap="round" />
             </g>
+            {guide && <g className="guide-route-arrow" transform={reduceMotion || !activePath ? `translate(${activeStart.join(" ")})` : undefined}>
+              {!reduceMotion && activePath && <animateMotion path={activePath} dur="2.6s" calcMode="spline" keyTimes="0;1" keySplines="0.42 0 0.58 1" rotate="auto" repeatCount="indefinite" />}
+              <circle r={15 * labelScale} fill="#2860ed" opacity="0.18" />
+              <circle r={11 * labelScale} fill="white" stroke="#dfe8ff" strokeWidth={1.5} />
+              <path d="M-4 -5 L6 0 L-4 5 L-2 0 Z" fill="#2860ed" transform={`scale(${labelScale})`} />
+            </g>}
           </g>;
         })()}
         {highlight?.position && (

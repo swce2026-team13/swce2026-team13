@@ -110,6 +110,41 @@
 .me[hidden] {
   display: none;
 }
+.guideArrow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 4;
+  width: 30px;
+  height: 30px;
+  pointer-events: none;
+}
+.guideArrow[hidden] { display: none; }
+.guideArrow::before {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  background: #2860ed55;
+  animation: guideArrowPing 1.6s ease-out infinite;
+}
+.guideArrow span {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 2px 8px #10286455;
+}
+.guideArrow svg { width: 18px; height: 18px; fill: #2860ed; }
+@keyframes guideArrowPing {
+  to { transform: scale(1.8); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .guideArrow::before { animation: none; }
+}
 @keyframes me-pulse {
   from {
     transform: scale(0.5);

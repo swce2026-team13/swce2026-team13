@@ -101,7 +101,7 @@ export type CampusMapController = {
   zoom: (factor: number) => void;
   selectBuilding: (id: string) => void;
   highlightBuildings: (ids: string[], currentId?: string) => void;
-  showRoute: (nodes: string[], annotation?: { name: string; color: string }) => void;
+  showRoute: (nodes: string[], annotation?: { name: string; color: string; guide?: import("./guide-route-motion").GuideRouteMotion }) => void;
   /** 안내 중 내 위치 점. undefined면 숨긴다. */
   showPosition: (position?: CampusCoordinate) => void;
   dispose: () => void;

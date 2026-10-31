@@ -1,4 +1,11 @@
 /* 안내 중 화면: 선택한 경로의 지점과 다음 이동을 한눈에 보여 준다. */
+@keyframes guideRouteFlow {
+  to { stroke-dashoffset: -12; }
+}
+.guide-route-flow { animation: guideRouteFlow .9s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .guide-route-flow { animation: none; }
+}
 .guide-live-header { height: 48px; padding: 0 20px; }
 .guide-live-header > strong { font-size: 18px; }
 .guide-live-end {
@@ -31,7 +38,18 @@
   height: 2px;
   background: #d3ddeb;
 }
+.guide-live-milestones::after {
+  content: "";
+  position: absolute;
+  top: 14px;
+  left: 16.66%;
+  width: var(--guide-line-fill, 0%);
+  height: 2px;
+  background: #2860ed;
+  transition: width .9s ease-in-out;
+}
 .guide-live-milestones[data-count="2"]::before { left: 25%; right: 25%; }
+.guide-live-milestones[data-count="2"]::after { left: 25%; }
 .guide-live-milestones li {
   position: relative;
   z-index: 1;
@@ -74,7 +92,7 @@
 .guide-live-viewport { position: relative; min-width: 0; }
 .guide-live-map {
   position: relative;
-  height: 344px;
+  height: 380px;
   overflow: hidden;
   border-radius: 20px;
   background: #c5e4a5;

@@ -1,19 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Maximize2 } from "lucide-react";
 import { Photo, Tag } from "@/components/ui";
 import { CampusOverviewMap } from "@/features/navigation/campus-overview-map";
 import { CampusMap } from "@/features/navigation/campus-map";
 import { useCampus } from "@/features/navigation/campus-provider";
 import { mapRouteBuildings } from "@/shared/utils/map-route";
-import { currentPosition } from "@/shared/utils/campus-map";
 import {
   guideLegLabel,
   type GuideMapData,
   type GuideStepViewModel,
 } from "@/shared/utils/guide-view";
 import { overviewRouteHighlight } from "@/shared/utils/campus-overview";
+import { guideRouteMotion } from "@/shared/utils/guide-route-motion";
 
 type GuideMapViewportProps = {
   currentStep: GuideStepViewModel | null;
@@ -24,12 +24,15 @@ type GuideMapViewportProps = {
 };
 const guideRoutePreview = { name: "", color: "#2860ed" };
 
-function RouteMap({ map, compact = false }: { map: GuideMapData; compact?: boolean }) {
+function RouteMap({ map, compact = false, guideActive = false, nextNode }: { map: GuideMapData; compact?: boolean; guideActive?: boolean; nextNode?: string }) {
   const [flat, setFlat] = useState(false);
   const { go } = useCampus();
   const highlight = overviewRouteHighlight(map);
   const buildings = mapRouteBuildings(map);
-  const position = currentPosition(map.nodes, map.current);
+  const routeAnnotation = useMemo(() => ({
+    ...guideRoutePreview,
+    guide: guideActive ? guideRouteMotion(map.nodes, map.current.node, nextNode) : undefined,
+  }), [guideActive, map.nodes, map.current.node, nextNode]);
   if (!map.nodes.length) {
     return (
       <div className="guide-map-viewport-placeholder">
@@ -41,18 +44,17 @@ function RouteMap({ map, compact = false }: { map: GuideMapData; compact?: boole
 
   const overview = <CampusOverviewMap
     highlight={highlight}
-    routePreview={{ ...guideRoutePreview, nodes: map.nodes }}
-    height={compact ? 344 : undefined}
+    routePreview={{ ...routeAnnotation, nodes: map.nodes }}
+    height={compact ? 380 : undefined}
   />;
   const mapView = flat ? overview : (
     <CampusMap
       embedded={compact}
       designTheme
       guideLive={compact}
-      mapHeight={compact ? 344 : undefined}
+      mapHeight={compact ? 380 : undefined}
       routeNodes={map.nodes}
-      routeAnnotation={guideRoutePreview}
-      position={position}
+      routeAnnotation={routeAnnotation}
       selectedBuildings={buildings.ids}
       currentBuilding={buildings.currentId}
       fallback={overview}
@@ -140,7 +142,7 @@ export function GuideMapViewport({
   if (compact) {
     return (
       <section className="guide-map-viewport guide-live-viewport" aria-label="길안내 지도">
-        {map && (showPhoto ? photo : <RouteMap map={map} compact />)}
+        {map && (showPhoto ? photo : <RouteMap map={map} compact guideActive nextNode={nextStep?.node} />)}
         {photo && (
           <button
             type="button"
@@ -163,7 +165,7 @@ export function GuideMapViewport({
             {legLabel && <strong>{legLabel}</strong>}
             {map.unverified && <Tag>현장 확인 전 길</Tag>}
           </div>
-          {showPhoto ? photo : <RouteMap map={map} />}
+          {showPhoto ? photo : <RouteMap map={map} guideActive nextNode={nextStep?.node} />}
           {photo && (
             <button
               className="button secondary guide-map-toggle"

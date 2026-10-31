@@ -82,6 +82,15 @@ export function createCampusScene(THREE, container, events) {
   me.hidden = true;
   labelLayer.appendChild(me);
   let mePosition = null;
+  const guideArrow = document.createElement("div");
+  guideArrow.className = styles.guideArrow;
+  guideArrow.hidden = true;
+  guideArrow.innerHTML = '<span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12 5 4.5 8.2 12 5 19.5Z"/></svg></span>';
+  labelLayer.appendChild(guideArrow);
+  let guideTrack = null;
+  let guideFrame = 0;
+  let guideStarted = 0;
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const compass = document.createElement("div");
   compass.className = styles.north;
   compass.setAttribute("aria-hidden", "true");
@@ -257,6 +266,7 @@ export function createCampusScene(THREE, container, events) {
         me.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%)`;
       }
     }
+    updateGuideArrow(performance.now());
     // 모든 건물·광장 이름을 두고, 겹칠 때 현재 건물과 경로 건물을 먼저 남긴다.
     const ordered = [...labels].sort(
       (a, b) =>
@@ -303,6 +313,60 @@ export function createCampusScene(THREE, container, events) {
       events.onEntrances?.(layoutEntrancePins(projectedPins, width, height, occupied));
     }
   }
+  function guidePoint(progress) {
+    if (!guideTrack) return null;
+    const target = progress * guideTrack.total;
+    let travelled = 0;
+    for (const [a, b] of guideTrack.segments) {
+      const length = Math.hypot(b.east - a.east, b.north - a.north, b.elevation - a.elevation);
+      if (target <= travelled + length || travelled + length >= guideTrack.total) {
+        const t = length ? Math.max(0, Math.min(1, (target - travelled) / length)) : 0;
+        return point(
+          a.east + (b.east - a.east) * t,
+          a.north + (b.north - a.north) * t,
+          a.elevation + (b.elevation - a.elevation) * t + 4,
+        );
+      }
+      travelled += length;
+    }
+    return null;
+  }
+  function updateGuideArrow(time) {
+    if (!guideTrack) { guideArrow.hidden = true; return; }
+    const { from, to } = guideTrack;
+    const fraction = reducedMotion.matches || to <= from
+      ? 0
+      : (1 - Math.cos(Math.PI * (((time - guideStarted) % 2600) / 2600))) / 2;
+    const progress = from + (to - from) * fraction;
+    const at = guidePoint(progress)?.project(camera);
+    const ahead = guidePoint(Math.min(to, progress + 0.003))?.project(camera);
+    if (!at || at.z < -1 || at.z > 1) { guideArrow.hidden = true; return; }
+    const width = container.clientWidth;
+    const height = container.clientHeight;
+    const x = (at.x + 1) * width / 2;
+    const y = (1 - at.y) * height / 2;
+    guideArrow.hidden = x < 0 || x > width || y < 0 || y > height;
+    if (guideArrow.hidden) return;
+    const angle = ahead && progress < to - 0.003
+      ? Math.atan2(at.y - ahead.y, ahead.x - at.x) * 180 / Math.PI
+      : 0;
+    guideArrow.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%) rotate(${angle}deg)`;
+  }
+  function animateGuide(time) {
+    guideFrame = 0;
+    if (disposed || !guideTrack || reducedMotion.matches) return;
+    updateGuideArrow(time);
+    guideFrame = window.requestAnimationFrame(animateGuide);
+  }
+  function motionPreferenceChanged() {
+    window.cancelAnimationFrame(guideFrame);
+    guideFrame = 0;
+    guideStarted = performance.now();
+    if (guideTrack && !reducedMotion.matches && guideTrack.to > guideTrack.from)
+      guideFrame = window.requestAnimationFrame(animateGuide);
+    else scheduleRender();
+  }
+  reducedMotion.addEventListener("change", motionPreferenceChanged);
   function fitBox(box) {
     const sphere = box.getBoundingSphere(new THREE.Sphere());
     const vertical = THREE.MathUtils.degToRad(camera.fov);
@@ -370,6 +434,11 @@ export function createCampusScene(THREE, container, events) {
     scheduleRender();
   }
   function showRoute(nodes, annotation) {
+    window.cancelAnimationFrame(guideFrame);
+    guideFrame = 0;
+    guideTrack = null;
+    guideArrow.hidden = true;
+    const routeChanged = nodes.length !== routeNodes.length || nodes.some((node, index) => node !== routeNodes[index]);
     routeNodes = nodes;
     for (const label of routeLabels) label.element.remove();
     routeLabels.length = 0;
@@ -394,7 +463,8 @@ export function createCampusScene(THREE, container, events) {
         routeLabels.push({ element, position: point(position.east, position.north, position.elevation + elevationOffset) });
         return element;
       };
-      addRouteLabel(segments[0][0], `${styles.routePill} ${styles.routeStartPill}`, "출발", 2);
+      if (!annotation.guide)
+        addRouteLabel(segments[0][0], `${styles.routePill} ${styles.routeStartPill}`, "출발", 2);
       if (annotation.name)
         addRouteLabel(middle, `${styles.routePill} ${styles.routeGradePill}`, annotation.name);
       const flag = addRouteLabel(segments.at(-1)[1], styles.routeFlagPin, "", 1.2);
@@ -414,7 +484,7 @@ export function createCampusScene(THREE, container, events) {
       pennant.setAttribute("stroke-width", "1.5");
       flagIcon.append(pin, pennant);
       flag.appendChild(flagIcon);
-      fitBox(previewBounds);
+      if (routeChanged) fitBox(previewBounds);
     }
     for (const child of [...routeLayer.children]) {
       child.geometry.dispose();
@@ -425,6 +495,7 @@ export function createCampusScene(THREE, container, events) {
     const lineLayers = annotation
       ? [[2.1, "#102864", 4], [1.7, "#ffffff", 5], [1, "#2860ed", 6]]
       : [[1.5, "#ffffff", 5], [0.95, "#dc2626", 6]];
+    if (annotation?.guide) lineLayers[2][1] = "#a9c3f7";
     for (const [from, to] of segments) {
       const a = point(from.east, from.north, from.elevation + 1.2);
       const b = point(to.east, to.north, to.elevation + 1.2);
@@ -464,6 +535,47 @@ export function createCampusScene(THREE, container, events) {
         cap.renderOrder = order;
         routeLayer.add(cap);
       }
+    }
+    if (annotation?.guide && segments.length) {
+      const lengths = segments.map(([a, b]) => Math.hypot(b.east-a.east, b.north-a.north, b.elevation-a.elevation));
+      const total = lengths.reduce((sum, length) => sum + length, 0);
+      const { from, to } = annotation.guide;
+      let travelled = 0;
+      const overlay = (a, b, color, order) => {
+        const start = point(a.east, a.north, a.elevation + 1.4);
+        const end = point(b.east, b.north, b.elevation + 1.4);
+        const delta = end.clone().sub(start);
+        if (delta.length() < 0.01) return;
+        const material = new THREE.MeshBasicMaterial({ color, depthTest: false, depthWrite: false, fog: false });
+        const mesh = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, delta.length(), 12), material);
+        mesh.position.copy(start).add(end).multiplyScalar(0.5);
+        mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), delta.normalize());
+        mesh.renderOrder = order;
+        routeLayer.add(mesh);
+        for (const endPoint of [start, end]) {
+          const cap = new THREE.Mesh(new THREE.SphereGeometry(1.1, 12, 8), material.clone());
+          cap.position.copy(endPoint);
+          cap.renderOrder = order;
+          routeLayer.add(cap);
+        }
+      };
+      segments.forEach(([a, b], index) => {
+        const length = lengths[index];
+        const at = (part) => {
+          const t = length ? (part - travelled) / length : 0;
+          return { east:a.east+(b.east-a.east)*t, north:a.north+(b.north-a.north)*t, elevation:a.elevation+(b.elevation-a.elevation)*t };
+        };
+        for (const [lower, upper, color, order] of [[0, from, "#b9c1cd", 7], [from, to, "#2860ed", 8]]) {
+          const start = Math.max(travelled, lower * total);
+          const end = Math.min(travelled + length, upper * total);
+          if (end > start) overlay(at(start), at(end), color, order);
+        }
+        travelled += length;
+      });
+      guideTrack = { segments, total, from, to };
+      guideStarted = performance.now();
+      if (!reducedMotion.matches && to > from)
+        guideFrame = window.requestAnimationFrame(animateGuide);
     }
     if (annotation && segments.length) {
       const total = segments.reduce((sum, [a, b]) =>
@@ -581,6 +693,8 @@ export function createCampusScene(THREE, container, events) {
     if (disposed) return;
     disposed = true;
     window.cancelAnimationFrame(frame);
+    window.cancelAnimationFrame(guideFrame);
+    reducedMotion.removeEventListener("change", motionPreferenceChanged);
     observer?.disconnect();
     controls.removeEventListener("change", scheduleRender);
     controls.dispose();

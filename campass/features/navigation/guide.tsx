@@ -1,7 +1,7 @@
 "use client";
 
 import { GuideRiskNotice } from "@/features/navigation/guide-risk-notice";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { createIntentRequest } from "@/shared/utils/intent-request";
 import { GuideMapViewport } from "@/features/navigation/guide-map-viewport";
 import {
@@ -74,7 +74,12 @@ export default function Screen() {
                 <p>현재 위치를 기준으로 목적지까지 경로를 다시 계산했어요.</p>
               </Notice>
             )}
-            <ol className="guide-live-milestones" aria-label="경로 진행 지점" data-count={milestones.length}>
+            <ol
+              className="guide-live-milestones"
+              aria-label="경로 진행 지점"
+              data-count={milestones.length}
+              style={{ "--guide-line-fill": `${activeMilestone / Math.max(1, milestones.length - 1) * (milestones.length === 2 ? 50 : 66.66)}%` } as CSSProperties}
+            >
               {milestones.map((milestone, index) => {
                 const state = index === activeMilestone ? "current" : index < activeMilestone ? "passed" : "upcoming";
                 return (

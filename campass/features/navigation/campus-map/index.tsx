@@ -43,7 +43,7 @@ export type CampusMapProps = {
   selectedBuildings?: string[];
   currentBuilding?: string;
   routeNodes?: string[];
-  routeAnnotation?: { name: string; color: string };
+  routeAnnotation?: { name: string; color: string; guide?: import("@/shared/utils/guide-route-motion").GuideRouteMotion };
   /** 안내 중 내 위치(지금 단계). 있으면 동그란 점으로 표시해요. */
   position?: CampusCoordinate;
   fallback: ReactNode;
@@ -70,7 +70,7 @@ export function CampusMap({ fallback, mapHeight, ...props }: CampusMapProps) {
         <b>
           {props.onBuilding
             ? "캠퍼스 3D 지도"
-            : props.position
+            : props.position || props.routeAnnotation?.guide
               ? "3D 길안내 지도"
               : "3D 경로 미리보기"}
         </b>
