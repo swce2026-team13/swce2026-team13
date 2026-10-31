@@ -5489,35 +5489,6 @@ body::-webkit-scrollbar,
   flex: 1;
 }
 
-/* #123 경로 상세 시트: 높이 변화 한 줄 띠 */
-.route-elevation-strip {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  height: 44px;
-  margin: 4px 0 10px;
-  padding: 0 12px;
-  border-radius: 12px;
-  background: #fbf6ee;
-}
-.route-elevation-strip-label {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  gap: 5px;
-  font-size: 12.5px;
-  font-weight: 700;
-  color: #5c4a2c;
-}
-.route-elevation-strip-label svg { color: #e08a1e; }
-.route-elevation-strip svg { flex: 1; min-width: 0; }
-.route-elevation-strip-value {
-  flex: none;
-  font-size: 12px;
-  font-weight: 700;
-  color: #5c6574;
-}
-
 /* #123 헤매기 쉬운 구간: 한 줄 띠(버튼) */
 .confusion-strip {
   display: flex;

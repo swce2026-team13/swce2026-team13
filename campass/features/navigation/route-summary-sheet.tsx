@@ -26,9 +26,6 @@ const icons: Record<GuideStepItem["kind"], typeof Footprints> = {
   elevator: ArrowUpDown,
 };
 
-// 높이 변화 띠의 작은 선 그래프 크기
-const SPARK_WIDTH = 96;
-const SPARK_HEIGHT = 22;
 export function RouteSummarySheet({
   option,
   recommended,
@@ -43,15 +40,7 @@ export function RouteSummarySheet({
   const summary = routeSummary(option);
   const mode = routeMode(option);
   const color = routeColors[mode];
-  const min = Math.min(...summary.bars.map((bar) => bar.elevation));
-  const max = Math.max(...summary.bars.map((bar) => bar.elevation));
   const chips = routeChips(option, summary);
-  // 실제 높이 자료로 그리는 작은 선 그래프(축·눈금 없음)
-  const spark = summary.bars.map((bar, i) => [
-    (i / Math.max(1, summary.bars.length - 1)) * SPARK_WIDTH,
-    2 + (max === min ? 0.5 : 1 - (bar.elevation - min) / (max - min)) * (SPARK_HEIGHT - 4),
-  ]);
-  const sparkLine = spark.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`).join(" ");
   // 단계 목록: 안내 중 화면의 안내 단계(묶음)와 같은 단위. 5개를 넘으면 주요 지점만
   const items = guideStepItems(option, option.steps, destinationName);
   // 주요 지점은 최대 5곳. 숨길 단계는 모두 모아 첫 숨긴 자리에 버튼 하나만 둠
@@ -92,25 +81,6 @@ export function RouteSummarySheet({
           <span><b>{summary.buildings}</b><small>건물 통과</small></span>
         </span>
       </div>
-      {summary.bars.length > 0 && summary.startElevation !== null && summary.endElevation !== null && (
-        <div
-          className="route-elevation-strip"
-          role="img"
-          aria-label={`높이 변화: 출발 ${Math.round(summary.startElevation)}m, 도착 ${Math.round(summary.endElevation)}m (높이는 지형도 기준 추정)`}
-          title="높이는 지형도 기준 추정"
-        >
-          <span className="route-elevation-strip-label">
-            <Mountain size={16} aria-hidden="true" /> 높이 변화
-          </span>
-          <svg width={SPARK_WIDTH} height={SPARK_HEIGHT} viewBox={`0 0 ${SPARK_WIDTH} ${SPARK_HEIGHT}`} aria-hidden="true">
-            <path d={`${sparkLine} L${SPARK_WIDTH} ${SPARK_HEIGHT} L0 ${SPARK_HEIGHT}Z`} fill="#fde7c7" />
-            <path d={sparkLine} fill="none" stroke="#e08a1e" strokeWidth={1.8} strokeLinejoin="round" strokeLinecap="round" />
-          </svg>
-          <span className="route-elevation-strip-value">
-            {Math.round(summary.startElevation)}m → {Math.round(summary.endElevation)}m
-          </span>
-        </div>
-      )}
       {warning}
       <div className="route-timeline-heading">
         <strong>이렇게 이동해요</strong>
