@@ -4212,7 +4212,6 @@ body:has(.page-transition-root)::-webkit-scrollbar,
 
 .route-mode-tabs input:focus-visible + span { outline:2px solid #2860ed; outline-offset:3px; }
 
-.prepare-screen .zoom button { min-width:44px; min-height:44px; }
 .route-mode-tabs label:first-child span svg { border-bottom:1.5px solid currentColor; padding-bottom:1px; }
 
 /* #111 길찾기 화면: 좁은 두 줄 출발·도착 카드 */
@@ -4331,8 +4330,6 @@ body:has(.page-transition-root)::-webkit-scrollbar,
   box-shadow: 0 6px 18px rgba(40, 70, 130, .07), 0 0 0 1px #e3e6eb;
 }
 .prepare-screen .route-start-picker .endpoint-map-surface,
-.prepare-screen .route-start-picker .endpoint-map-surface .stage,
-.prepare-screen .route-start-picker .endpoint-map-surface .loading,
 .prepare-screen .route-start-picker .endpoint-map-surface .overview-map {
   height: 400px;
 }
@@ -4374,8 +4371,6 @@ body:has(.page-transition-root)::-webkit-scrollbar,
   padding: 0 10px 0 16px;
 }
 .prepare-screen .route-preview-heading strong { font-size: 15px; font-weight: 800; }
-.prepare-screen .route-preview-card .stage,
-.prepare-screen .route-preview-card .loading,
 .prepare-screen .route-preview-card .overview-map { height: 378px; }
 .prepare-screen .route-summary-sheet {
   display: flex;

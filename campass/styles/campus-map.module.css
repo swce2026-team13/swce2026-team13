@@ -31,8 +31,7 @@
 .stage,
 .loading {
   position: relative;
-  height: 420px;
-  height: clamp(320px, 55svh, 500px);
+  height: var(--campus-map-height, clamp(320px, 55svh, 500px));
   background: #e8effd;
   overflow: hidden;
 }
