@@ -17,7 +17,8 @@ import {
 } from "@/components/ui/icons";
 import { Notice } from "@/components/ui";
 import { api, useCampus } from "@/features/navigation/campus-provider";
-import { routeEnvironment, routeMode, routeName } from "@/shared/utils/route-presentation";
+import { routeMode, routeName } from "@/shared/utils/route-presentation";
+import { guideInstruction, stepUnverified } from "@/shared/utils/guide-instruction";
 import { guideRouteMotion } from "@/shared/utils/guide-route-motion";
 import type { IntentResult } from "@/shared/types/recognition";
 export default function Screen() {
@@ -40,13 +41,17 @@ export default function Screen() {
   const option = session?.route.options.find((item) => item.id === session.route.option)
     ?? session?.route.options[0];
   const mode = option ? routeMode(option) : null;
-  const environment = option ? routeEnvironment(option) : null;
-  const routeLabel = option
-    ? mode === "elevator"
-      ? routeName(option)
-      : (environment === "outdoor" ? "실외" : "실내") + " · " + routeName(option)
-    : "선택한 경로";
+  const routeLabel = option ? routeName(option) : "선택한 경로";
   const routeSteps = session?.route.steps ?? [];
+  const currentStep = session ? routeSteps[session.currentStep] : undefined;
+  const nextStep = session ? routeSteps[session.currentStep + 1] : undefined;
+  const destinationName = displayDestination.building || displayDestination.name;
+  // 지금 할 일을 동작으로 말하는 한 줄(단계 종류별 템플릿)
+  const instruction = currentStep
+    ? guideInstruction(option, currentStep, nextStep, destinationName)
+    : "";
+  // 지금 단계 구간이 '확인'된 연결이 아닐 때만 확인 전 표시와 안내 표지 문구를 보여 줌
+  const unverified = currentStep ? stepUnverified(option, currentStep) : false;
   const remainingDistance = session && option
     ? Math.max(0, Math.round(session.route.distance * (1 - (guideRouteMotion(option.nodes, guide.current?.node, guide.next?.node)?.from ?? 0))))
     : 0;
@@ -105,30 +110,30 @@ export default function Screen() {
               <div className="guide-live-meta">
                 <div className="guide-live-chips">
                   <span data-mode={mode ?? "default"}>{routeLabel}</span>
-                  {(option?.unverified || option?.approximate) && <span className="unverified">현장 확인 전</span>}
+                  {unverified && <span className="unverified">현장 확인 전</span>}
                 </div>
                 {session.route.distance > 0 && (
                   <span className="guide-live-distance">
-                    {remainingDistance > 0 ? `${displayDestination.building || "목적지"}까지 약 ${remainingDistance}m` : "도착"}
+                    {remainingDistance > 0 ? `${destinationName || "목적지"}까지 약 ${remainingDistance}m` : "도착"}
                   </span>
                 )}
               </div>
               <h1>
                 {session.recovered && session.recoveryDirection === "backward"
                   ? "되돌아가는 방향으로 이동해 주세요"
-                  : guide.current?.instruction}
+                  : instruction}
               </h1>
-              {guide.current?.detail && <p className="guide-live-detail">{guide.current.detail}</p>}
+              {unverified && guide.current?.detail && <p className="guide-live-detail">{guide.current.detail}</p>}
               <div className="guide-live-flow">
-                <div>
+                <p>
                   <span>현재</span>
                   <strong>{guide.current?.name ?? "현재 위치"}</strong>
-                </div>
-                <ArrowRightIcon size={20} />
-                <div>
+                </p>
+                <ArrowRightIcon size={18} />
+                <p>
                   <span>{guide.next ? "다음" : "도착"}</span>
                   <strong>{guide.next?.name ?? displayDestination.name}</strong>
-                </div>
+                </p>
               </div>
             </div>
             <div className="guide-live-quick-actions">
@@ -168,7 +173,8 @@ export default function Screen() {
                 disabled={busy}
                 onClick={session.status === "completed" ? () => go("arrival") : advance}
               >
-                {session.status === "completed" ? "목적지에 도착했어요" : "다음 지점에 도착했어요"}
+                <CheckIcon size={18} />
+                {session.status === "completed" || !guide.next ? "도착했어요" : `${guide.next.name}에 도착했어요`}
               </button>
             </div>
           </div>

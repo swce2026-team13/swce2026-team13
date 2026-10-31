@@ -19,7 +19,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <button className="icon-button" aria-label="뒤로 가기" onClick={back}>
             <BackIcon size={21} />
           </button>
-          <strong>{view === "guide" ? displayDestination.building || screenTitle(view, displayDestination, recovering) : screenTitle(view, displayDestination, recovering)}</strong>
+          <strong>{view === "guide" ? "안내 중" : screenTitle(view, displayDestination, recovering)}</strong>
           {view === "guide" ? (
             <button
               className="guide-live-end"

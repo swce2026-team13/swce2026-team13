@@ -92,28 +92,34 @@
 .guide-live-viewport { position: relative; min-width: 0; }
 .guide-live-map {
   position: relative;
-  height: 380px;
+  /* 375px 폭 기준 약 460px. 버튼 위 빈 공간이 거의 없게 */
+  height: 460px;
   overflow: hidden;
   border-radius: 20px;
   background: #c5e4a5;
   box-shadow: 0 6px 16px #27405b12, 0 0 0 1px #d8e1dd;
 }
-.guide-live-map .guide-live-map-expand,
+.guide-live-map .guide-live-north,
 .guide-live-map .guide-live-map-switch {
   position: absolute;
   z-index: 8;
 }
-.guide-live-map-expand {
-  display: grid;
-  place-items: center;
+/* 오른쪽 위 북쪽 표시: 흰 원 안에 파란 화살표 + N */
+.guide-live-north {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   top: 10px;
   right: 10px;
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: #fffef8;
-  box-shadow: 0 2px 8px #1a3a4550;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 2px 8px #1a3a4530;
 }
+.guide-live-north b { color: #2860ed; font-size: 9px; font-weight: 800; line-height: 1; }
+.guide-live-map .overview-north { display: none; }
 .guide-live-map-switch {
   display: flex;
   left: 10px;
@@ -134,45 +140,48 @@
 .guide-live-map-switch button[aria-pressed="true"] { background: #2860ed; color: white; }
 .guide-live-instruction {
   padding: 14px 15px 12px;
-  border: 1px solid #dfe5ed;
+  border: 1px solid rgba(255, 255, 255, 0.85);
   border-radius: 20px;
-  background: #fff;
-  box-shadow: 0 6px 18px #2846820c;
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 4px 14px rgba(40, 70, 130, .06);
 }
 .guide-live-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .guide-live-chips { display: flex; flex-wrap: wrap; gap: 5px; min-width: 0; }
 .guide-live-chips span {
   padding: 3px 7px;
   border-radius: 8px;
-  background: #e6f4ee;
-  color: #247c62;
+  background: #dbe6fd;
+  color: #2051d6;
   font-size: 10px;
   font-weight: 700;
   white-space: nowrap;
 }
-.guide-live-chips span[data-mode="stairs"] { background: #fff0df; color: #a65d13; }
-.guide-live-chips span[data-mode="elevator"] { background: #e8eef9; color: #243c68; }
 .guide-live-chips span.unverified { background: #fff2d9; color: #a16a11; }
-.guide-live-distance { flex: none; color: #747e8c; font-size: 10px; white-space: nowrap; }
+.guide-live-distance { flex: none; color: #5d6d83; font-size: 11px; font-weight: 600; white-space: nowrap; }
+/* 안내 문장은 한 줄(약 19px 굵게, 줄바꿈 없음) */
 .guide-live-instruction h1 {
-  margin: 9px 0 3px;
-  color: #1f2a3c;
-  font-size: 20px;
+  margin: 10px 0 10px;
+  overflow: hidden;
+  color: #1c3866;
+  font-size: 19px;
   font-weight: 800;
   line-height: 1.35;
   letter-spacing: -.5px;
-  word-break: keep-all;
-  overflow-wrap: anywhere;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.guide-live-detail { margin: 0 0 12px; color: #7b8798; font-size: 10px; line-height: 1.45; }
-.guide-live-flow { display: grid; grid-template-columns: minmax(0,1fr) 20px minmax(0,1fr); align-items: center; gap: 10px; }
-.guide-live-flow > div { min-width: 0; padding: 8px 10px; border-radius: 12px; background: #f3f5f9; }
-.guide-live-flow > div:last-child { background: #edf3ff; }
+.guide-live-detail { margin: -6px 0 10px; color: #8a96a8; font-size: 10px; line-height: 1.45; }
+/* 현재 → 다음: 각 칸은 「라벨 장소명」 한 줄, 가운데 정렬 */
+.guide-live-flow { display: grid; grid-template-columns: minmax(0,1fr) 18px minmax(0,1fr); align-items: center; gap: 8px; }
+.guide-live-flow > p { display: flex; align-items: baseline; justify-content: center; gap: 5px; min-width: 0; margin: 0; padding: 9px 10px; border-radius: 12px; background: rgba(255, 255, 255, 0.7); }
+.guide-live-flow > p:last-child { background: #edf3ff; }
 .guide-live-flow > svg { color: #2860ed; }
-.guide-live-flow span { display: block; color: #7d8796; font-size: 10px; }
-.guide-live-flow > div:last-child span { color: #4671c9; }
-.guide-live-flow strong { display: block; overflow: hidden; color: #1f2a3c; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.guide-live-flow > div:last-child strong { color: #2053c7; }
+.guide-live-flow span { flex: none; color: #7d8796; font-size: 10px; }
+.guide-live-flow > p:last-child span { color: #4671c9; }
+.guide-live-flow strong { overflow: hidden; color: #1f2a3c; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.guide-live-flow > p:last-child strong { color: #2053c7; }
 .guide-live-quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
 .guide-live-quick-actions button {
   display: flex;
@@ -201,10 +210,13 @@
 .guide-live-actions.actions::before { content: none; }
 .guide-live-actions .guide-step-actions { grid-template-columns: minmax(0,.35fr) minmax(0,1fr); gap: 7px; }
 .guide-live-actions .button { min-height: 52px; border-radius: 15px; font-size: 13px; font-weight: 800; }
-.guide-live-actions .button.primary { background: #2860ed; box-shadow: 0 8px 18px #2860ed30; }
+.guide-live-actions .button.primary { gap: 6px; background: #2860ed; box-shadow: 0 8px 18px #2860ed30; }
 .guide-live-actions .button.secondary { background: white; }
 
 @media (max-width: 360px) {
   .guide-live-meta { align-items: flex-start; flex-direction: column; }
   .guide-live-quick-actions button { font-size: 10px; }
 }
+
+/* #121 「지금 여기」 퍼지는 원은 움직임 줄이기 설정에서 빠짐(SVG에서 처리) */
+.guide-live-screen.content { gap: 8px; padding-bottom: 8px; }
