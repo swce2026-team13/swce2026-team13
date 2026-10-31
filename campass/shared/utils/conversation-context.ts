@@ -96,6 +96,10 @@ export async function restoreConversation(
 
 const compact = (value: string) => value.replace(/\s/g, "").replace(/[.!?]/g, "");
 
+// 장소 확인 카드에 '맞아요'라고 답함
+export const isConfirmation = (question: string) =>
+  /^(?:네|예|응|넵|맞아요?|맞습니다|맞아|그래요|좋아요|그곳이에요|거기예요)$/.test(compact(question));
+
 export function rememberedTurnPlaces(
   context: ConversationContext | null,
   turnId: string,
@@ -122,9 +126,15 @@ export function mergeConversation(
     ? oldCandidates.filter((p) => answer === compact(p.building) || answer === compact(p.floor))
     : [];
   const oldDestination = previous?.destinationPlaceId ? find(previous.destinationPlaceId) : undefined;
-  const followup = result.conditions.elevator !== undefined && !result.places.length &&
-    (result.intent === "condition" || /그럼|거기|그곳|그쪽|그대로/.test(question));
-  const candidates = clarified.length ? clarified : result.places.length ? result.places :
+  // 출발만 새로 알려 준 답이나 '맞아요'면 이전 목적지를 그대로 이어가요.
+  const startAnswer = Boolean(result.startRequested && result.startPlaceId) && !result.places.length;
+  const followup = !result.places.length && (startAnswer || isConfirmation(question) ||
+    result.conditions.elevator !== undefined &&
+    (result.intent === "condition" || /그럼|거기|그곳|그쪽|그대로/.test(question)));
+  // '다른 곳이에요'면 방금 확인한 곳을 빼고 다시 고르게 해요.
+  const rejected = result.rejected
+    ? result.places.filter((p) => p.id !== previous?.destinationPlaceId) : [];
+  const candidates = clarified.length ? clarified : rejected.length ? rejected : result.places.length ? result.places :
     followup ? oldCandidates.length ? oldCandidates : oldDestination ? [oldDestination] : [] : [];
   const startPlaceId = result.startRequested ? result.startPlaceId : previous?.startPlaceId;
   const elevator = result.conditions.elevator ?? previous?.elevator;

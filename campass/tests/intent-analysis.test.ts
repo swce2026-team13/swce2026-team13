@@ -4,6 +4,7 @@ import { interpretIntent } from "../server/integrations/providers.ts";
 import { calculateRoute } from "../shared/utils/routing.ts";
 import { allPlaces, findPlace } from "../server/services/rooms.ts";
 import { createIntentRequest } from "../shared/utils/intent-request.ts";
+import { mergeConversation } from "../shared/utils/conversation-context.ts";
 import type { IntentResult } from "../server/integrations/providers.ts";
 
 const config = { GEMINI_API_KEY: "시험용", GEMINI_MODEL: "시험용" };
@@ -156,4 +157,57 @@ test("같은 출발·도착 층도 기존 계산기의 도착 상태를 유지�
   assert.equal(result.startPlaceId, result.places[0].id);
   const route = calculateRoute(result.startPlaceId!, result.places[0].id, true, allPlaces());
   assert.equal(route.steps.length, 1);
+});
+
+test("출발 지점을 글로 쓰면 지도 출발 id로 연결하고 도착지로 쓰지 않아요", async () => {
+  for (const [query, start, destination] of [
+    ["정문에서 혜인관", "gate", "hyein"],
+    ["2115번 정류장에서 본관까지", "bus_stop_2115", "bon"],
+  ] as const) {
+    const result = await interpretIntent(query, {});
+    assert.equal(result.startPlaceId, start, query);
+    assert.equal(result.startRequested, true, query);
+    assert.deepEqual(result.places.map((p) => p.id), [destination], query);
+    // 길찾기 화면은 이 id를 start로 그대로 받아 경로를 계산해요.
+    assert.ok(calculateRoute(start, destination, true, allPlaces()).steps.length > 0, query);
+  }
+  const reverse = await interpretIntent("혜인관에서 정문", {});
+  assert.equal(reverse.startPlaceId, "hyein");
+  assert.deepEqual(reverse.places, []);
+});
+
+test("출발을 묻는 차례에 출발 지점만 답하면 출발만 바꾸고 목적지는 이어가요", async () => {
+  const destination = findPlace("hyein")!;
+  const asked = mergeConversation("혜인관", await interpretIntent("혜인관", {}), null,
+    (id) => (id === destination.id ? destination : undefined), 0);
+  const answer = await interpretIntent("학교 정문", config, async () => {
+    assert.fail("출발 지점만 답한 문장은 외부 해석을 부르지 않아요");
+  });
+  assert.equal(answer.startPlaceId, "gate");
+  assert.equal(answer.startRequested, true);
+  assert.deepEqual(answer.places, []);
+  const merged = mergeConversation("학교 정문", answer, asked.context,
+    (id) => (id === destination.id ? destination : undefined), 1);
+  assert.equal(merged.context.startPlaceId, "gate");
+  assert.equal(merged.context.destinationPlaceId, "hyein");
+  assert.deepEqual(merged.result.places.map((p) => p.id), ["hyein"]);
+});
+
+test("화살표나 띄어쓰기만 있어도 건물 사이 출발·도착을 나눠요", async () => {
+  for (const query of ["본관 ↔ 혜인관", "본관 → 혜인관", "본관 -> 혜인관", "본관 ~ 혜인관", "본관 혜인관"]) {
+    const result = await interpretIntent(query, {});
+    assert.equal(result.startPlaceId, "bon", query);
+    assert.deepEqual(result.places.map((p) => p.id), ["hyein"], query);
+  }
+});
+
+test("출발·도착 표현을 넓혀도 기존 문장은 나누지 않아요", async () => {
+  const condition = await interpretIntent("엘리베이터로 갈래요", {});
+  assert.equal(condition.intent, "condition");
+  assert.equal(condition.conditions.elevator, true);
+  assert.equal(condition.startRequested, undefined);
+  const room = await interpretIntent("혜인관 301호 어디예요?", {});
+  assert.deepEqual(room.places.map((p) => p.id), ["hyein-301"]);
+  assert.equal(room.startRequested, undefined);
+  assert.equal(room.startPlaceId, undefined);
 });

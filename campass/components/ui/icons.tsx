@@ -297,3 +297,28 @@ export const CupSolidIcon = (props: IconProps) => (
     />
   </Svg>
 );
+
+export const SwapIcon = (props: IconProps) => (
+  <Line d="M4 8H19M15 4L19 8L15 12M20 16H5M9 12L5 16L9 20" {...props} />
+);
+
+// 홈·대화 검색창의 장식용 돋보기(연한 렌즈 + 파란 테두리, 진한 손잡이)
+export const SearchLensIcon = (props: IconProps) => (
+  <Svg {...props}>
+    <circle cx="10.5" cy="10.5" r="6" fill="#E1E9F7" stroke="#2860ED" strokeWidth={2} />
+    <path d="M15 15L19.5 19.5" stroke="#174FD6" strokeWidth={3.2} strokeLinecap="round" />
+  </Svg>
+);
+
+// 이용 안내 「알아두세요」 아이콘. 색은 글자 색을 따름
+export const ShieldIcon = (props: IconProps) => (
+  <Line d="M12 3L19 6V11.5C19 15.6 16.1 19.3 12 20.5C7.9 19.3 5 15.6 5 11.5V6L12 3ZM9 12L11 14L15 10" {...props} />
+);
+
+export const FoldedMapIcon = (props: IconProps) => (
+  <Line d="M3 6.5L9 4L15 6.5L21 4V17.5L15 20L9 17.5L3 20V6.5ZM9 4V17.5M15 6.5V20" {...props} />
+);
+
+export const AlertCircleIcon = (props: IconProps) => (
+  <Line d="M12 21C16.97 21 21 16.97 21 12C21 7.03 16.97 3 12 3C7.03 3 3 7.03 3 12C3 16.97 7.03 21 12 21ZM12 7.5V13M12 16.5H12.01" {...props} />
+);

@@ -14,6 +14,8 @@ export type IntentResult = {
   intent: Intent;
   startPlaceId?: string;
   startRequested?: boolean;
+  // 장소 확인에 '다른 곳이에요'라고 답함
+  rejected?: boolean;
   conditions: { elevator?: boolean };
   places: Place[];
   mode: "keyword" | "api" | "llm";

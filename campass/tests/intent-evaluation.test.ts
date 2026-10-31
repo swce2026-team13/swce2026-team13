@@ -22,11 +22,11 @@ function memory() {
   };
 }
 
-test("시뮬레이션 평가 180건은 유형별 개수와 등록 장소 정답을 지켜요", () => {
-  assert.equal(validateEvaluationCases(), 180);
+test("시뮬레이션 평가 187건은 유형별 개수와 등록 장소 정답을 지켜요", () => {
+  assert.equal(validateEvaluationCases(), 187);
   assert.deepEqual(Object.fromEntries(Object.entries(Object.groupBy(evaluationCases, (item) => item.category))
     .map(([category, cases]) => [category, cases.length])), {
-    "단순 장소": 30, "복합 질문": 35, "후속 질문": 30,
+    "단순 장소": 30, "복합 질문": 35, "후속 질문": 37,
     "모호한 질문": 25, "의미·오타·별칭": 35, "범위 밖·미등록": 25,
   });
   assert.ok(evaluationCases.every((item) => item.source === "작성된 시뮬레이션"));
