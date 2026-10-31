@@ -723,16 +723,20 @@ export function CampusOverviewMap({
             if (remaining <= lengths[i]) { const [a,b]=previewSegments[i]; const t=lengths[i] ? remaining/lengths[i] : 0; middle=toPoint({ east:a.east+(b.east-a.east)*t, north:a.north+(b.north-a.north)*t, elevation:0 }); break; }
             remaining -= lengths[i];
           }
-          const waypoint = toPoint(previewSegments[Math.floor(previewSegments.length / 2)][1]);
+          const waypoint = guide && activeSegments.length
+            ? toPoint(activeSegments.at(-1)![1])
+            : toPoint(previewSegments[Math.floor(previewSegments.length / 2)][1]);
           return <g pointerEvents="none" aria-label="경로: 초록 출발점, 흰 중간 지점, 파란 도착 깃발">
-            <path d={path} fill="none" stroke="rgba(16, 40, 100, 0.18)" strokeWidth={13} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" transform={`translate(0 ${2*labelScale})`} />
-            <path d={path} fill="none" stroke="white" strokeWidth={11} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-            <path d={path} fill="none" stroke={guide ? "#a9c3f7" : "#2860ed"} strokeWidth={6.5} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+            {!guide && <path d={path} fill="none" stroke="rgba(16, 40, 100, 0.18)" strokeWidth={13} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" transform={`translate(0 ${2*labelScale})`} />}
+            {!guide && <path d={path} fill="none" stroke="white" strokeWidth={11} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />}
+            <path d={path} fill="none" stroke={guide ? "#b8c8e2" : "#2860ed"} strokeWidth={guide ? 4.5 : 6.5} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
             {passedPath && <path d={passedPath} fill="none" stroke="#b9c1cd" strokeWidth={6.5} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />}
+            {activePath && <path d={activePath} fill="none" stroke="rgba(16, 40, 100, 0.18)" strokeWidth={13} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" transform={`translate(0 ${2*labelScale})`} />}
+            {activePath && <path d={activePath} fill="none" stroke="white" strokeWidth={11} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />}
             {activePath && <path d={activePath} fill="none" stroke="#2860ed" strokeWidth={7} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />}
             {activePath && <path className="guide-route-flow" d={activePath} fill="none" stroke="white" strokeWidth={2} strokeDasharray="2 4" strokeLinecap="round" vectorEffect="non-scaling-stroke" />}
             <circle cx={start[0]} cy={start[1]} r={6.5*labelScale} fill="#1d9e75" stroke="white" strokeWidth={3} vectorEffect="non-scaling-stroke" />
-            <circle cx={waypoint[0]} cy={waypoint[1]} r={5.5*labelScale} fill="white" stroke="#2860ed" strokeWidth={3} vectorEffect="non-scaling-stroke" />
+            {(!guide || activePath) && <circle cx={waypoint[0]} cy={waypoint[1]} r={5.5*labelScale} fill="white" stroke="#2860ed" strokeWidth={3} vectorEffect="non-scaling-stroke" />}
             <g transform={`translate(${start.join(" ")}) scale(${labelScale})`}>
               <rect x={-19} y={12} width={38} height={24} rx={8} fill="#1d9e75" />
               <text textAnchor="middle" y={29} fontSize={11.5} fontWeight={800} fill="white">출발</text>

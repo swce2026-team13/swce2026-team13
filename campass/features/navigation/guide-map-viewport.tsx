@@ -142,17 +142,7 @@ export function GuideMapViewport({
   if (compact) {
     return (
       <section className="guide-map-viewport guide-live-viewport" aria-label="길안내 지도">
-        {map && (showPhoto ? photo : <RouteMap map={map} compact guideActive nextNode={nextStep?.node} />)}
-        {photo && (
-          <button
-            type="button"
-            className="guide-live-photo-toggle"
-            aria-pressed={showPhoto}
-            onClick={() => setPhotoStep(showPhoto ? null : currentStep.id)}
-          >
-            {showPhoto ? "지도 보기" : "사진 보기"}
-          </button>
-        )}
+        {map && <RouteMap map={map} compact guideActive nextNode={nextStep?.node} />}
       </section>
     );
   }

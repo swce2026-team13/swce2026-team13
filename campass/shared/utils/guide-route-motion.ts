@@ -1,4 +1,4 @@
-import { routeCoordinate, routeSegments, type CampusCoordinate } from "./campus-map";
+import { routeCoordinate, routeSegments, type CampusCoordinate } from "./campus-map.ts";
 
 export type GuideRouteMotion = { from: number; to: number };
 
@@ -54,11 +54,8 @@ export function guideRouteMotion(
 
   const from = nearest(currentNode);
   let to = nearest(nextNode, from);
-  if (to - from < 0.005) {
-    const following = nodes.findIndex((node, index) => index > nodes.indexOf(currentNode) && node !== currentNode);
-    if (following >= 0) to = nearest(nodes[following], from);
-  }
-  if (to - from < 0.005) to = Math.min(1, from + 0.08);
+  // 같은 지도 좌표인 실내 지점은 다음 길을 임의로 앞당겨 보여 주지 않는다.
+  if (to - from < 0.005) to = from;
   return { from, to };
 }
 

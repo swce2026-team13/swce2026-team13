@@ -132,20 +132,6 @@
   font-weight: 700;
 }
 .guide-live-map-switch button[aria-pressed="true"] { background: #2860ed; color: white; }
-.guide-live-photo-toggle {
-  position: absolute;
-  z-index: 9;
-  top: 10px;
-  left: 10px;
-  min-height: 44px;
-  width: auto;
-  margin: 0;
-  padding: 0 11px;
-  border-radius: 12px;
-  background: #fffffff0;
-  box-shadow: 0 2px 8px #1a3a4530;
-  font-weight: 700;
-}
 .guide-live-instruction {
   padding: 14px 15px 12px;
   border: 1px solid #dfe5ed;

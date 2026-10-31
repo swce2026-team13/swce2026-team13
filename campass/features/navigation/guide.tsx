@@ -18,6 +18,7 @@ import {
 import { Notice } from "@/components/ui";
 import { api, useCampus } from "@/features/navigation/campus-provider";
 import { routeEnvironment, routeMode, routeName } from "@/shared/utils/route-presentation";
+import { guideRouteMotion } from "@/shared/utils/guide-route-motion";
 import type { IntentResult } from "@/shared/types/recognition";
 export default function Screen() {
   const {
@@ -46,6 +47,9 @@ export default function Screen() {
       : (environment === "outdoor" ? "실외" : "실내") + " · " + routeName(option)
     : "선택한 경로";
   const routeSteps = session?.route.steps ?? [];
+  const remainingDistance = session && option
+    ? Math.max(0, Math.round(session.route.distance * (1 - (guideRouteMotion(option.nodes, guide.current?.node, guide.next?.node)?.from ?? 0))))
+    : 0;
   const middleIndex = routeSteps.length > 2 ? Math.floor((routeSteps.length - 1) / 2) : -1;
   const milestones = [
     { index: 0, label: routeSteps[0]?.name ?? "출발" },
@@ -105,7 +109,7 @@ export default function Screen() {
                 </div>
                 {session.route.distance > 0 && (
                   <span className="guide-live-distance">
-                    {displayDestination.building || "목적지"}까지 약 {session.route.distance}m
+                    {remainingDistance > 0 ? `${displayDestination.building || "목적지"}까지 약 ${remainingDistance}m` : "도착"}
                   </span>
                 )}
               </div>

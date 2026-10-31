@@ -313,7 +313,7 @@ export function createCampusScene(THREE, container, events) {
       events.onEntrances?.(layoutEntrancePins(projectedPins, width, height, occupied));
     }
   }
-  function guidePoint(progress) {
+  function guidePoint(progress, elevationOffset = 4) {
     if (!guideTrack) return null;
     const target = progress * guideTrack.total;
     let travelled = 0;
@@ -324,7 +324,7 @@ export function createCampusScene(THREE, container, events) {
         return point(
           a.east + (b.east - a.east) * t,
           a.north + (b.north - a.north) * t,
-          a.elevation + (b.elevation - a.elevation) * t + 4,
+          a.elevation + (b.elevation - a.elevation) * t + elevationOffset,
         );
       }
       travelled += length;
@@ -492,10 +492,11 @@ export function createCampusScene(THREE, container, events) {
       routeLayer.remove(child);
     }
     const joints = new Map();
-    const lineLayers = annotation
-      ? [[2.1, "#102864", 4], [1.7, "#ffffff", 5], [1, "#2860ed", 6]]
-      : [[1.5, "#ffffff", 5], [0.95, "#dc2626", 6]];
-    if (annotation?.guide) lineLayers[2][1] = "#a9c3f7";
+    const lineLayers = annotation?.guide
+      ? [[0.7, "#b8c8e2", 5]]
+      : annotation
+        ? [[2.1, "#102864", 4], [1.7, "#ffffff", 5], [1, "#2860ed", 6]]
+        : [[1.5, "#ffffff", 5], [0.95, "#dc2626", 6]];
     for (const [from, to] of segments) {
       const a = point(from.east, from.north, from.elevation + 1.2);
       const b = point(to.east, to.north, to.elevation + 1.2);
@@ -541,19 +542,19 @@ export function createCampusScene(THREE, container, events) {
       const total = lengths.reduce((sum, length) => sum + length, 0);
       const { from, to } = annotation.guide;
       let travelled = 0;
-      const overlay = (a, b, color, order) => {
+      const overlay = (a, b, color, order, radius) => {
         const start = point(a.east, a.north, a.elevation + 1.4);
         const end = point(b.east, b.north, b.elevation + 1.4);
         const delta = end.clone().sub(start);
         if (delta.length() < 0.01) return;
-        const material = new THREE.MeshBasicMaterial({ color, depthTest: false, depthWrite: false, fog: false });
-        const mesh = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, delta.length(), 12), material);
+        const material = new THREE.MeshBasicMaterial({ color, depthTest: false, depthWrite: false, transparent: true, opacity: 1, fog: false });
+        const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, delta.length(), 12), material);
         mesh.position.copy(start).add(end).multiplyScalar(0.5);
         mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), delta.normalize());
         mesh.renderOrder = order;
         routeLayer.add(mesh);
         for (const endPoint of [start, end]) {
-          const cap = new THREE.Mesh(new THREE.SphereGeometry(1.1, 12, 8), material.clone());
+          const cap = new THREE.Mesh(new THREE.SphereGeometry(radius, 12, 8), material.clone());
           cap.position.copy(endPoint);
           cap.renderOrder = order;
           routeLayer.add(cap);
@@ -565,10 +566,14 @@ export function createCampusScene(THREE, container, events) {
           const t = length ? (part - travelled) / length : 0;
           return { east:a.east+(b.east-a.east)*t, north:a.north+(b.north-a.north)*t, elevation:a.elevation+(b.elevation-a.elevation)*t };
         };
-        for (const [lower, upper, color, order] of [[0, from, "#b9c1cd", 7], [from, to, "#2860ed", 8]]) {
+        for (const [lower, upper, color, order, radius] of [
+          [0, from, "#b9c1cd", 7, 1.1],
+          [from, to, "#ffffff", 7, 1.8],
+          [from, to, "#2860ed", 8, 1.15],
+        ]) {
           const start = Math.max(travelled, lower * total);
           const end = Math.min(travelled + length, upper * total);
-          if (end > start) overlay(at(start), at(end), color, order);
+          if (end > start) overlay(at(start), at(end), color, order, radius);
         }
         travelled += length;
       });
@@ -591,16 +596,18 @@ export function createCampusScene(THREE, container, events) {
         }
         remaining -= length;
       }
-      for (const [at, outer, inner] of [
-        [segments[0][0], "#ffffff", "#1d9e75"],
-        [middle, "#2860ed", "#ffffff"],
-      ]) {
-        for (const [radius, color, order] of [[3.1, outer, 7], [2.1, inner, 8]]) {
+      const dotPositions = [
+        [point(segments[0][0].east, segments[0][0].north, segments[0][0].elevation + 2), "#ffffff", "#1d9e75"],
+        [annotation.guide ? guidePoint(annotation.guide.to, 2) : point(middle.east, middle.north, middle.elevation + 2), "#2860ed", "#ffffff"],
+      ];
+      for (const [position, outer, inner] of dotPositions) {
+        if (!position) continue;
+        for (const [radius, color, order] of [[3.1, outer, 9], [2.1, inner, 10]]) {
           const dot = new THREE.Mesh(
             new THREE.SphereGeometry(radius, 16, 12),
-            new THREE.MeshBasicMaterial({ color, depthTest: false, depthWrite: false }),
+            new THREE.MeshBasicMaterial({ color, depthTest: false, depthWrite: false, transparent: true, opacity: 1 }),
           );
-          dot.position.copy(point(at.east, at.north, at.elevation + 2));
+          dot.position.copy(position);
           dot.renderOrder = order;
           routeLayer.add(dot);
         }
