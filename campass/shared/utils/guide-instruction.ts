@@ -35,12 +35,13 @@ export function guideStepKind(option: RouteOption, step: Step, next?: Step): Gui
   const kind = routeStepKind(option, step as Waypoint);
   // 실외 언덕길은 건물을 드나들어도 출입구가 아니라 오르막 단계로 봄(다른 단계와 합치지 않음)
   if (kind === "hill") return "hill";
+  // 계단(건물 밖 계단길 포함)도 출입구보다 먼저 봄. 경로 요약의 계단 개수와 같은 기준
+  if (kind === "stairs") return "stairs";
   // 건물 밖 지점 ↔ 건물 층: 출입구로 드나듦
   if (from && to && from.includes("|") !== to.includes("|") &&
       (buildingById(nodeArea(from)) || buildingById(nodeArea(to))))
     return "entrance";
   if (kind === "elevator") return "elevator";
-  if (kind === "stairs") return "stairs";
   if (kind === "indoor") return "passage";
   return "walk";
 }

@@ -115,13 +115,14 @@ export function routeSummary(option: RouteOption) {
     !kinds.includes("elevator")
       ? Math.round((Math.abs(rise) / slopedOutdoorLength) * 1000) / 10
       : null;
+  // 같은 곳 안에서 이어지는 계단·엘리베이터는 한 번으로 셈. 건물 안 계단에 이어 건물 밖 계단길로 나가면 따로 셈
+  // (경로 상세 시트 단계 목록과 같은 기준)
+  const hopArea = (i: number) => `${nodeArea(option.nodes[i])}>${nodeArea(option.nodes[i + 1])}`;
   const countRuns = (kind: MovementKind) =>
     kinds.filter(
       (value, i) =>
         value === kind &&
-        (i === 0 ||
-          kinds[i - 1] !== kind ||
-          nodeArea(option.nodes[i - 1]) !== nodeArea(option.nodes[i])),
+        (i === 0 || kinds[i - 1] !== kind || hopArea(i - 1) !== hopArea(i)),
     ).length;
   const total = segments.reduce((sum, s) => sum + s.length, 0);
   const bars =
