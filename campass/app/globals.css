@@ -547,35 +547,6 @@ progress::-moz-progress-bar {
   display: block;
   margin-top: 8px;
 }
-.route-list {
-  list-style: none;
-  margin: 18px 0 10px;
-  padding: 0 0 0 15px;
-  font-size: 11px;
-}
-.route-list li {
-  position: relative;
-  padding: 0 0 15px 12px;
-  border-left: 1px solid #cad7f0;
-}
-.route-list li:before {
-  position: absolute;
-  content: "";
-  width: 7px;
-  height: 7px;
-  border: 1px solid var(--blue);
-  background: white;
-  border-radius: 50%;
-  left: -4px;
-  top: 5px;
-}
-.route-list li:last-child {
-  padding-bottom: 0;
-  border: 0;
-}
-.route-list li:last-child:before {
-  background: var(--blue);
-}
 .actions {
   position: sticky;
   bottom: 0;
@@ -3191,94 +3162,6 @@ progress::-moz-progress-bar {
   }
 }
 
-/* 지도에서 출발·도착 고르기 */
-.map-pick-screen h1 {
-  color: #354863;
-  text-shadow: 0 2px 4px rgba(58, 101, 173, 0.18);
-}
-
-.map-pick-screen h1 + p {
-  margin-top: 6px;
-  color: #667389;
-  line-height: 20px;
-}
-
-.map-pick-card {
-  padding: 14px 16px 16px;
-  border-radius: 14px;
-}
-
-.map-pick-card > .between {
-  min-height: 24px;
-  margin-bottom: 8px;
-  font-size: 13px;
-}
-
-.map-pick-card > .between b {
-  font-weight: 500;
-  color: #192334;
-}
-
-.map-pick-card .text-button {
-  min-height: 24px;
-  font-size: 12px;
-}
-
-.map-pick-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 44px;
-  font-size: 13px;
-  color: #667389;
-}
-
-.map-pick-row + .map-pick-row {
-  border-top: 1px solid #dfe7f4;
-}
-
-.map-pick-row.turn,
-.map-pick-row strong {
-  color: #192334;
-  font-weight: 500;
-}
-
-.map-pick-row strong {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.map-pick-row strong svg {
-  color: #2563eb;
-}
-
-.map-pick-tag {
-  padding: 4px 9px;
-  border-radius: 8px;
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 17px;
-}
-
-.map-pick-tag.start {
-  background: #eaf7f0;
-  color: #17845d;
-}
-
-.map-pick-tag.destination {
-  background: #e3edff;
-  color: #2563eb;
-}
-
-.map-pick-dot {
-  width: 6px;
-  height: 6px;
-  margin-right: -4px;
-  border-radius: 3px;
-  background: #2563eb;
-}
-
 .overview-card {
   overflow: hidden;
   border: 1px solid #dfe7f4;
@@ -3356,13 +3239,6 @@ progress::-moz-progress-bar {
   font-size: 11px;
 }
 .overview-legend[hidden] { display: none; }
-.map-picker-caption {
-  margin-top: -10px;
-  color: #667389;
-  font-size: 10px;
-  line-height: 1.5;
-}
-
 .map-entrance-layer {
   position: absolute;
   inset: 0;
@@ -3431,35 +3307,9 @@ progress::-moz-progress-bar {
   border: 1px solid white;
   transform: translate(-50%, -50%);
 }
-.map-entrance-notice {
-  padding: 8px 12px;
-  color: #8a570f;
-  font-size: 12px;
-}
 .map-picker-surface .zoom,
 .map-picker-surface .overview-north,
 .map-fit-all { z-index: 2; }
-
-.overview-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 53px;
-  padding: 0 15px 0 13px;
-  background: rgba(255, 255, 255, 0.32);
-  font-size: 13px;
-  color: #192334;
-}
-
-.overview-heading span {
-  padding: 4px 9px;
-  border-radius: 8px;
-  background: #e3edff;
-  color: #2563eb;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 17px;
-}
 
 .overview-map {
   position: relative;
@@ -3529,81 +3379,10 @@ progress::-moz-progress-bar {
   border-radius: 2px;
 }
 
-.map-pick-actions > p {
-  color: #667389;
-  font-size: 12px;
-  line-height: 18px;
-  text-align: center;
-}
-
-.map-pick-actions > .map-pick-message {
-  color: #b45309;
-  font-weight: 600;
-}
-
-.map-pick-actions .button.primary:disabled {
-  background: #c7d1de;
-  box-shadow: none;
-  opacity: 1;
-}
-
-/* 길찾기 준비(B4) */
-.prepare-request {
-  padding: 13px 16px 14px;
-  border-radius: 16px;
-}
-
-.prepare-request p {
-  color: #354863;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 21.5px;
-}
-
-.prepare-request small {
-  display: block;
-  margin-top: 6px;
-  color: var(--blue);
-  font-size: 12px;
-}
-
-.prepare-screen .choice small {
-  font-size: 12px;
-}
-
-.route-endpoints,
 .route-start-picker {
   display: flex;
   flex-direction: column;
   gap: 14px;
-}
-
-.route-endpoint {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  font-size: 13px;
-}
-
-.route-endpoint + .route-endpoint {
-  border-top: 1px solid #dce5f2;
-  padding-top: 14px;
-}
-
-.route-endpoint strong {
-  overflow-wrap: anywhere;
-}
-
-.route-endpoint .text-button {
-  white-space: nowrap;
-}
-
-.route-endpoint small {
-  display: block;
-  margin-top: 5px;
-  color: #667389;
-  font-size: 11px;
 }
 
 .actions.route-start-actions::before {
@@ -3618,131 +3397,6 @@ progress::-moz-progress-bar {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
-}
-
-.route-start-actions > p {
-  color: #667389;
-  font-size: 12px;
-  text-align: center;
-}
-
-.route-options {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.route-options > .between small {
-  color: #667389;
-  font-size: 12px;
-}
-
-.route-option-card {
-  padding: 16px;
-  border-radius: 14px;
-}
-
-/* 계단 여부 문구가 길어도 한 줄에 들어가도록 아래 줄 전체를 씀 */
-.route-option-head {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  grid-template-areas:
-    "name count meta"
-    "note note note";
-  align-items: center;
-  column-gap: 12px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid #dfe7f4;
-}
-
-.route-option-head strong {
-  grid-area: name;
-  color: #354863;
-  font-size: 15px;
-  font-weight: 500;
-  line-height: 23.5px;
-}
-
-.route-option-head small {
-  grid-area: note;
-  overflow: hidden;
-  color: #667389;
-  font-size: 10px;
-  line-height: 15.5px;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.route-option-head > b {
-  grid-area: count;
-  color: var(--blue);
-  font-size: 26px;
-  letter-spacing: -0.5px;
-  line-height: 1.2;
-}
-
-.route-option-head > span {
-  grid-area: meta;
-  color: #667389;
-  font-size: 12px;
-}
-
-.route-legs {
-  list-style: none;
-  margin: 14px 0 6px;
-  padding: 0;
-}
-
-.route-legs li {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 7px 0 7px 24px;
-  color: #192334;
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.route-legs li:before {
-  content: "";
-  position: absolute;
-  z-index: 1;
-  left: 0;
-  top: 50%;
-  width: 12px;
-  height: 12px;
-  margin-top: -6px;
-  border: 2px solid var(--blue);
-  border-radius: 50%;
-  background: white;
-}
-
-.route-legs li:last-child:before {
-  background: var(--blue);
-}
-
-.route-legs li:not(:last-child):after {
-  content: "";
-  position: absolute;
-  left: 5px;
-  top: 50%;
-  width: 2px;
-  height: 100%;
-  background: #dde6f5;
-}
-
-.route-legs small {
-  color: #667389;
-  font-size: 10px;
-}
-
-.route-steps {
-  margin: 4px 0 8px;
-  padding-left: 40px;
-  color: #667389;
-  font-size: 12px;
-  line-height: 1.8;
 }
 
 .prepare-warning {
@@ -3912,19 +3566,6 @@ progress::-moz-progress-bar {
   color: #354863;
   font-size: 13px;
   text-align: right;
-}
-
-.route-unverified {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 12px;
-}
-
-.route-unverified p {
-  color: #8a5a0c;
-  font-size: 12px;
-  line-height: 18px;
 }
 
 .ai-place-open {
@@ -4514,10 +4155,6 @@ body:has(.page-transition-root)::-webkit-scrollbar,
   opacity: 1;
   transform: translateY(0);
 }
-/* 통합 길찾기: 선택 중인 줄과 기존 지도 카드 */
-.endpoint-picking { display:flex; align-items:center; gap:8px; padding:10px; min-height:44px; background:#f1f6ff; border:1.5px dashed #9dbaf7; border-radius:12px; color:#416ba8; font-size:12px; }
-.endpoint-picking i { flex:none; width:7px; height:7px; border-radius:50%; background:#568cf0; box-shadow:0 0 0 5px #568cf01a,0 0 13px 7px #568cf016; }
-.route-endpoint .endpoint-cancel { color:#818894; }
 .endpoint-map-surface { position:relative; }
 .endpoint-map-hint { position:absolute; z-index:5; top:12px; left:12px; max-width:calc(100% - 130px); margin:0; padding:7px 11px; border-radius:20px; background:#fffffff0; box-shadow:0 2px 8px #10223f12; color:#45618a; font-size:11px; pointer-events:none; }
 .prepare-screen .map-picker-toolbar { height:46px; padding:0 10px; border-bottom:1px solid #edf0f4; background:white; }

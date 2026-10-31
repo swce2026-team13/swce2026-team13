@@ -90,7 +90,7 @@ export default function Screen() {
             <MessageIcon size={15} />
             <span>CAMPASS</span>
           </div>
-          <div className="card ai-answer-card ai-search-loading" role="status" aria-live="polite">
+          <div className="card ai-answer-card" role="status" aria-live="polite">
             <span className="ai-answer-type">검색 중</span>
             <h3>목적지를 찾고 있어요</h3>
             <p className="muted">검색 결과를 확인하는 중이에요.</p>
