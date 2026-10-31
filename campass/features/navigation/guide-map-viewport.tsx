@@ -1,11 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Maximize2 } from "lucide-react";
 import { Photo, Tag } from "@/components/ui";
 import { CampusOverviewMap } from "@/features/navigation/campus-overview-map";
 import { CampusMap } from "@/features/navigation/campus-map";
-import { useCampus } from "@/features/navigation/campus-provider";
 import { mapRouteBuildings } from "@/shared/utils/map-route";
 import {
   guideLegLabel,
@@ -25,8 +23,8 @@ type GuideMapViewportProps = {
 const guideRoutePreview = { name: "", color: "#2860ed" };
 
 function RouteMap({ map, compact = false, guideActive = false, nextNode }: { map: GuideMapData; compact?: boolean; guideActive?: boolean; nextNode?: string }) {
-  const [flat, setFlat] = useState(false);
-  const { go } = useCampus();
+  // 안내 중 작은 지도는 2D가 기본
+  const [flat, setFlat] = useState(compact);
   const highlight = overviewRouteHighlight(map);
   const buildings = mapRouteBuildings(map);
   const routeAnnotation = useMemo(() => ({
@@ -45,14 +43,14 @@ function RouteMap({ map, compact = false, guideActive = false, nextNode }: { map
   const overview = <CampusOverviewMap
     highlight={highlight}
     routePreview={{ ...routeAnnotation, nodes: map.nodes }}
-    height={compact ? 380 : undefined}
+    height={compact ? 460 : undefined}
   />;
   const mapView = flat ? overview : (
     <CampusMap
       embedded={compact}
       designTheme
       guideLive={compact}
-      mapHeight={compact ? 380 : undefined}
+      mapHeight={compact ? 460 : undefined}
       routeNodes={map.nodes}
       routeAnnotation={routeAnnotation}
       selectedBuildings={buildings.ids}
@@ -65,17 +63,15 @@ function RouteMap({ map, compact = false, guideActive = false, nextNode }: { map
     return (
       <div className="guide-live-map">
         {mapView}
-        <button
-          type="button"
-          className="guide-live-map-expand"
-          aria-label="지도 크게 보기"
-          onClick={() => go("guide-map")}
-        >
-          <Maximize2 size={20} aria-hidden="true" />
-        </button>
+        <span className="guide-live-north" role="img" aria-label="위쪽이 북쪽">
+          <svg width="14" height="16" viewBox="0 0 14 16" aria-hidden="true">
+            <path d="M7 0L13 12L7 9L1 12Z" fill="#2860ED" />
+          </svg>
+          <b>N</b>
+        </span>
         <div className="guide-live-map-switch" role="group" aria-label="지도 표시 방식">
-          <button type="button" aria-pressed={!flat} onClick={() => setFlat(false)}>3D</button>
           <button type="button" aria-pressed={flat} onClick={() => setFlat(true)}>2D</button>
+          <button type="button" aria-pressed={!flat} onClick={() => setFlat(false)}>3D</button>
         </div>
       </div>
     );

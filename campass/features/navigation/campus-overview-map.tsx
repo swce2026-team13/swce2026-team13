@@ -23,13 +23,16 @@ import {
   overviewFrame,
   overviewRoads,
   overviewCourts,
-  overviewTrees,
   hillLabel,
   plazaLabel,
   buildingLabelPositions,
 } from "@/shared/utils/campus-overview-design";
 
 const ZOOMS = [1, 1.5, 2];
+// 모든 2D 지도의 잔디 바탕. 캠퍼스 바닥과 같은 색이라 가장자리가 보이지 않음
+const lawn = "#e2ead8";
+// 건물 이름표(글씨·박스) 크기. 확대 배율의 85%
+const LABEL_SIZE = 0.85;
 
 export type PinKind = "cafe" | "store" | "dining" | "aed" | "etc" | "mixed";
 
@@ -71,6 +74,7 @@ export function CampusOverviewMap({
   onPin,
   highlight,
   pickerMode = false,
+  destinationLabel,
   onEntrance,
   onResetView,
   buildingPicker = false,
@@ -89,6 +93,8 @@ export function CampusOverviewMap({
   onPin?: (id: string) => void;
   highlight?: OverviewRouteHighlight;
   pickerMode?: boolean;
+  // 출발을 고를 때 목적지 건물 id. 이름표를 파란 「건물명 · 도착」으로 바꿈
+  destinationLabel?: string;
   onEntrance?: (id: string) => void;
   onResetView?: () => void;
   // 건물·강의실 탭에서만 입구를 숨기고 이름표도 건물 선택 영역으로 쓴다.
@@ -304,10 +310,6 @@ export function CampusOverviewMap({
         }
       >
         <defs>
-          <linearGradient id={`${id}-bg`} x1="0" y1="0" x2="0" y2="1">
-            <stop stopColor="#F8FAFD" />
-            <stop offset="1" stopColor="#EDF2F9" />
-          </linearGradient>
           <clipPath id={`${id}-plaza-clip`}>
             <path d={plazaPath} />
           </clipPath>
@@ -318,10 +320,10 @@ export function CampusOverviewMap({
           y={viewTop}
           width={width}
           height={height}
-          fill={`url(#${id}-bg)`}
+          fill={lawn}
         />
         <g pointerEvents="none" aria-hidden="true">
-          <path d={landPath} fill="#e3ecda" />
+          <path d={landPath} fill={lawn} />
           {overviewRoads.map((road, i) => (
             <g key={i} fill="none" strokeLinecap="round" strokeLinejoin="round">
               <path d={road.path} stroke="#d9cfba" strokeWidth={7} />
@@ -346,42 +348,6 @@ export function CampusOverviewMap({
           >
             언덕길
           </text>
-          {overviewTrees
-            .filter((tree) => {
-              // 확대 후에도 고정된 지도 버튼 뒤로 나무가 들어오지 않게 한다.
-              const x = (tree.x - viewLeft) / labelScale;
-              const y = (tree.y - viewTop) / labelScale;
-              const r = tree.r / labelScale;
-              const screenWidth = size.width || MAP_WIDTH;
-              const screenHeight = size.height || MAP_HEIGHT;
-              return (
-                !(x + r > screenWidth - 112 && y - r < 112) &&
-                !(x + r > screenWidth - 64 && y + r > screenHeight - 108)
-              );
-            })
-            .map((tree, i) => (
-              <g key={i} transform={`translate(${tree.x} ${tree.y})`}>
-                <ellipse
-                  cx={1.4}
-                  cy={1.8}
-                  rx={tree.r}
-                  ry={tree.r * 0.8}
-                  fill="rgba(46,74,44,0.18)"
-                />
-                <circle
-                  r={tree.r}
-                  fill={tree.color}
-                  stroke="#7aa868"
-                  strokeWidth={0.6}
-                />
-                <circle
-                  cx={-tree.r * 0.3}
-                  cy={-tree.r * 0.3}
-                  r={tree.r * 0.42}
-                  fill="rgba(255,255,255,0.28)"
-                />
-              </g>
-            ))}
           {buildingPaths.map((path, i) => (
             <path
               key={i}
@@ -537,10 +503,15 @@ export function CampusOverviewMap({
                 })),
                 { id: "스콘스퀘어", label: "스콘스퀘어", at: plazaLabel },
               ]
-          ).map((label) => (
+          ).map((item) => {
+            const arriving = !focused && item.id === destinationLabel;
+            const label = arriving ? { ...item, label: `${item.label} · 도착` } : item;
+            const charWidth = 11;
+            const boxHeight = 20;
+            return (
             <g
               key={label.id}
-              transform={`translate(${label.at.join(" ")}) scale(${labelScale})`}
+              transform={`translate(${label.at.join(" ")}) scale(${labelScale * LABEL_SIZE})`}
               className={
                 buildingPicker && label.id !== "스콘스퀘어"
                   ? "overview-building-label-pick"
@@ -553,25 +524,27 @@ export function CampusOverviewMap({
               }
             >
               <rect
-                x={-(label.label.length * 11 + 10) / 2}
-                y={-10}
-                width={label.label.length * 11 + 10}
-                height={20}
+                x={-(label.label.length * charWidth + 10) / 2}
+                y={-boxHeight / 2}
+                width={label.label.length * charWidth + 10}
+                height={boxHeight}
                 rx={6}
                 fill={
-                  focused || state(label.id) === "current"
+                  focused || arriving || state(label.id) === "current"
                     ? "#2563EB"
                     : "rgba(255,255,255,0.7)"
                 }
               />
               <text
                 y={4}
-                fill={focused ? "white" : labelFill(label.id, "#4a5361")}
+                fill={focused || arriving ? "white" : labelFill(label.id, "#4a5361")}
+                fontWeight={arriving ? 700 : undefined}
               >
                 {label.label}
               </text>
             </g>
-        ))}
+            );
+          })}
   </g>
 )}
         
@@ -714,6 +687,7 @@ export function CampusOverviewMap({
             : "";
           const passedPath = guide ? linePath(sliceRouteSegments(previewSegments, 0, guide.from)) : "";
           const activeSegments = guide ? sliceRouteSegments(previewSegments, guide.from, guide.to) : [];
+          const remainingPath = guide ? linePath(sliceRouteSegments(previewSegments, guide.to, 1)) : "";
           const activePath = linePath(activeSegments);
           const activeStart = activeSegments.length ? toPoint(activeSegments[0][0]) : end;
           const lengths = previewSegments.map(([a, b]) => Math.hypot(b.east-a.east, b.north-a.north, b.elevation-a.elevation));
@@ -729,11 +703,12 @@ export function CampusOverviewMap({
           return <g pointerEvents="none" aria-label="경로: 초록 출발점, 흰 중간 지점, 파란 도착 깃발">
             {!guide && <path d={path} fill="none" stroke="rgba(16, 40, 100, 0.18)" strokeWidth={13} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" transform={`translate(0 ${2*labelScale})`} />}
             {!guide && <path d={path} fill="none" stroke="white" strokeWidth={11} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />}
-            <path d={path} fill="none" stroke={guide ? "#b8c8e2" : "#2860ed"} strokeWidth={guide ? 4.5 : 6.5} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+            {!guide && <path d={path} fill="none" stroke="#2860ed" strokeWidth={6.5} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />}
+            {remainingPath && <path d={remainingPath} fill="none" stroke="#9fbaf2" strokeWidth={4.5} strokeDasharray="1 7" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />}
             {passedPath && <path d={passedPath} fill="none" stroke="#b9c1cd" strokeWidth={6.5} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />}
             {activePath && <path d={activePath} fill="none" stroke="rgba(16, 40, 100, 0.18)" strokeWidth={13} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" transform={`translate(0 ${2*labelScale})`} />}
             {activePath && <path d={activePath} fill="none" stroke="white" strokeWidth={11} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />}
-            {activePath && <path d={activePath} fill="none" stroke="#2860ed" strokeWidth={7} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />}
+            {activePath && <path d={activePath} fill="none" stroke="#1d47c8" strokeWidth={7} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />}
             {activePath && <path className="guide-route-flow" d={activePath} fill="none" stroke="white" strokeWidth={2} strokeDasharray="2 4" strokeLinecap="round" vectorEffect="non-scaling-stroke" />}
             <circle cx={start[0]} cy={start[1]} r={6.5*labelScale} fill="#1d9e75" stroke="white" strokeWidth={3} vectorEffect="non-scaling-stroke" />
             {(!guide || activePath) && <circle cx={waypoint[0]} cy={waypoint[1]} r={5.5*labelScale} fill="white" stroke="#2860ed" strokeWidth={3} vectorEffect="non-scaling-stroke" />}
@@ -749,6 +724,16 @@ export function CampusOverviewMap({
               <path d="M0 0S-13-15-13-24a13 13 0 0 1 26 0C13-15 0 0 0 0z" fill="#2860ed" stroke="white" strokeWidth={2.5} />
               <path d="M-4-31v12m.5-11h8l-2 3 2 3h-8z" fill="white" stroke="white" strokeWidth={1.4} strokeLinecap="round" />
             </g>
+            {guide && <g className="guide-route-here" transform={`translate(${activeStart.join(" ")})`}>
+              {!reduceMotion && <circle r={8 * labelScale} fill="#2860ed" opacity="0.3">
+                <animate attributeName="r" values={`${8 * labelScale};${22 * labelScale}`} dur="1.8s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.4;0" dur="1.8s" repeatCount="indefinite" />
+              </circle>}
+              <g transform={`scale(${labelScale})`}>
+                <rect x={-27} y={-40} width={54} height={22} rx={11} fill="#2860ed" stroke="white" strokeWidth={1.5} />
+                <text textAnchor="middle" y={-25} fontSize={11} fontWeight={800} fill="white">지금 여기</text>
+              </g>
+            </g>}
             {guide && <g className="guide-route-arrow" transform={reduceMotion || !activePath ? `translate(${activeStart.join(" ")})` : undefined}>
               {!reduceMotion && activePath && <animateMotion path={activePath} dur="2.6s" calcMode="spline" keyTimes="0;1" keySplines="0.42 0 0.58 1" rotate="auto" repeatCount="indefinite" />}
               <circle r={15 * labelScale} fill="#2860ed" opacity="0.18" />
@@ -757,7 +742,7 @@ export function CampusOverviewMap({
             </g>}
           </g>;
         })()}
-        {highlight?.position && (
+        {highlight?.position && !routePreview?.guide && (
           <g className="overview-me" pointerEvents="none" aria-label="현재 위치">
             <circle cx={highlight.position[0]} cy={highlight.position[1]} r="7" fill="#2563EB" opacity="0.25">
               <animate attributeName="r" values="6;13" dur="1.8s" repeatCount="indefinite" />

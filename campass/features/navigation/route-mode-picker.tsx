@@ -1,16 +1,18 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
-import { Building, PersonStanding, MoveUpRight } from "lucide-react";
 import { api } from "./campus-provider";
 import type { Route, RouteOption } from "@/shared/utils/routing";
+import type { HillMode } from "@/shared/utils/campus3d/route";
 import {
   routeMode,
-  routeModeLabel,
-  routeEnvironment,
+  routeNames,
+  routeHints,
   displayedRouteOption,
 } from "@/shared/utils/route-presentation";
 
-type Mode = "hill" | "stairs";
+// 길 카드 순서. 엘리베이터 길은 엘리베이터 조건 경로에서, 나머지는 일반 경로에서 찾음
+const modes: HillMode[] = ["elevator", "hill", "stairs"];
+
 export function RouteModePicker({
   start,
   destination,
@@ -37,8 +39,7 @@ export function RouteModePicker({
     normal: RouteOption[];
     lift: RouteOption[];
   }>({ key: "", normal: [], lift: [] });
-  const preferred = useRef<Mode>("hill");
-  const pending = useRef<Mode | null>(null);
+  const pending = useRef<"hill" | "stairs" | null>(null);
   useEffect(() => {
     if (!start || !destination) return;
     let cancelled = false;
@@ -57,122 +58,70 @@ export function RouteModePicker({
     };
   }, [key, start, destination]);
   const loaded = available.key === key;
-  const normal = loaded
-    ? available.normal
-    : !elevator
-      ? (route?.options ?? [])
-      : [];
+  const normal = loaded ? available.normal : !elevator ? (route?.options ?? []) : [];
   const lift = loaded ? available.lift : elevator ? (route?.options ?? []) : [];
-  const options = route?.options ?? [];
   // 조건을 바꾼 뒤 새 후보가 도착했을 때만 기존 후보 선택 함수를 호출한다.
   useEffect(() => {
     if (!route || !selected) return;
-    const option = displayedRouteOption(
-      route.options,
-      selected,
-      elevator,
-      pending.current,
-    );
+    const option = displayedRouteOption(route.options, selected, elevator, pending.current);
     pending.current = null;
     if (option && option.id !== selected.id) onOption(option.id);
   }, [route, selected, elevator, onOption]);
-  const missing = (["hill", "stairs"] as const).filter(
-    (mode) => !normal.some((o) => routeMode(o) === mode),
-  );
+
+  const optionFor = (mode: HillMode) =>
+    (mode === "elevator" ? lift : normal).find((o) => routeMode(o) === mode);
+  const current = elevator ? "elevator" : selected ? routeMode(selected) : null;
+  // 추천: 엘리베이터 조건으로 찾은 첫 길이 엘리베이터 길이면 그 길, 아니면 일반 경로의 첫 길
+  const recommended: HillMode | undefined = lift.some((o) => routeMode(o) === "elevator")
+    ? "elevator"
+    : normal[0] ? routeMode(normal[0]) : undefined;
+
+  const choose = (mode: HillMode) => {
+    const option = optionFor(mode);
+    if (!option || busy) return;
+    if (mode === "elevator") {
+      if (!elevator) onElevator(true);
+      else onOption(option.id);
+      return;
+    }
+    if (elevator) {
+      pending.current = mode;
+      onElevator(false);
+    } else onOption(option.id);
+  };
+
   return (
-    <div className="route-mode-section">
-      <div className="route-mode-row">
-        <div
-          className="route-mode-tabs"
-          role="radiogroup"
-          aria-label="가는 길 선택"
-        >
-          {(["hill", "stairs"] as const).map((mode) => {
-            const option = options.find((o) => routeMode(o) === mode);
-            const Icon =
-              mode === "hill"
-                ? PersonStanding
-                : option && routeEnvironment(option) === "indoor"
-                  ? Building
-                  : MoveUpRight;
-            const disabled = busy || elevator || !option;
-            return (
-              <label key={mode} className={disabled ? "disabled" : ""}>
-                <input
-                  className="sr-only"
-                  type="radio"
-                  name={radioName}
-                  value={mode}
-                  aria-label={
-                    option
-                      ? routeModeLabel(option)
-                      : mode === "hill"
-                        ? "실외 길 (언덕길)"
-                        : "실외 길 (계단길)"
-                  }
-                  checked={
-                    !elevator &&
-                    Boolean(selected && routeMode(selected) === mode)
-                  }
-                  aria-describedby={
-                    missing.includes(mode) ? "route-mode-reason" : undefined
-                  }
-                  disabled={disabled}
-                  onChange={() => {
-                    preferred.current = mode;
-                    if (option) onOption(option.id);
-                  }}
-                />
-                <span>
-                  <Icon size={21} aria-hidden="true" />
-                </span>
-              </label>
-            );
-          })}
-        </div>
-        <div className="route-elevator-control">
-          <span>엘리베이터</span>
-          <button
-            type="button"
-            className={`switch ${elevator ? "on" : ""}`}
-            role="switch"
-            aria-label="엘리베이터"
-            aria-checked={elevator}
-            disabled={
-              busy ||
-              (elevator &&
-                loaded &&
-                !normal.some((o) => routeMode(o) !== "elevator")) ||
-              (!elevator &&
-                (!loaded || !lift.some((o) => routeMode(o) === "elevator")))
-            }
-            onClick={() => {
-              if (elevator) pending.current = preferred.current;
-              onElevator(!elevator);
-            }}
-          >
-            <span />
-          </button>
-        </div>
+    <section className="route-choice" aria-labelledby={`${radioName}-title`}>
+      <h2 id={`${radioName}-title`}>어떤 길로 갈까요?</h2>
+      <div className="route-choice-list" role="radiogroup" aria-labelledby={`${radioName}-title`}>
+        {modes.map((mode) => {
+          const option = optionFor(mode);
+          // 이 구간에 없는 길 종류는 숨김
+          if (loaded && !option) return null;
+          const disabled = busy || !option;
+          const checked = current === mode;
+          return (
+            <label key={mode} className={`route-choice-card${checked ? " is-checked" : ""}${disabled ? " is-disabled" : ""}`}>
+              <input
+                className="sr-only"
+                type="radio"
+                name={radioName}
+                value={mode}
+                checked={checked}
+                disabled={disabled}
+                onChange={() => choose(mode)}
+              />
+              <span className="route-choice-name">
+                {routeNames[mode]}
+                {recommended === mode && <em className="route-choice-badge">추천</em>}
+              </span>
+              <span className="route-choice-hint">{routeHints[mode]}</span>
+              <span className="route-choice-radio" aria-hidden="true" />
+            </label>
+          );
+        })}
       </div>
-      <p className="route-mode-reason" id="route-mode-reason" role="status">
-        {!start || !destination
-          ? "출발지와 도착지를 골라 주세요."
-          : !loaded
-            ? "이용 가능한 길을 확인하고 있어요."
-            : [
-                elevator ? "엘리베이터 길만 보여 드려요." : "",
-                ...missing.map(
-                  (mode) =>
-                    `${mode === "hill" ? "언덕길" : "계단길"}은 이 구간에 없어요.`,
-                ),
-                !lift.some((o) => routeMode(o) === "elevator")
-                  ? "엘리베이터 길은 이 구간에 없어요."
-                  : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-      </p>
-    </div>
+      {!loaded && <p className="route-choice-status" role="status">이용 가능한 길을 확인하고 있어요.</p>}
+    </section>
   );
 }

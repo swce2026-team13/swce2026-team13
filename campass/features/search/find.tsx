@@ -84,7 +84,7 @@ export default function Screen({
             <div className="overview-card building-picker-map">
               <CampusOverviewMap
                 buildingPicker
-                height={360}
+                height={400}
                 onSelect={(id) => {
                   const selected = buildings.find((item) => item.id === id);
                   if (selected) update({ building: selected.name });

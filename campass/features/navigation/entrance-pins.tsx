@@ -52,6 +52,7 @@ export function EntrancePins({
               className={`map-entrance-button${interactive ? "" : " map-entrance-static"}`}
               aria-label={`${pin.label}${interactive ? (pin.start ? " 출발" : " · 길안내 준비 중") : ""}`}
               aria-pressed={interactive ? selected.includes(pin.id) : undefined}
+              data-start={pin.start ? "true" : undefined}
               data-route-state={
                 current === pin.id
                   ? "current"

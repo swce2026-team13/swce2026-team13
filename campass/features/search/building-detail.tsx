@@ -24,7 +24,7 @@ export function BuildingDetail({
       <div className="overview-card building-detail-map">
         <CampusOverviewMap
           key={building.id}
-          height={280}
+          height={310}
           focusBuilding={building}
         />
         <button type="button" className="building-map-back" onClick={onBack}>

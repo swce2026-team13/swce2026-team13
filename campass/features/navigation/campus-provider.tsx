@@ -527,31 +527,29 @@ function useCampusState() {
       go(s.status === "completed" ? "arrival" : "guide");
     });
   }
-  async function advance() {
+  // 화면의 안내 단계 하나가 서버 단계 여러 개를 묶을 수 있어, 그만큼 이어서 진행
+  async function advance(times = 1) {
     if (!session) return;
     await run(async () => {
-      const s = await api<Session>(`sessions/${session.id}/advance`, {
-        version: session.version,
-      });
+      let s = session;
+      for (let i = 0; i < Math.max(1, times); i++) {
+        s = await api<Session>(`sessions/${s.id}/advance`, { version: s.version });
+        if (s.status === "completed") break;
+      }
       saveSession(s);
       go(s.status === "completed" ? "arrival" : "guide");
     });
   }
-  async function previous() {
-  if (!session) return;
-
-  await run(async () => {
-    const s = await api<Session>(
-      `sessions/${session.id}/previous`,
-      {
-        version: session.version,
-      },
-    );
-
-    saveSession(s);
-    go("guide");
-  });
-}
+  async function previous(times = 1) {
+    if (!session) return;
+    await run(async () => {
+      let s = session;
+      for (let i = 0; i < Math.max(1, times) && s.currentStep > 0; i++)
+        s = await api<Session>(`sessions/${s.id}/previous`, { version: s.version });
+      saveSession(s);
+      go("guide");
+    });
+  }
   function endGuide() {
     try { sessionStorage.removeItem("campass-session"); } catch { /* 저장 공간을 사용할 수 없어도 종료해요. */ }
     setSession(null);

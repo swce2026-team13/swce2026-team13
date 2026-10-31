@@ -8,13 +8,19 @@ import { CampusMap } from "./campus-map";
 export function MapPicker({
   selected,
   target,
+  destination,
   onSelect,
 }: {
   selected: string[];
   target: "start" | "destination";
+  // 목적지 건물. 출발을 고를 때 「건물명 · 도착」으로 표시
+  destination?: string;
   onSelect: (id: string, building: boolean) => void;
 }) {
-  const [flat, setFlat] = useState(false);
+  const [chosenFlat, setFlat] = useState(false);
+  // 출발을 고를 때는 2D 지도만 보여 줌
+  const startPick = target === "start";
+  const flat = startPick || chosenFlat;
   const [buildingFocus, setBuildingFocus] = useState("");
   const [overviewReset, setOverviewReset] = useState(0);
   const [legendOpen, setLegendOpen] = useState(false);
@@ -29,36 +35,39 @@ export function MapPicker({
     <CampusOverviewMap
       key={overviewReset}
       pickerMode
-      height={400}
+      height={480}
       selected={selected}
+      destinationLabel={startPick ? destination : undefined}
       onEntrance={selectEntrance}
       onSelect={selectBuilding}
       onResetView={() => setBuildingFocus("")}
     />
   );
   return (
-    <div className="overview-card">
+    <div className={`overview-card${startPick ? " map-picker-start" : ""}`}>
       <div className="map-picker-toolbar">
-        <div
-          className="map-view-switch"
-          role="group"
-          aria-label="지도 표시 방식"
-        >
-          <button
-            type="button"
-            aria-pressed={!flat}
-            onClick={() => setFlat(false)}
+        {!startPick && (
+          <div
+            className="map-view-switch"
+            role="group"
+            aria-label="지도 표시 방식"
           >
-            3D
-          </button>
-          <button
-            type="button"
-            aria-pressed={flat}
-            onClick={() => setFlat(true)}
-          >
-            2D
-          </button>
-        </div>
+            <button
+              type="button"
+              aria-pressed={!flat}
+              onClick={() => setFlat(false)}
+            >
+              3D
+            </button>
+            <button
+              type="button"
+              aria-pressed={flat}
+              onClick={() => setFlat(true)}
+            >
+              2D
+            </button>
+          </div>
+        )}
         <label className="map-building-select">
           건물
           <select
@@ -93,7 +102,7 @@ export function MapPicker({
           <CampusMap
             embedded
             designTheme
-            mapHeight={400}
+            mapHeight={480}
             controllerRef={mapController}
             selectedBuildings={selected}
             onBuilding={selectBuilding}
@@ -102,15 +111,12 @@ export function MapPicker({
             fallback={overview}
           />
         )}
-        <p className="endpoint-map-hint" role="status">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V11" />
-            <path d="M12 10.5V9a1.5 1.5 0 0 1 3 0v2" />
-            <path d="M15 10.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-1a6 6 0 0 1-4.6-2.2L4 15.5a1.5 1.5 0 0 1 2.3-1.9L9 16" />
-          </svg>
-          지도에서 {target === "start" ? "출발지" : "도착지"}를 눌러 주세요
-        </p>
       </div>
+      <p className="endpoint-map-caption">
+        {startPick
+          ? "초록 표시나 건물을 누르면 바로 경로를 보여 드려요"
+          : "건물을 누르면 바로 경로를 보여 드려요"}
+      </p>
       <button
         type="button"
         className="map-legend-toggle"

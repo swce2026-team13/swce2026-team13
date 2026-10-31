@@ -17,7 +17,8 @@ import {
 } from "@/components/ui/icons";
 import { Notice } from "@/components/ui";
 import { api, useCampus } from "@/features/navigation/campus-provider";
-import { routeEnvironment, routeMode, routeName } from "@/shared/utils/route-presentation";
+import { routeMode, routeName } from "@/shared/utils/route-presentation";
+import { groupIndexOf, guideStepGroups, placeName, stepUnverified } from "@/shared/utils/guide-instruction";
 import { guideRouteMotion } from "@/shared/utils/guide-route-motion";
 import type { IntentResult } from "@/shared/types/recognition";
 export default function Screen() {
@@ -40,17 +41,29 @@ export default function Screen() {
   const option = session?.route.options.find((item) => item.id === session.route.option)
     ?? session?.route.options[0];
   const mode = option ? routeMode(option) : null;
-  const environment = option ? routeEnvironment(option) : null;
-  const routeLabel = option
-    ? mode === "elevator"
-      ? routeName(option)
-      : (environment === "outdoor" ? "실외" : "실내") + " · " + routeName(option)
-    : "선택한 경로";
+  const routeLabel = option ? routeName(option) : "선택한 경로";
   const routeSteps = session?.route.steps ?? [];
+  const destinationName = displayDestination.building || displayDestination.name;
+  // 서버 단계를 안내 단계로 묶음(복도 → 엘리베이터 앞, 출입구 들어갔다 나가기 등). 화면은 묶음 기준
+  const groups = guideStepGroups(option, routeSteps, destinationName);
+  const groupIndex = session ? groupIndexOf(groups, session.currentStep) : 0;
+  const group = groups[groupIndex];
+  const currentStep = session ? routeSteps[session.currentStep] : undefined;
+  const nextStep = group ? routeSteps[group.last + 1] : undefined;
+  const nextName = nextStep ? placeName(nextStep.name, routeSteps[group.last]?.node) : "";
+  // 지금 할 일을 동작으로 말하는 한 줄(단계 종류별 템플릿)
+  const instruction = group?.instruction ?? "";
+  const nextView = nextStep ? { id: nextStep.id, node: nextStep.node, name: nextName, instruction: nextStep.instruction } : null;
+  // 도착: 묶음 끝까지 한 번에 진행. 이전: 앞 묶음 처음으로
+  const advanceSteps = session && group ? group.last - session.currentStep + 1 : 1;
+  const previousSteps = session && groupIndex > 0 ? session.currentStep - groups[groupIndex - 1].first : 1;
+  // 지금 단계 구간이 '확인'된 연결이 아닐 때만 확인 전 표시와 안내 표지 문구를 보여 줌
+  const unverified = currentStep ? stepUnverified(option, currentStep) : false;
   const remainingDistance = session && option
-    ? Math.max(0, Math.round(session.route.distance * (1 - (guideRouteMotion(option.nodes, guide.current?.node, guide.next?.node)?.from ?? 0))))
+    ? Math.max(0, Math.round(session.route.distance * (1 - (guideRouteMotion(option.nodes, guide.current?.node, nextStep?.node)?.from ?? 0))))
     : 0;
-  const middleIndex = routeSteps.length > 2 ? Math.floor((routeSteps.length - 1) / 2) : -1;
+  // 가운데 단계 표시는 안내 단계(묶음) 기준으로 골라 합쳐진 단계가 나오지 않게 함
+  const middleIndex = groups.length > 2 ? groups[Math.floor((groups.length - 1) / 2)].first : -1;
   const milestones = [
     { index: 0, label: routeSteps[0]?.name ?? "출발" },
     ...(middleIndex > 0 ? [{ index: middleIndex, label: routeSteps[middleIndex].name }] : []),
@@ -98,37 +111,37 @@ export default function Screen() {
               compact
               map={guide.map ?? undefined}
               currentStep={guide.current}
-              nextStep={guide.next}
+              nextStep={nextView}
               recoveredBackward={session.recovered && session.recoveryDirection === "backward"}
             />
             <div className="guide-live-instruction">
               <div className="guide-live-meta">
                 <div className="guide-live-chips">
                   <span data-mode={mode ?? "default"}>{routeLabel}</span>
-                  {(option?.unverified || option?.approximate) && <span className="unverified">현장 확인 전</span>}
+                  {unverified && <span className="unverified">현장 확인 전</span>}
                 </div>
                 {session.route.distance > 0 && (
                   <span className="guide-live-distance">
-                    {remainingDistance > 0 ? `${displayDestination.building || "목적지"}까지 약 ${remainingDistance}m` : "도착"}
+                    {remainingDistance > 0 ? `${destinationName || "목적지"}까지 약 ${remainingDistance}m` : "도착"}
                   </span>
                 )}
               </div>
               <h1>
                 {session.recovered && session.recoveryDirection === "backward"
                   ? "되돌아가는 방향으로 이동해 주세요"
-                  : guide.current?.instruction}
+                  : instruction}
               </h1>
-              {guide.current?.detail && <p className="guide-live-detail">{guide.current.detail}</p>}
+              {unverified && guide.current?.detail && <p className="guide-live-detail">{guide.current.detail}</p>}
               <div className="guide-live-flow">
-                <div>
+                <p>
                   <span>현재</span>
                   <strong>{guide.current?.name ?? "현재 위치"}</strong>
-                </div>
-                <ArrowRightIcon size={20} />
-                <div>
-                  <span>{guide.next ? "다음" : "도착"}</span>
-                  <strong>{guide.next?.name ?? displayDestination.name}</strong>
-                </div>
+                </p>
+                <ArrowRightIcon size={18} />
+                <p>
+                  <span>{nextStep ? "다음" : "도착"}</span>
+                  <strong>{nextName || displayDestination.name}</strong>
+                </p>
               </div>
             </div>
             <div className="guide-live-quick-actions">
@@ -160,15 +173,16 @@ export default function Screen() {
           </section>
           <div className="actions guide-actions guide-live-actions">
             <div className="guide-step-actions">
-              <button className="button secondary" disabled={busy || guide.isFirstStep} onClick={previous}>
+              <button className="button secondary" disabled={busy || groupIndex === 0} onClick={() => previous(previousSteps)}>
                 이전
               </button>
               <button
                 className="button primary"
                 disabled={busy}
-                onClick={session.status === "completed" ? () => go("arrival") : advance}
+                onClick={session.status === "completed" ? () => go("arrival") : () => advance(advanceSteps)}
               >
-                {session.status === "completed" ? "목적지에 도착했어요" : "다음 지점에 도착했어요"}
+                <CheckIcon size={18} />
+                {session.status === "completed" || !nextStep ? "도착했어요" : `${nextName}에 도착했어요`}
               </button>
             </div>
           </div>
