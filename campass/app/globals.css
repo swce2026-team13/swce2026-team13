@@ -2338,247 +2338,6 @@ body:has(.sheet-modal[open]) .phone > .app-header {
   font-size: 10px;
   color: #9aa8ba;
 }
-
-.confusion-preview-card {
-  width: 100%;
-  text-align: left;
-  border: 1px solid rgba(245, 158, 11, 0.28);
-  background:
-    linear-gradient(
-      135deg,
-      rgba(255, 247, 237, 0.96),
-      rgba(255, 251, 235, 0.9)
-    );
-  box-shadow:
-    0 10px 28px rgba(245, 158, 11, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
-  cursor: pointer;
-  transition:
-    transform 0.18s ease,
-    box-shadow 0.18s ease,
-    border-color 0.18s ease;
-}
-
-.confusion-preview-card:hover {
-  transform: translateY(-1px);
-  border-color: rgba(245, 158, 11, 0.42);
-  box-shadow:
-    0 14px 32px rgba(245, 158, 11, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
-}
-
-.confusion-preview-card strong {
-  color: #9a5b00;
-}
-
-.confusion-preview-card > div > span {
-  color: #b86f08;
-  font-weight: 700;
-  font-size: 13px;
-}
-.confusion-page {
-  display: flex;
-  flex-direction: column;
-  gap: 22px;
-  padding-bottom: 32px;
-}
-
-.confusion-back {
-  width: fit-content;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-
-  padding: 0;
-  border: 0;
-  background: none;
-
-  color: #6b7280;
-  font-size: 14px;
-  font-weight: 600;
-
-  cursor: pointer;
-}
-
-.confusion-header {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding-top: 4px;
-}
-
-.confusion-label {
-  color: #e58a16;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-}
-
-.confusion-header h1 {
-  margin: 0;
-
-  font-size: 30px;
-  font-weight: 800;
-  line-height: 1.15;
-  letter-spacing: -0.04em;
-}
-
-.confusion-header p {
-  margin: 0;
-
-  color: #7b7b7b;
-  font-size: 15px;
-  line-height: 1.6;
-}
-
-.confusion-highlight {
-  padding: 18px;
-
-  border: 1px solid #f3c885;
-  border-radius: 22px;
-
-  background:
-    linear-gradient(
-      145deg,
-      #fff8ec 0%,
-      #fffdf9 100%
-    );
-
-  box-shadow:
-    0 12px 28px rgba(201, 121, 20, 0.08);
-}
-
-.confusion-highlight-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-
-  margin-bottom: 22px;
-}
-
-.confusion-icon {
-  width: 44px;
-  height: 44px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  border-radius: 14px;
-
-  background: #fff0d5;
-  color: #d77a08;
-}
-
-.confusion-badge {
-  padding: 7px 11px;
-
-  border-radius: 999px;
-
-  background: #ffe9c5;
-  color: #b66505;
-
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.confusion-highlight h2 {
-  margin: 0 0 6px;
-
-  color: #352819;
-
-  font-size: 15px;
-  font-weight: 800;
-  line-height: 1.4;
-  letter-spacing: -0.02em;
-}
-
-.confusion-highlight p {
-  margin: 0;
-
-  color: #7b654d;
-
-  font-size: 14px;
-  line-height: 1.65;
-}
-
-.confusion-mini-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.confusion-mini-card {
-  display: flex;
-  gap: 14px;
-
-  padding: 18px;
-
-  border: 1px solid rgba(30, 41, 59, 0.06);
-  border-radius: 20px;
-
-  background: rgba(255, 255, 255, 0.82);
-
-  box-shadow:
-    0 8px 24px rgba(15, 23, 42, 0.05);
-}
-
-.confusion-mini-icon {
-  flex: 0 0 auto;
-
-  width: 38px;
-  height: 38px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  border-radius: 12px;
-
-  background: #fff5e6;
-  color: #d97b0b;
-}
-
-.confusion-mini-title {
-  display: block;
-
-  margin-bottom: 5px;
-
-  color: #252525;
-
-  font-size: 15px;
-  font-weight: 800;
-}
-
-.confusion-mini-card p {
-  margin: 0;
-
-  color: #777;
-
-  font-size: 14px;
-  line-height: 1.55;
-}
-
-.confusion-rest {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-
-  padding: 17px 18px;
-
-  border-radius: 18px;
-
-  background: rgba(246, 248, 252, 0.82);
-
-  color: #777;
-
-  font-size: 13px;
-}
-
-.confusion-rest strong {
-  color: #394150;
-  font-size: 13px;
-}
 .ai-search-flow {
   display: flex;
   flex-direction: column;
@@ -3776,37 +3535,6 @@ body:has(.sheet-modal[open]) .phone > .app-header {
   padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
 }
 
-.prepare-warning {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  padding: 14px;
-  border-radius: 14px;
-  background: #fff5e5;
-}
-
-.prepare-warning b {
-  color: #a76c12;
-  font-size: 14px;
-}
-
-.prepare-warning p {
-  color: #667389;
-  font-size: 12px;
-  line-height: 18px;
-}
-
-.prepare-warning .button {
-  width: auto;
-  min-height: 34px;
-  margin-top: 6px;
-  padding: 0 13px;
-  border-radius: 10px;
-  color: var(--blue);
-  font-size: 12px;
-}
-
 /* 편의시설 위치와 운영 시간(A4) · 편의시설 정보(A4a) */
 .facility-filters button {
   display: inline-flex;
@@ -4397,10 +4125,6 @@ body:has(.sheet-modal[open]) .phone > .app-header {
   color: #a82235;
   background: #ffe5e9;
 }
-.confusion-highlight .tag.red {
-  color: #a82235;
-  background: #ffe5e9;
-}
 .admin-filters .chips,
 .insight-reasons,
 .insight-point-heading {
@@ -4433,7 +4157,6 @@ body:has(.sheet-modal[open]) .phone > .app-header {
     font-size: 16px;
   }
 }
-.confusion-demo-label,
 .guide-risk-demo-label {
   display: inline-block;
   margin-top: 8px;
@@ -4443,29 +4166,6 @@ body:has(.sheet-modal[open]) .phone > .app-header {
   color: #a86300;
   font-size: 11px;
   font-weight: 600;
-}
-
-.confusion-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: 18px;
-}
-
-.confusion-list-card {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.confusion-list-card h3 {
-  margin: 4px 0 0;
-}
-
-.confusion-list-stats {
-  display: flex;
-  gap: 14px;
-  font-size: 12px;
 }
 
 .guide-risk-notice .guide-risk-demo-label {
@@ -4548,21 +4248,11 @@ body::-webkit-scrollbar,
 .route-summary-sheet { background:white; border-radius:24px 24px 0 0; padding:10px 18px 24px; }
 .route-sheet-handle { width:34px; height:4px; border-radius:4px; background:#dce1e8; margin:0 auto 20px; }
 .route-sheet-title { font-size:12px; font-weight:700; margin:0 0 8px; }
-.route-height-summary { margin:0 0 14px; font-size:32px; font-weight:800; line-height:1.35; letter-spacing:-1.3px; word-break:keep-all; overflow-wrap:anywhere; }
-.route-height-summary span { display:inline-block; }
 .route-summary-chips { display:flex; flex-wrap:wrap; gap:6px; }
 .route-summary-chips span { border-radius:14px; padding:4px 9px; background:#f1f4f8; color:#647085; font-size:11px; }
 .route-counts { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; padding:20px 0; margin:0 0 20px; border-bottom:1px solid #edf0f4; }
 .route-counts > span { display:flex; align-items:center; justify-content:center; gap:4px; font-size:11px; color:#738196; white-space:nowrap; }
 .route-counts b { color:#26354c; font-size:16px; }
-.route-elevation-heading, .route-elevation-labels { display:flex; align-items:center; justify-content:space-between; gap:8px; }
-.route-elevation-heading strong { font-size:13px; }
-.route-elevation-heading small { font-size:10px; color:#8a94a4; }
-.route-elevation-bars { display:flex; align-items:flex-end; gap:5px; height:106px; padding:12px 0 0; }
-.route-elevation-bars span { flex:1; border-radius:4px 4px 0 0; min-width:0; }
-.route-elevation-labels { align-items:flex-start; margin:9px 0 24px; font-size:10px; color:#748198; }
-.route-elevation-labels span { max-width:48%; }
-.route-elevation-labels span:last-child { text-align:right; }
 .route-timeline { padding:0; margin:24px 0 0; list-style:none; }
 .route-timeline li { position:relative; display:flex; gap:12px; padding:0 0 22px; }
 .route-timeline li:not(:last-child)::before { content:""; position:absolute; width:2px; top:30px; bottom:0; left:15px; background:#e2e8f1; }
@@ -4800,20 +4490,6 @@ body::-webkit-scrollbar,
 .prepare-screen .route-sheet-handle { width: 36px; margin: 0 auto; background: #d5dbe5; }
 .prepare-screen .route-sheet-intro { display: flex; flex-direction: column; gap: 4px; }
 .prepare-screen .route-sheet-title { margin: 0; font-size: 15px; font-weight: 800; }
-.prepare-screen .route-height-summary {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 0;
-  color: #1f2a3c;
-  font-size: 32px;
-  font-weight: 800;
-  letter-spacing: -.02em;
-}
-.route-height-summary .route-height-label { color: #5c6574; font-size: 15px; font-weight: 400; letter-spacing: 0; }
-.route-height-summary .route-height-divider { color: #a3abb8; font-size: 18px; font-weight: 400; }
-.route-height-summary b { font-weight: 800; }
 .prepare-screen .route-summary-chips { gap: 6px; }
 .prepare-screen .route-summary-chips > span {
   display: inline-flex;
@@ -4839,26 +4515,6 @@ body::-webkit-scrollbar,
 .route-counts > span > span { display: flex; flex-direction: column; line-height: 1.15; }
 .prepare-screen .route-counts b { color: #1f2a3c; font-size: 20px; font-weight: 800; }
 .route-counts small { color: #5c6574; font-size: 12px; font-weight: 400; }
-.prepare-screen .route-elevation-card {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 14px 14px 10px;
-  border-radius: 16px;
-  background: #f6f8fb;
-}
-.prepare-screen .route-elevation-heading strong { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 800; }
-.prepare-screen .route-elevation-heading small { color: #6b7480; font-size: 12px; }
-.prepare-screen .route-elevation-bars { height: 48px; gap: 3px; padding: 0; }
-.prepare-screen .route-elevation-bars span { border-radius: 4px; }
-.prepare-screen .route-elevation-labels { margin: 0; font-size: 11.5px; color: #6b7480; }
-.route-elevation-labels span:nth-child(2):not(:last-child) { text-align: center; }
-.prepare-screen .prepare-warning { gap: 6px; padding: 14px 14px 12px; border-radius: 16px; background: #fff6e6; }
-.prepare-screen .prepare-warning b { display: flex; align-items: center; gap: 6px; color: #9a5400; font-size: 14.5px; font-weight: 800; }
-.prepare-screen .prepare-warning p { margin: 0; color: #5c4a2c; font-size: 13px; line-height: 1.55; }
-.prepare-warning-footer { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 8px; margin-top: 2px; }
-.prepare-warning-footer small { color: #9a8466; font-size: 11.5px; }
-.prepare-screen .prepare-warning .button { min-height: 32px; margin: 0 0 0 auto; border: 0; border-radius: 10px; box-shadow: 0 0 0 1px #f1dcb6; color: #9a5400; font-size: 12.5px; font-weight: 700; }
 .prepare-screen .route-timeline { margin: 0; }
 .prepare-screen .route-timeline li { gap: 12px; padding-bottom: 16px; }
 .prepare-screen .route-timeline li:not(:last-child)::before { background: #dfe5ee; }
@@ -5831,4 +5487,173 @@ body::-webkit-scrollbar,
 /* #121 아래에는 안내 시작 버튼 하나만 */
 .prepare-fixed-actions .button.primary {
   flex: 1;
+}
+
+/* #123 경로 상세 시트: 높이 변화 한 줄 띠 */
+.route-elevation-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  margin: 4px 0 10px;
+  padding: 0 12px;
+  border-radius: 12px;
+  background: #fbf6ee;
+}
+.route-elevation-strip-label {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #5c4a2c;
+}
+.route-elevation-strip-label svg { color: #e08a1e; }
+.route-elevation-strip svg { flex: 1; min-width: 0; }
+.route-elevation-strip-value {
+  flex: none;
+  font-size: 12px;
+  font-weight: 700;
+  color: #5c6574;
+}
+
+/* #123 헤매기 쉬운 구간: 한 줄 띠(버튼) */
+.confusion-strip {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  min-height: 42px;
+  margin: 0 0 10px;
+  padding: 0 12px;
+  border-radius: 12px;
+  background: #fff6e2;
+  color: #8a4f06;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: left;
+}
+.confusion-strip span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* #123 헤매기 쉬운 구간 팝업: 화면 가운데 작은 카드 */
+.confusion-dialog {
+  width: min(330px, calc(100% - 40px));
+  max-height: calc(100dvh - 80px);
+  margin: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+}
+.confusion-dialog::backdrop { background: rgba(16, 28, 52, 0.28); }
+.confusion-dialog:focus { outline: none; }
+.confusion-dialog-card {
+  position: relative;
+  max-height: calc(100dvh - 80px);
+  overflow-y: auto;
+  padding: 20px 18px 16px;
+  border: 1px solid rgba(240, 200, 120, 0.6);
+  border-radius: 22px;
+  background: rgba(255, 248, 230, 0.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 16px 40px rgba(16, 28, 52, 0.2);
+  color: #3d3020;
+  animation: confusion-pop 0.24s cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+.confusion-dialog-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: #8a4f06;
+}
+.confusion-dialog-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 10px;
+  font-size: 19px;
+  font-weight: 800;
+  color: #8a4f06;
+}
+.confusion-dialog-point + .confusion-dialog-point {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(160, 110, 30, 0.18);
+}
+.confusion-dialog-place { display: block; font-size: 22px; font-weight: 800; color: #2a2116; }
+.confusion-dialog-count { margin: 4px 0 10px; font-size: 12px; color: #8a6a3a; }
+.confusion-dialog-box {
+  margin: 0;
+  padding: 4px 12px;
+  border-radius: 14px;
+  background: rgba(255, 226, 160, 0.45);
+}
+.confusion-dialog-box > div { padding: 9px 0; }
+.confusion-dialog-box > div + div { border-top: 1px solid rgba(160, 110, 30, 0.2); }
+.confusion-dialog-box dt {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #8a4f06;
+}
+.confusion-dialog-box dd { margin: 3px 0 0; font-size: 14px; line-height: 1.5; color: #3d3020; }
+.confusion-dialog-demo { margin: 12px 0 0; font-size: 11px; color: #8a94a4; }
+@keyframes confusion-pop {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .confusion-dialog-card { animation: none; }
+}
+
+/* #123 단계 목록: 주요 지점만 보이고 나머지는 접음 */
+.route-timeline-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 6px 0 8px;
+}
+.route-timeline-heading strong { font-size: 15px; font-weight: 800; color: #1c3866; }
+.route-timeline-heading small { font-size: 11px; color: #8a94a4; }
+.route-timeline-gap {
+  margin-left: 15px;
+  padding: 2px 0 2px 18px;
+  border-left: 2px dashed #c8d2e2;
+}
+.route-timeline-gap button,
+.route-timeline-minor button {
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: rgba(40, 96, 237, 0.08);
+  color: #2860ed;
+  font-size: 12px;
+  font-weight: 700;
+}
+.route-timeline-minor {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 30px;
+  margin-left: 11px;
+  color: #7f8da3;
+  font-size: 12.5px;
+}
+.route-timeline-minor button { margin-left: auto; }
+.route-timeline-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #c8d2e2;
 }

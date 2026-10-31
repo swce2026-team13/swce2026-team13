@@ -172,3 +172,48 @@ export function stepUnverified(option: RouteOption | undefined, step: Pick<Waypo
   const edge = linkId ? graphEdges.find((e) => e.id === linkId) : undefined;
   return Boolean(edge && edge.status !== "확인");
 }
+
+// 경로 상세 시트 단계 목록의 항목. 안내 중 화면의 안내 단계(묶음)와 같은 단위
+export type GuideStepItem = {
+  title: string;
+  instruction: string;
+  kind: GuideStepKind | "start" | "destination";
+  // 주요 지점: 출발, 엘리베이터 타는 곳, 다른 건물로 넘어가는 곳, 도착
+  major: boolean;
+};
+
+export function guideStepItems(
+  option: RouteOption,
+  steps: Step[],
+  destinationName: string,
+): GuideStepItem[] {
+  const groups = guideStepGroups(option, steps, destinationName);
+  return groups.map((group, index) => {
+    const step = steps[group.first];
+    const target = steps[group.last + 1];
+    if (index === 0)
+      return { title: step.name, instruction: group.instruction, kind: "start", major: true };
+    if (!target)
+      return { title: destinationName, instruction: group.instruction, kind: "destination", major: true };
+    const from = steps[group.last].node;
+    const to = target.node;
+    const kind = guideStepKind(option, steps[group.last], target);
+    // 엘리베이터 타는 곳: 실제로 층이 바뀔 때만
+    if (kind === "elevator" && from && to && floorIndex(from) !== floorIndex(to))
+      return {
+        title: `${areaName(nodeArea(from))} 엘리베이터 → ${floorLabel(to)}`,
+        instruction: group.instruction,
+        kind,
+        major: true,
+      };
+    // 다른 건물로 넘어가는 곳: 연결통로로 건물이 바뀔 때
+    if (kind === "passage" && from && to && nodeArea(from) !== nodeArea(to) && buildingById(nodeArea(to)))
+      return {
+        title: `${areaName(nodeArea(to))} ${floorLabel(to)} 연결통로`,
+        instruction: group.instruction,
+        kind,
+        major: true,
+      };
+    return { title: placeName(target.name, from), instruction: group.instruction, kind, major: false };
+  });
+}

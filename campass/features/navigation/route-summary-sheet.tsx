@@ -1,7 +1,8 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   ArrowUpDown,
   Building,
+  DoorOpen,
   Footprints,
   Mountain,
   MoveUpRight,
@@ -10,36 +11,32 @@ import {
   PersonStanding,
 } from "lucide-react";
 import type { RouteOption } from "@/shared/utils/routing";
-import {
-  routeSummary,
-  routeChips,
-  routeHeightText,
-  routeStepKind,
-  type MovementKind,
-} from "@/shared/utils/route-summary";
-import {
-  routeColors,
-  routeMode,
-  routeName,
-} from "@/shared/utils/route-presentation";
+import { routeSummary, routeChips } from "@/shared/utils/route-summary";
+import { routeColors, routeMode, routeName } from "@/shared/utils/route-presentation";
+import { guideStepItems, type GuideStepItem } from "@/shared/utils/guide-instruction";
 
-const icons: Record<MovementKind, typeof Footprints> = {
+const icons: Record<GuideStepItem["kind"], typeof Footprints> = {
+  start: Footprints,
+  destination: Footprints,
   walk: Footprints,
   hill: Mountain,
   stairs: MoveUpRight,
-  indoor: Building,
+  passage: Building,
+  entrance: DoorOpen,
   elevator: ArrowUpDown,
 };
+
+// 높이 변화 띠의 작은 선 그래프 크기
+const SPARK_WIDTH = 96;
+const SPARK_HEIGHT = 22;
 export function RouteSummarySheet({
   option,
   recommended,
-  startName,
   destinationName,
   warning,
 }: {
   option: RouteOption;
   recommended: boolean;
-  startName: string;
   destinationName: string;
   warning?: ReactNode;
 }) {
@@ -49,8 +46,17 @@ export function RouteSummarySheet({
   const min = Math.min(...summary.bars.map((bar) => bar.elevation));
   const max = Math.max(...summary.bars.map((bar) => bar.elevation));
   const chips = routeChips(option, summary);
-  const middleName = option.steps.slice(1, -1).find((step) => step.name.includes("스콘스퀘어"))?.name;
-  const showGrade = mode === "hill" && summary.rise !== null && summary.rise !== 0 && summary.grade !== null;
+  // 실제 높이 자료로 그리는 작은 선 그래프(축·눈금 없음)
+  const spark = summary.bars.map((bar, i) => [
+    (i / Math.max(1, summary.bars.length - 1)) * SPARK_WIDTH,
+    2 + (max === min ? 0.5 : 1 - (bar.elevation - min) / (max - min)) * (SPARK_HEIGHT - 4),
+  ]);
+  const sparkLine = spark.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`).join(" ");
+  // 단계 목록: 안내 중 화면의 안내 단계(묶음)와 같은 단위. 5개를 넘으면 주요 지점만
+  const items = guideStepItems(option, option.steps, destinationName);
+  const majorCount = items.filter((item) => item.major).length;
+  const folding = items.length > 5;
+  const [expanded, setExpanded] = useState(false);
   return (
     <section className="route-summary-sheet" aria-label="선택한 경로 요약">
       <div className="route-sheet-handle" aria-hidden="true" />
@@ -58,17 +64,6 @@ export function RouteSummarySheet({
         <p className="route-sheet-title" style={{ color }}>
           {routeName(option)}{recommended && " · 추천"}
         </p>
-        <h2 className="route-height-summary">
-          {showGrade ? (
-            <>
-              <span className="route-height-label">{summary.rise! < 0 ? "내리막" : "오르막"}</span>
-              <b>{Math.round(Math.abs(summary.rise!))}m</b>
-              <span className="route-height-divider">·</span>
-              <span className="route-height-label">평균 경사</span>
-              <b>{summary.grade}%</b>
-            </>
-          ) : routeHeightText(option, summary)}
-        </h2>
       </div>
       <div className="route-summary-chips">
         {chips.map((chip) => (
@@ -94,65 +89,65 @@ export function RouteSummarySheet({
           <span><b>{summary.buildings}</b><small>건물 통과</small></span>
         </span>
       </div>
-      <div className="route-elevation-card">
-        <div className="route-elevation-heading">
-          <strong><Mountain size={17} aria-hidden="true" /> 높이 변화</strong>
-          <small>높이는 지형도 기준 추정</small>
+      {summary.bars.length > 0 && summary.startElevation !== null && summary.endElevation !== null && (
+        <div
+          className="route-elevation-strip"
+          role="img"
+          aria-label={`높이 변화: 출발 ${Math.round(summary.startElevation)}m, 도착 ${Math.round(summary.endElevation)}m (높이는 지형도 기준 추정)`}
+          title="높이는 지형도 기준 추정"
+        >
+          <span className="route-elevation-strip-label">
+            <Mountain size={16} aria-hidden="true" /> 높이 변화
+          </span>
+          <svg width={SPARK_WIDTH} height={SPARK_HEIGHT} viewBox={`0 0 ${SPARK_WIDTH} ${SPARK_HEIGHT}`} aria-hidden="true">
+            <path d={`${sparkLine} L${SPARK_WIDTH} ${SPARK_HEIGHT} L0 ${SPARK_HEIGHT}Z`} fill="#fde7c7" />
+            <path d={sparkLine} fill="none" stroke="#e08a1e" strokeWidth={1.8} strokeLinejoin="round" strokeLinecap="round" />
+          </svg>
+          <span className="route-elevation-strip-value">
+            {Math.round(summary.startElevation)}m → {Math.round(summary.endElevation)}m
+          </span>
         </div>
-        {summary.bars.length > 0 ? (
-          <>
-          <div
-            className="route-elevation-bars"
-            role="img"
-            aria-label={`높이 변화: 출발 ${Math.round(summary.startElevation!)}m, 도착 ${Math.round(summary.endElevation!)}m. 주황은 경사 8% 초과, 초록은 완만한 구간, 남색은 엘리베이터 구간`}
-          >
-            {summary.bars.map((bar, i) => (
-              <span
-                key={i}
-                title={`${Math.round(bar.elevation)}m`}
-                style={{
-                  height: `${12 + (max === min ? 0 : (bar.elevation - min) / (max - min)) * 36}px`,
-                  background:
-                    bar.kind === "elevator"
-                      ? "#10223f"
-                      : bar.kind === "steep"
-                        ? "#e9a23b"
-                        : "#7cc08a",
-                }}
-              />
-            ))}
-          </div>
-          <div className="route-elevation-labels">
-            <span>
-              {startName} {Math.round(summary.startElevation!)}m
-            </span>
-            {middleName && <span>{middleName}</span>}
-            <span>
-              {destinationName} {Math.round(summary.endElevation!)}m
-            </span>
-          </div>
-          </>
-        ) : (
-          <p className="muted">이 경로의 높이 자료가 아직 없어요.</p>
-        )}
-      </div>
+      )}
       {warning}
+      <div className="route-timeline-heading">
+        <strong>이렇게 이동해요</strong>
+        {folding && <small>전체 {items.length}단계 · 주요 {majorCount}곳</small>}
+      </div>
       <ol className="route-timeline">
-        {option.steps.map((step, index) => {
-          const kind = routeStepKind(option, step);
-          const Icon = icons[kind];
+        {items.map((item, index) => {
+          const hidden = folding && !item.major;
+          // 접힌 단계 자리: 연속된 접힌 단계의 첫 자리에만 점선과 버튼
+          const gapStart = hidden && (index === 0 || items[index - 1].major);
+          const gapSize = gapStart ? items.slice(index).findIndex((next) => next.major) : 0;
+          if (hidden && !expanded)
+            return gapStart ? (
+              <li key={`gap-${index}`} className="route-timeline-gap">
+                <button type="button" onClick={() => setExpanded(true)}>
+                  ··· 중간 {gapSize < 0 ? items.length - index : gapSize}단계 더 보기
+                </button>
+              </li>
+            ) : null;
+          if (hidden)
+            return (
+              <li key={index} className="route-timeline-minor">
+                <span className="route-timeline-dot" aria-hidden="true" />
+                <span>{item.title}</span>
+                {gapStart && (
+                  <button type="button" onClick={() => setExpanded(false)}>중간 단계 접기</button>
+                )}
+              </li>
+            );
+          const Icon = icons[item.kind];
           return (
-            <li key={`${step.id}-${index}`} data-kind={index === 0 ? "start" : index === option.steps.length - 1 ? "destination" : kind}>
+            <li key={index} data-kind={item.kind}>
               <span className="route-step-icon">
                 <Icon size={17} aria-hidden="true" />
               </span>
               <div>
-                <strong>{step.name}</strong>
-                <p>{step.instruction}</p>
+                <strong>{item.title}</strong>
+                <p>{item.instruction}</p>
               </div>
-              {index === option.steps.length - 1 && (
-                <ArrowUpRight size={16} aria-hidden="true" />
-              )}
+              {item.kind === "destination" && <ArrowUpRight size={16} aria-hidden="true" />}
             </li>
           );
         })}
