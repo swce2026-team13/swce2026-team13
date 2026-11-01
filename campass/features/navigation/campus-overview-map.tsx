@@ -48,6 +48,15 @@ export type HeatSpot = {
   faded: boolean;
 };
 
+// 관리자 대시보드의 순위 동그라미. 색은 수준 배지와 같음
+export type RankSpot = {
+  id: string;
+  position: [number, number];
+  rank: number;
+  label: string;
+  color: string;
+};
+
 // 편의시설 핀. 같은 건물 시설을 하나로 묶고 개수를 보여 줌
 export type MapPin = {
   id: string;
@@ -87,6 +96,9 @@ export function CampusOverviewMap({
   heat,
   selectedHeat,
   onHeat,
+  ranks,
+  selectedRank,
+  onRank,
   highlight,
   pickerMode = false,
   destinationLabel,
@@ -109,6 +121,9 @@ export function CampusOverviewMap({
   heat?: HeatSpot[];
   selectedHeat?: string;
   onHeat?: (id: string) => void;
+  ranks?: RankSpot[];
+  selectedRank?: string;
+  onRank?: (id: string) => void;
   highlight?: OverviewRouteHighlight;
   pickerMode?: boolean;
   // 출발을 고를 때 목적지 건물 id. 이름표를 파란 「건물명 · 도착」으로 바꿈
@@ -638,6 +653,56 @@ export function CampusOverviewMap({
             )}
           </g>
         )}
+
+        {ranks && ranks.length > 0 && (() => {
+          // 같은 건물의 여러 지점은 한 자리에 겹치므로 작은 고리 모양으로 벌려 놓음
+          const groups = new Map<string, RankSpot[]>();
+          for (const spot of ranks) {
+            const key = spot.position.join(",");
+            groups.set(key, [...(groups.get(key) ?? []), spot]);
+          }
+          const placed = [...groups.values()].flatMap((group) =>
+            group.map((spot, i) => {
+              if (group.length === 1) return { spot, at: spot.position };
+              const angle = (i / group.length) * Math.PI * 2 - Math.PI / 2;
+              const ring = 11 * labelScale;
+              return { spot, at: [spot.position[0] + Math.cos(angle) * ring, spot.position[1] + Math.sin(angle) * ring] as [number, number] };
+            }),
+          );
+          // 선택한 지점이 맨 위에 오게 마지막에 그림
+          placed.sort((a, b) => Number(a.spot.id === selectedRank) - Number(b.spot.id === selectedRank) || b.spot.rank - a.spot.rank);
+          return (
+            <g className="overview-ranks">
+              {placed.map(({ spot, at }) => {
+                const on = spot.id === selectedRank;
+                const r = (on ? 10 : 7) * labelScale;
+                return (
+                  <g
+                    key={spot.id}
+                    className={`overview-rank${on ? " on" : ""}`}
+                    aria-label={`${spot.rank}순위 ${spot.label}`}
+                    {...button(() => onRank?.(spot.id))}
+                  >
+                    <title>{`${spot.rank}순위 · ${spot.label}`}</title>
+                    {on && <circle cx={at[0]} cy={at[1]} r={r * 2} fill={spot.color} fillOpacity={0.18} />}
+                    <circle cx={at[0]} cy={at[1]} r={r} fill={spot.color} stroke="white" strokeWidth={1.5 * labelScale} />
+                    <text
+                      x={at[0]}
+                      y={at[1] + r * 0.36}
+                      textAnchor="middle"
+                      fontSize={r * 1.05}
+                      fontWeight={700}
+                      fill="white"
+                      pointerEvents="none"
+                    >
+                      {spot.rank}
+                    </text>
+                  </g>
+                );
+              })}
+            </g>
+          );
+        })()}
 
         {heatLayout && (() => {
           const { spots, top, max } = heatLayout;
