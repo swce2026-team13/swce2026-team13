@@ -36,6 +36,18 @@ const LABEL_SIZE = 0.85;
 
 export type PinKind = "cafe" | "store" | "dining" | "aed" | "etc" | "mixed";
 
+// 관리자 열지도의 원. 기록이 많을수록 크고 진하게, 가장 많은 곳은 테두리·이름 강조
+type Box = { left: number; right: number; top: number; bottom: number };
+
+export type HeatSpot = {
+  id: string;
+  position: [number, number];
+  label: string;
+  count: number;
+  // 통과 기록이 적어 흐리게 보여 줄 곳
+  faded: boolean;
+};
+
 // 편의시설 핀. 같은 건물 시설을 하나로 묶고 개수를 보여 줌
 export type MapPin = {
   id: string;
@@ -72,6 +84,9 @@ export function CampusOverviewMap({
   pins,
   selectedPin,
   onPin,
+  heat,
+  selectedHeat,
+  onHeat,
   highlight,
   pickerMode = false,
   destinationLabel,
@@ -91,6 +106,9 @@ export function CampusOverviewMap({
   pins?: MapPin[];
   selectedPin?: string;
   onPin?: (id: string) => void;
+  heat?: HeatSpot[];
+  selectedHeat?: string;
+  onHeat?: (id: string) => void;
   highlight?: OverviewRouteHighlight;
   pickerMode?: boolean;
   // 출발을 고를 때 목적지 건물 id. 이름표를 파란 「건물명 · 도착」으로 바꿈
@@ -115,7 +133,7 @@ export function CampusOverviewMap({
     preference.addEventListener("change", update);
     return () => preference.removeEventListener("change", update);
   }, []);
-  const viewOnly = Boolean(pins || highlight || focusBuilding || routePreview);
+  const viewOnly = Boolean(pins || heat || highlight || focusBuilding || routePreview);
   const destinationArea = routePreview?.nodes.at(-1)?.split("|")[0];
   const state = (area: string) =>
     destinationArea === area ? "current" :
@@ -207,6 +225,34 @@ export function CampusOverviewMap({
     ((y - viewTop) * size.height) / height,
   ];
   const labelScale = width / (size.width || MAP_WIDTH);
+  // 열지도 원·이름표 배치. 건물 이름표보다 먼저 정해, 겹치는 건물 이름표는 숨김
+  const heatLayout = heat && heat.length > 0 ? (() => {
+    const max = Math.max(...heat.map((spot) => spot.count), 1);
+    const top = heat.reduce((best, spot) => (spot.count > best.count ? spot : best), heat[0]);
+    // 이름표는 기록이 많은 곳부터 놓고, 먼저 놓인 이름표와 겹치면 생략(원의 title로 대신 보여 줌)
+    const placed: Box[] = [];
+    const spots = [...heat].sort((a, b) => b.count - a.count).map((spot) => {
+      const r = (6 + Math.sqrt(spot.count / max) * 20) * labelScale;
+      const fontSize = (spot.id === top.id ? 12 : 10.5) * labelScale;
+      const width = spot.label.length * fontSize * 0.95 + 4 * labelScale;
+      const box = {
+        left: spot.position[0] + r + 3 * labelScale,
+        right: spot.position[0] + r + 3 * labelScale + width,
+        top: spot.position[1] - fontSize * 0.75,
+        bottom: spot.position[1] + fontSize * 0.55,
+      };
+      const clash = placed.some((p) => box.left < p.right && p.left < box.right && box.top < p.bottom && p.top < box.bottom);
+      if (!clash) placed.push(box);
+      return { spot, r, fontSize, labelled: !clash };
+    });
+    return { spots, top, max, boxes: placed };
+  })() : undefined;
+  const hidesLabel = (at: [number, number], text: string) => {
+    if (!heatLayout) return false;
+    const w = ((text.length * 11 + 10) / 2) * labelScale * LABEL_SIZE;
+    const h = 10 * labelScale * LABEL_SIZE;
+    return heatLayout.boxes.some((p) => at[0] - w < p.right && p.left < at[0] + w && at[1] - h < p.bottom && p.top < at[1] + h);
+  };
   const focusLabel = focused
     ? ((
         [
@@ -503,7 +549,7 @@ export function CampusOverviewMap({
                 })),
                 { id: "스콘스퀘어", label: "스콘스퀘어", at: plazaLabel },
               ]
-          ).map((item) => {
+          ).filter((item) => !hidesLabel(item.at, item.label)).map((item) => {
             const arriving = !focused && item.id === destinationLabel;
             const label = arriving ? { ...item, label: `${item.label} · 도착` } : item;
             const charWidth = 11;
@@ -592,6 +638,55 @@ export function CampusOverviewMap({
             )}
           </g>
         )}
+
+        {heatLayout && (() => {
+          const { spots, top, max } = heatLayout;
+          return (
+            <g className="overview-heat">
+              {[...spots].reverse().map(({ spot, r }) => {
+                const isTop = spot.id === top.id;
+                const on = spot.id === selectedHeat;
+                return (
+                  <g
+                    key={spot.id}
+                    className={`overview-heat-spot${on ? " on" : ""}`}
+                    aria-label={`${spot.label} 혼란 ${spot.count}건${spot.faded ? " · 기록 부족" : ""}`}
+                    {...button(() => onHeat?.(spot.id))}
+                  >
+                    <title>{`${spot.label} · 혼란 ${spot.count}건${spot.faded ? " (기록 부족)" : ""}`}</title>
+                    <circle
+                      cx={spot.position[0]}
+                      cy={spot.position[1]}
+                      r={r}
+                      fill={spot.faded ? "#b8b5ae" : "#E24B4A"}
+                      fillOpacity={spot.faded ? 0.25 : 0.15 + 0.55 * (spot.count / max)}
+                      stroke={isTop || on ? "#A32D2D" : "none"}
+                      strokeWidth={(on ? 2.5 : 2) * labelScale}
+                    />
+                    <circle cx={spot.position[0]} cy={spot.position[1]} r={3 * labelScale}
+                      fill={spot.faded ? "#8a8780" : "#A32D2D"} />
+                  </g>
+                );
+              })}
+              {spots.filter((s) => s.labelled).map(({ spot, r, fontSize }) => (
+                <text
+                  key={`${spot.id}-label`}
+                  x={spot.position[0] + r + 3 * labelScale}
+                  y={spot.position[1] + fontSize * 0.35}
+                  fontSize={fontSize}
+                  fontWeight={spot.id === top.id ? 800 : 600}
+                  fill={spot.faded ? "#8a8780" : spot.id === top.id ? "#2a1a1a" : "#4a3a3a"}
+                  stroke="white"
+                  strokeWidth={3 * labelScale}
+                  paintOrder="stroke"
+                  pointerEvents="none"
+                >
+                  {spot.label}
+                </text>
+              ))}
+            </g>
+          );
+        })()}
 
         {!highlight &&
           pins?.map((pin) => {
@@ -752,7 +847,8 @@ export function CampusOverviewMap({
           </g>
         )}
       </svg>
-      {!backgroundOnly && !buildingPicker && !focused && !routePreview && (
+      {/* 열지도에서는 입구·정류장 이름표가 지점 이름표를 가려서 숨김 */}
+      {!backgroundOnly && !buildingPicker && !focused && !routePreview && !heat && (
         <EntrancePins
           pins={entrancePositions}
           selected={selected}

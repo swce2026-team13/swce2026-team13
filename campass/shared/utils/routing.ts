@@ -189,7 +189,8 @@ export const waypoints: Waypoint[] = [
   },
 ];
 // 출발 위치로 쓸 때 사진 안내 지점이 놓인 그래프 노드
-const waypointNodes: Record<string, string> = {
+// 사진 안내 지점이 있는 지도 노드(관리자 열지도에서도 씀)
+export const waypointNodes: Record<string, string> = {
   gate: "gate_main",
   bus_stop_2115: "bus_stop_2115",
   main: "bon|1",
@@ -208,7 +209,7 @@ const waypointNodes: Record<string, string> = {
   interview: "hyein|2",
 };
 // 연결통로 위에 있는 사진 안내 지점
-const waypointLinks: Record<string, string> = {
+export const waypointLinks: Record<string, string> = {
   to_hallim: "bon-5__hallim-3",
   hallim_6f_corridor: "hallim-6__eunju1-5",
 };

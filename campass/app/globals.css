@@ -5603,3 +5603,48 @@ body::-webkit-scrollbar,
   border-radius: 50%;
   background: #c8d2e2;
 }
+
+/* 관리자 열지도 */
+.heat-summary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.heat-summary .stat strong {
+  overflow-wrap: anywhere;
+}
+.heat-map-card {
+  display: grid;
+  gap: 10px;
+}
+.heat-map-card h3 {
+  margin: 0;
+}
+.overview-heat-spot {
+  cursor: pointer;
+}
+.overview-heat-spot:focus-visible {
+  outline: none;
+}
+.overview-heat-spot:focus-visible circle:first-of-type {
+  stroke: #1c5fd4;
+}
+.heat-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  font-size: 12px;
+  color: var(--muted, #6b6b6b);
+}
+.heat-legend i {
+  width: 96px;
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, rgba(226, 75, 74, 0.15), rgba(226, 75, 74, 0.7));
+}
+.heat-legend em {
+  flex-basis: 100%;
+  font-style: normal;
+}
+.insight-point {
+  scroll-margin: 80px;
+}

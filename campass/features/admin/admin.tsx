@@ -6,6 +6,8 @@ import { useCampus } from "@/features/navigation/campus-provider";
 import { api, type Insight } from "@/features/navigation/campus-provider";
 import { campusBuildings } from "@/shared/utils/campus3d/types";
 import { confusionReasons, improvementAdvice, levelTones, type ConfusionReason } from "@/shared/utils/confusion-advice";
+import { CampusOverviewMap, type HeatSpot } from "@/features/navigation/campus-overview-map";
+import { insightPointPosition } from "@/shared/utils/insight-map";
 export default function Screen() {
   const { busy, insight, setInsight, run } = useCampus();
   const [id, setId] = useState("");
@@ -16,6 +18,8 @@ export default function Screen() {
   const [excludeDemo, setExcludeDemo] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  // 열지도에서 누른 지점. 아래 지점 카드를 강조함
+  const [selectedPoint, setSelectedPoint] = useState("");
   const params = new URLSearchParams({ period, demo: excludeDemo ? "exclude" : "include" });
   if (building) params.set("building", building);
   if (reason) params.set("reason", reason);
@@ -40,6 +44,21 @@ export default function Screen() {
       cancelled = true;
     };
   }, [setInsight, insightPath]);
+  // 혼란 기록이 있고 지도 좌표를 찾은 지점만 원으로 보여 줌(좌표가 없어도 목록에는 남김)
+  const heat: HeatSpot[] = (insight?.points ?? []).flatMap((p) => {
+    const position = p.confusions > 0 ? insightPointPosition(p.id) : undefined;
+    return position
+      ? [{ id: p.id, position, label: p.name, count: p.confusions, faded: p.level === "기록 부족" }]
+      : [];
+  });
+  const mostConfused = insight?.points.reduce<Insight["points"][number] | undefined>(
+    (best, p) => (p.confusions > 0 && (!best || p.confusions > best.confusions) ? p : best),
+    undefined,
+  );
+  function showPoint(pointId: string) {
+    setSelectedPoint(pointId);
+    document.getElementById(`insight-${pointId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
   function changeFilter(change: () => void) {
     setLoading(true);
     setLoadError("");
@@ -146,15 +165,10 @@ export default function Screen() {
           </div>
           {loading && <p role="status">통계를 불러오고 있어요.</p>}
           {loadError && <Notice>{loadError}</Notice>}
-          <div className="stats-grid" aria-busy={loading}>
+          <div className="stats-grid heat-summary" aria-busy={loading}>
             {[
-              ["지점 통과", `${insight.passages}건`, "세션·지점별 중복 제외"],
-              [
-                "혼란 신호",
-                `${insight.confusions}건`,
-                "피드백·위치 재확인 합집합",
-              ],
-              ["전체 혼란 비율", `${insight.rate}%`, "혼란 신호 ÷ 지점 통과"],
+              ["길 잃음 기록", `${insight.confusions}건`, "피드백·위치 재확인 합집합"],
+              ["가장 많이 헤맨 곳", mostConfused?.name ?? "없음", mostConfused ? `혼란 ${mostConfused.confusions}건` : "기록 없음"],
               [
                 "개선 필요 지점",
                 `${insight.points.filter((p) => p.level === "개선 필요").length}곳`,
@@ -168,6 +182,25 @@ export default function Screen() {
               </div>
             ))}
           </div>
+          <p className="small muted">
+            지점 통과 {insight.passages}건(세션·지점별 중복 제외) · 전체 혼란 비율 {insight.rate}%
+          </p>
+          <section className="card heat-map-card" aria-labelledby="heat-map-title">
+            <h3 id="heat-map-title">헤맨 지점 지도</h3>
+            {heat.length > 0 ? (
+              <>
+                <CampusOverviewMap heat={heat} selectedHeat={selectedPoint} onHeat={showPoint} height={300} />
+                <div className="heat-legend" aria-hidden="true">
+                  <span>적음</span>
+                  <i />
+                  <span>많음</span>
+                  <em>흐린 원: 기록 부족(통과 5건 미만)</em>
+                </div>
+              </>
+            ) : (
+              <p className="small muted">지도에 표시할 혼란 기록이 없어요.</p>
+            )}
+          </section>
           <div className="between">
             <h3>혼란 지점 우선순위</h3>
             <Tag>수준 · 비율순</Tag>
@@ -182,7 +215,8 @@ export default function Screen() {
           )}
           {insight.points.map((p, i) => (
             <div
-              className={`card insight-point ${i === 0 ? "selected" : ""}`}
+              id={`insight-${p.id}`}
+              className={`card insight-point ${(selectedPoint ? p.id === selectedPoint : i === 0) ? "selected" : ""}`}
               key={p.id}
             >
               <div className="row insight-point-heading">
